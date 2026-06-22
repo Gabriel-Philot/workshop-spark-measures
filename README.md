@@ -1,0 +1,45 @@
+# Spark Measure Workshop Platform
+
+Local workshop platform for performance troubleshooting with Apache Spark 4, Delta Lake, sparkMeasure, and MinIO.
+
+## Platform
+
+- Spark `4.1.2` with Scala `2.13`
+- Delta Lake `4.2.0`
+- sparkMeasure `0.28.0` Python API and `0.28` JVM artifact
+- MinIO object storage
+- Spark History Server backed by MinIO event logs
+
+MinIO uses three buckets:
+
+- `lakehouse`: future `landing/`, `bronze/`, `silver/`, and `gold/` data
+- `tests`: workshop test datasets and artifacts
+- `observability`: Spark event logs and sparkMeasure Delta tables
+
+Object-store folders are prefixes and are materialized when data is first written.
+
+## Quick start
+
+```bash
+make bootstrap
+make build
+make tests
+make validate
+make compose
+make dry-test
+make services
+```
+
+`make dry-test` runs a deterministic shuffle workload, collects stage metrics, prints a sparkMeasure report, and writes the aggregate as Delta to:
+
+```text
+s3a://observability/spark-measure/stage/latest
+```
+
+The integration validator checks the report, Delta transaction log, data files, Spark event log, and History Server application.
+
+Use `make down` to stop services without removing data. Use `make clean-data` to remove all local MinIO state.
+
+## Why stage metrics first
+
+Stage-level collection has lower overhead and is sufficient for the first workshop diagnostic flow. Task-level metrics and Flight Recorder mode are intentionally deferred.

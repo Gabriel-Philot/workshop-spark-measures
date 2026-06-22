@@ -1,0 +1,2 @@
+PyYAML==6.0.2
+sparkmeasure==0.28.0

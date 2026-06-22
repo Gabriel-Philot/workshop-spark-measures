@@ -1,0 +1,110 @@
+name: workshop-spark-measures
+
+x-spark-env: &spark-env
+  AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-sparkworkshop}
+  AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-sparkworkshop123}
+  AWS_REGION: us-east-1
+  AWS_DEFAULT_REGION: us-east-1
+  MINIO_LAKEHOUSE_BUCKET: ${MINIO_LAKEHOUSE_BUCKET:-lakehouse}
+  MINIO_TESTS_BUCKET: ${MINIO_TESTS_BUCKET:-tests}
+  MINIO_OBSERVABILITY_BUCKET: ${MINIO_OBSERVABILITY_BUCKET:-observability}
+  SPARKMEASURE_VERSION: ${SPARKMEASURE_VERSION:-0.28}
+  PYTHONPATH: /opt/spark/src
+
+services:
+  minio:
+    image: ${MINIO_IMAGE:-workshop-spark-measures-minio:2025-09-07}
+    container_name: wsm-minio
+    command:
+      - server
+      - /data
+      - --console-address
+      - :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-sparkworkshop}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-sparkworkshop123}
+    ports:
+      - "${MINIO_API_PORT:-29010}:9000"
+      - "${MINIO_CONSOLE_PORT:-29011}:9001"
+    volumes:
+      - ./var/minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  minio-init:
+    image: ${MINIO_MC_IMAGE:-workshop-spark-measures-minio-mc:2025-08-13}
+    container_name: wsm-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-sparkworkshop}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-sparkworkshop123}
+      MINIO_LAKEHOUSE_BUCKET: ${MINIO_LAKEHOUSE_BUCKET:-lakehouse}
+      MINIO_TESTS_BUCKET: ${MINIO_TESTS_BUCKET:-tests}
+      MINIO_OBSERVABILITY_BUCKET: ${MINIO_OBSERVABILITY_BUCKET:-observability}
+
+  spark-master:
+    image: ${SPARK_RUNTIME_IMAGE:-workshop-spark-measures-spark:4.1.2}
+    container_name: wsm-spark-master
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    environment: *spark-env
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.master.Master
+      - --host
+      - spark-master
+      - --port
+      - "7077"
+      - --webui-port
+      - "8080"
+    ports:
+      - "${SPARK_MASTER_UI_PORT:-28091}:8080"
+    volumes:
+      - ../src:/opt/spark/src:ro
+
+  spark-worker:
+    image: ${SPARK_RUNTIME_IMAGE:-workshop-spark-measures-spark:4.1.2}
+    container_name: wsm-spark-worker-1
+    depends_on:
+      spark-master:
+        condition: service_started
+    environment: *spark-env
+    command:
+      - /opt/spark/bin/spark-class
+      - org.apache.spark.deploy.worker.Worker
+      - spark://spark-master:7077
+      - --cores
+      - "${SPARK_WORKER_CORES:-2}"
+      - --memory
+      - "${SPARK_WORKER_MEMORY:-2g}"
+      - --webui-port
+      - "8081"
+    volumes:
+      - ../src:/opt/spark/src:ro
+
+  spark-history:
+    image: ${SPARK_HISTORY_IMAGE:-workshop-spark-measures-spark-history:4.1.2}
+    container_name: wsm-spark-history
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *spark-env
+      SPARK_HISTORY_OPTS: >-
+        -Dspark.history.fs.logDirectory=s3a://${MINIO_OBSERVABILITY_BUCKET:-observability}/event-logs
+        -Dspark.history.ui.port=18080
+        -Dspark.history.fs.update.interval=2s
+        -Dspark.hadoop.fs.s3a.endpoint=http://minio:9000
+        -Dspark.hadoop.fs.s3a.endpoint.region=us-east-1
+        -Dspark.hadoop.fs.s3a.path.style.access=true
+        -Dspark.hadoop.fs.s3a.connection.ssl.enabled=false
+        -Dspark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+        -Dspark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
+    ports:
+      - "${SPARK_HISTORY_UI_PORT:-28090}:18080"

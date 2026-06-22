@@ -1,0 +1,11 @@
+.env
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+build/cache/
+build/config/spark/jars/*.jar
+build/config/spark/jars/.bootstrap-manifest
+build/images/spark/context/
+build/var/

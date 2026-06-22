@@ -1,0 +1,19 @@
+[project]
+name = "workshop-spark-measures"
+version = "0.1.0"
+description = "Local Spark performance troubleshooting workshop with sparkMeasure."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "PyYAML>=6.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"

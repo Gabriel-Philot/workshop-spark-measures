@@ -1,0 +1,7 @@
+ARG MINIO_MC_BASE_IMAGE=quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z-cpuv1
+FROM ${MINIO_MC_BASE_IMAGE}
+
+COPY init-buckets.sh /usr/local/bin/init-workshop-buckets
+USER root
+RUN chmod 755 /usr/local/bin/init-workshop-buckets
+ENTRYPOINT ["/usr/local/bin/init-workshop-buckets"]

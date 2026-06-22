@@ -1,0 +1,31 @@
+defaults:
+  log_level: INFO
+  spark:
+    log_level: WARN
+    config:
+      spark.sql.extensions: io.delta.sql.DeltaSparkSessionExtension
+      spark.sql.catalog.spark_catalog: org.apache.spark.sql.delta.catalog.DeltaCatalog
+  observability:
+    enabled: true
+    collector: stage
+    persist: true
+    output_artifact: metrics
+  artifacts:
+    locations:
+      lakehouse: ${MINIO_LAKEHOUSE_URI:-s3a://lakehouse}
+      tests: ${MINIO_TESTS_URI:-s3a://tests}
+      observability: ${MINIO_OBSERVABILITY_URI:-s3a://observability}
+    inputs: {}
+    outputs: {}
+
+experiments:
+  sparkmeasure-dry-test:
+    app_name: workshop-spark-measures-dry-test
+    artifacts:
+      outputs:
+        metrics:
+          format: delta
+          path: ${SPARK_WORKSHOP_METRICS_PATH:-s3a://observability/spark-measure/stage/latest}
+          mode: overwrite
+          options:
+            overwriteSchema: true

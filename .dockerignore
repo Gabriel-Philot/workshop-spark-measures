@@ -1,0 +1,10 @@
+.git
+.env
+.venv
+.pytest_cache
+build/cache
+build/var
+build/config/spark/jars
+build/images/spark/context
+__pycache__
+*.pyc
