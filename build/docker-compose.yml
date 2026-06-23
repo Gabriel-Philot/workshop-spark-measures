@@ -9,7 +9,7 @@ x-spark-env: &spark-env
   MINIO_TESTS_BUCKET: ${MINIO_TESTS_BUCKET:-tests}
   MINIO_OBSERVABILITY_BUCKET: ${MINIO_OBSERVABILITY_BUCKET:-observability}
   SPARKMEASURE_VERSION: ${SPARKMEASURE_VERSION:-0.28}
-  PYTHONPATH: /opt/spark/src
+  PYTHONPATH: /opt/spark/src:/opt/spark/generator/src
 
 services:
   minio:
@@ -67,6 +67,7 @@ services:
       - "${SPARK_MASTER_UI_PORT:-28091}:8080"
     volumes:
       - ../src:/opt/spark/src:ro
+      - ../generator:/opt/spark/generator:ro
 
   spark-worker:
     image: ${SPARK_RUNTIME_IMAGE:-workshop-spark-measures-spark:4.1.2}
@@ -87,6 +88,7 @@ services:
       - "8081"
     volumes:
       - ../src:/opt/spark/src:ro
+      - ../generator:/opt/spark/generator:ro
 
   spark-history:
     image: ${SPARK_HISTORY_IMAGE:-workshop-spark-measures-spark-history:4.1.2}

@@ -1,0 +1,49 @@
+scenario:
+  name: retail_sales_skew
+  app_name: workshop-generator-retail-sales-skew
+  seed: 42
+  materialization:
+    engine: spark-native
+  paths:
+    bronze_base: ${MINIO_LAKEHOUSE_URI:-s3a://lakehouse}/bronze/retail
+    observability_base: ${MINIO_OBSERVABILITY_URI:-s3a://observability}/generator-runs
+  write:
+    mode: overwrite
+    sales_partition_by:
+      - vendor_id
+  distributions:
+    vendor_skew:
+      hot_vendor_id: 1
+      hot_vendor_share: 0.70
+      tolerance: 0.08
+  time:
+    start_date: '2026-01-01'
+    days: 30
+  scales:
+    demo:
+      vendors: 20
+      products_per_vendor: 10
+      customers: 10000
+      sales: 200000
+      partitions: 4
+      max_records_per_file: 50000
+      payload_columns: 1
+      payload_width: 32
+    xs:
+      vendors: 100
+      products_per_vendor: 20
+      customers: 250000
+      sales: 5000000
+      partitions: 16
+      max_records_per_file: 250000
+      payload_columns: 2
+      payload_width: 64
+    s:
+      vendors: 250
+      products_per_vendor: 40
+      customers: 1000000
+      sales: 50000000
+      partitions: 64
+      max_records_per_file: 500000
+      payload_columns: 3
+      payload_width: 96

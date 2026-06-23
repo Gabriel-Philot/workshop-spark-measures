@@ -9,14 +9,22 @@ COMPOSE := docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
 include .env.example
 -include .env
 
-.PHONY: bootstrap build validate compose dry-test services test tests down clean-data removeimage
+.PHONY: bootstrap build validate compose dry-test generate services test tests down clean-data removeimage
 
-SPARK_SUBMIT := $(COMPOSE) exec -T spark-master env PYTHONPATH=/opt/spark/src /opt/spark/bin/spark-submit \
+SPARK_PYTHONPATH := /opt/spark/src:/opt/spark/generator/src
+GENERATOR_CONFIG ?= /opt/spark/generator/configs/retail_sales_skew.yaml
+SCALE ?= demo
+GENERATOR_RUN_ID ?=
+GENERATOR_VALIDATE ?= 1
+GENERATOR_VALIDATE_ARGS := $(if $(filter 0 false no,$(GENERATOR_VALIDATE)),--skip-validation,)
+GENERATOR_RUN_ID_ARGS := $(if $(GENERATOR_RUN_ID),--run-id $(GENERATOR_RUN_ID),)
+
+SPARK_SUBMIT := $(COMPOSE) exec -T spark-master env PYTHONPATH=$(SPARK_PYTHONPATH) /opt/spark/bin/spark-submit \
 	--master spark://spark-master:7077 \
 	--deploy-mode client \
 	--conf spark.driver.host=spark-master \
 	--conf spark.eventLog.dir=s3a://$(MINIO_OBSERVABILITY_BUCKET)/event-logs \
-	--conf spark.executorEnv.PYTHONPATH=/opt/spark/src
+	--conf spark.executorEnv.PYTHONPATH=$(SPARK_PYTHONPATH)
 
 bootstrap:
 	@build/scripts/bootstrap.sh
@@ -56,6 +64,15 @@ dry-test:
 	@mkdir -p build/var
 	@$(SPARK_SUBMIT) /opt/spark/src/apps/sparkmeasure_dry_test.py 2>&1 | tee build/var/dry-test.log
 	@build/scripts/validate-dry-test.sh
+
+generate: compose
+	@mkdir -p build/var
+	@$(SPARK_SUBMIT) /opt/spark/generator/src/workshop_generator/cli.py \
+		--config $(GENERATOR_CONFIG) \
+		--scale $(SCALE) \
+		$(GENERATOR_RUN_ID_ARGS) \
+		$(GENERATOR_VALIDATE_ARGS) \
+		2>&1 | tee build/var/generate-$(SCALE).log
 
 services:
 	@build/scripts/services.sh

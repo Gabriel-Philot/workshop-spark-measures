@@ -40,6 +40,19 @@ The integration validator checks the report, Delta transaction log, data files, 
 
 Use `make down` to stop services without removing data. Use `make clean-data` to remove all local MinIO state.
 
+
+## Data generator
+
+The first generator slice creates related retail Delta tables in bronze for join-skew and file-layout labs:
+
+```bash
+make generate SCALE=demo
+```
+
+It writes `vendors`, `products`, `customers`, and `sales` under `s3a://lakehouse/bronze/retail/...`, validates foreign keys and hot-vendor skew, and writes a generator manifest under `s3a://observability/generator-runs/<run_id>/manifest.json`.
+
+The generator is schema-first: the YAML contract owns relationships, distributions, scale, and file layout. The first materializer is Spark-native so local Delta/S3A behavior matches the later sparkMeasure labs.
+
 ## Why stage metrics first
 
 Stage-level collection has lower overhead and is sufficient for the first workshop diagnostic flow. Task-level metrics and Flight Recorder mode are intentionally deferred.
