@@ -29,7 +29,7 @@ for image in "$SPARK_RUNTIME_IMAGE" "$SPARK_HISTORY_IMAGE" "$MINIO_IMAGE" "$MINI
   fi
 done
 
-known_containers=(wsm-minio wsm-spark-master wsm-spark-worker-1 wsm-spark-history)
+known_containers=(wsm-minio wsm-spark-master wsm-spark-worker-1 wsm-spark-worker-2 wsm-spark-worker-3 wsm-spark-history)
 known_running=false
 for container in "${known_containers[@]}"; do
   if [[ "$(docker inspect -f '{{.State.Running}}' "$container" 2>/dev/null || true)" == "true" ]]; then

@@ -23,6 +23,10 @@ MinIO Console
 Spark Master
   URL: http://127.0.0.1:${SPARK_MASTER_UI_PORT}
 
+Spark Workers
+  Default topology: ${SPARK_WORKER_REPLICAS:-2} workers x ${SPARK_WORKER_CORES} cores x ${SPARK_WORKER_MEMORY}
+  Optional 3-worker topology: make compose-three-workers
+
 Spark History
   URL: http://127.0.0.1:${SPARK_HISTORY_UI_PORT}
 

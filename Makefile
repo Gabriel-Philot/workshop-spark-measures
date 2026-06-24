@@ -9,7 +9,7 @@ COMPOSE := docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
 include .env.example
 -include .env
 
-.PHONY: bootstrap build validate compose dry-test generate services test tests down clean-data removeimage
+.PHONY: bootstrap build validate compose compose-three-workers dry-test generate services test tests down clean-data removeimage
 
 SPARK_PYTHONPATH := /opt/spark/src:/opt/spark/generator/src
 GENERATOR_CONFIG ?= /opt/spark/generator/configs/retail_sales_skew.yaml
@@ -57,8 +57,12 @@ validate:
 	@build/scripts/validate.sh
 
 compose: validate
-	@$(COMPOSE) up -d minio minio-init spark-master spark-worker spark-history
+	@$(COMPOSE) up -d minio minio-init spark-master spark-worker-1 spark-worker-2 spark-history
 	@build/scripts/wait-ready.sh
+
+compose-three-workers: validate
+	@SPARK_WORKER_MEMORY=$(SPARK_WORKER_THREE_WORKER_MEMORY) $(COMPOSE) --profile three-workers up -d minio minio-init spark-master spark-worker-1 spark-worker-2 spark-worker-3 spark-history
+	@SPARK_WORKER_EXPECTED_REPLICAS=3 build/scripts/wait-ready.sh
 
 dry-test:
 	@mkdir -p build/var
@@ -83,7 +87,7 @@ tests:
 	@uv run pytest
 
 down:
-	@$(COMPOSE) down
+	@$(COMPOSE) --profile three-workers down --remove-orphans
 
 clean-data:
 	@$(COMPOSE) down -v --remove-orphans || true
