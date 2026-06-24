@@ -1,4 +1,20 @@
-"""CLI entrypoint for spark-submit generator runs."""
+"""CLI entrypoint for spark-submit generator runs.
+
+Execution flow:
+1. `make generate SCALE=<preset>` or direct `spark-submit` calls this file.
+2. CLI arguments select a generator YAML file and a named scale preset.
+3. `load_contract(config, scale)` reads the YAML and converts it into a typed
+   `GeneratorContract` with paths, scale, skew, write mode, and time settings.
+4. The contract is injected into the selected materializer. The first runtime
+   implementation is `SparkNativeMaterializer`, which writes related Delta
+   tables to MinIO and validates row counts, FK coverage, skew, and file stats.
+
+Example:
+`make generate SCALE=xs GENERATOR_RUN_ID=manual-xs-001` becomes a spark-submit
+call with `--scale xs`; the loader resolves `scales.xs` from
+`generator/configs/retail_sales_skew.yaml` and passes that resolved contract to
+the generator.
+"""
 
 from __future__ import annotations
 
