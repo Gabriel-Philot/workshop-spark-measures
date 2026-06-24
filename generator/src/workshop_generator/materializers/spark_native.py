@@ -146,16 +146,21 @@ class SparkNativeMaterializer:
 
     def _validate_outputs(self, spark: Any, F: Any) -> dict[str, Any]:
         paths = self.contract.paths
-        vendors = spark.read.format("delta").load(paths.table_path("vendors"))
-        products = spark.read.format("delta").load(paths.table_path("products"))
-        customers = spark.read.format("delta").load(paths.table_path("customers"))
-        sales = spark.read.format("delta").load(paths.table_path("sales"))
+        tables = {
+            "vendors": spark.read.format("delta").load(paths.table_path("vendors")),
+            "products": spark.read.format("delta").load(paths.table_path("products")),
+            "customers": spark.read.format("delta").load(paths.table_path("customers")),
+            "sales": spark.read.format("delta").load(paths.table_path("sales")),
+        }
+        vendors = tables["vendors"]
+        products = tables["products"]
+        customers = tables["customers"]
+        sales = tables["sales"]
 
-        counts = {
-            "vendors": vendors.count(),
-            "products": products.count(),
-            "customers": customers.count(),
-            "sales": sales.count(),
+        counts = {table: dataframe.count() for table, dataframe in tables.items()}
+        table_file_stats = {
+            table: _data_file_stats_for_files(spark, dataframe.inputFiles())
+            for table, dataframe in tables.items()
         }
         expected_counts = {
             "vendors": self.contract.scale.vendor_rows,
@@ -186,14 +191,14 @@ class SparkNativeMaterializer:
                 f"Generated hot vendor share {hot_share:.4f} differs from expected {expected_share:.4f} by more than {tolerance:.4f}"
             )
 
-        file_stats = _data_file_stats_for_files(spark, sales.inputFiles())
-        if file_stats["file_count"] < 1:
+        sales_file_stats = table_file_stats["sales"]
+        if sales_file_stats["file_count"] < 1:
             raise RuntimeError("Generated sales table has no Delta data files")
 
         logger.info(
             "GENERATOR_VALIDATION_OK "
             f"sales_rows={counts['sales']} hot_vendor_share={hot_share:.4f} "
-            f"sales_files={file_stats['file_count']}"
+            f"sales_files={sales_file_stats['file_count']}"
         )
         return {
             "counts": counts,
@@ -205,7 +210,8 @@ class SparkNativeMaterializer:
             "hot_vendor_id": hot_vendor_id,
             "hot_vendor_count": hot_count,
             "hot_vendor_share": hot_share,
-            "sales_file_stats": file_stats,
+            "table_file_stats": table_file_stats,
+            "sales_file_stats": sales_file_stats,
         }
 
     def _manifest(self, spark: Any, validation: dict[str, Any]) -> dict[str, Any]:

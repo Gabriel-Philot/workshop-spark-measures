@@ -55,6 +55,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"GENERATOR_MANIFEST_PATH={manifest['paths']['manifest']}")
     if not args.skip_validation:
         validation = manifest["validation"]
+        for line in _volume_metric_lines(validation):
+            print(line)
         print(
             "GENERATOR_VALIDATION_OK "
             f"sales_rows={validation['counts']['sales']} "
@@ -63,6 +65,34 @@ def main(argv: list[str] | None = None) -> int:
         )
     print("GENERATOR_OK")
     return 0
+
+
+def _volume_metric_lines(validation: dict) -> list[str]:
+    counts = validation.get("counts", {})
+    table_file_stats = validation.get("table_file_stats", {})
+    ordered_tables = ("vendors", "products", "customers", "sales")
+    return [
+        _format_volume_metric_line(
+            table=table,
+            rows=int(counts.get(table, 0)),
+            file_stats=table_file_stats.get(table, {}),
+        )
+        for table in ordered_tables
+        if table in counts or table in table_file_stats
+    ]
+
+
+def _format_volume_metric_line(table: str, rows: int, file_stats: dict) -> str:
+    return (
+        "GENERATOR_VOLUME "
+        f"table={table} "
+        f"rows={rows} "
+        f"files={int(file_stats.get('file_count', 0))} "
+        f"total_bytes={int(file_stats.get('total_bytes', 0))} "
+        f"min_file_bytes={int(file_stats.get('min_file_bytes', 0))} "
+        f"avg_file_bytes={float(file_stats.get('avg_file_bytes', 0.0)):.1f} "
+        f"max_file_bytes={int(file_stats.get('max_file_bytes', 0))}"
+    )
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
