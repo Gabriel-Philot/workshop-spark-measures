@@ -41,6 +41,23 @@ The integration validator checks the report, Delta transaction log, data files, 
 Use `make down` to stop services without removing data. Use `make clean-data` to remove all local MinIO state.
 
 
+
+## Local Spark workers
+
+The default Compose topology starts two explicit Spark workers for a small WSL-friendly cluster:
+
+```text
+2 workers x 2 cores x 2g
+```
+
+Use the optional three-worker profile for executor/topology demos:
+
+```bash
+make compose-three-workers
+```
+
+The three-worker target uses `SPARK_WORKER_THREE_WORKER_MEMORY=1536m` by default to avoid overcommitting the current WSL memory cap.
+
 ## Data generator
 
 The first generator slice creates related retail Delta tables in bronze for join-skew and file-layout labs:

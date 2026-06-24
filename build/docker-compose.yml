@@ -11,6 +11,26 @@ x-spark-env: &spark-env
   SPARKMEASURE_VERSION: ${SPARKMEASURE_VERSION:-0.28}
   PYTHONPATH: /opt/spark/src:/opt/spark/generator/src
 
+x-spark-worker-common: &spark-worker-common
+  image: ${SPARK_RUNTIME_IMAGE:-workshop-spark-measures-spark:4.1.2}
+  depends_on:
+    spark-master:
+      condition: service_started
+  environment: *spark-env
+  command:
+    - /opt/spark/bin/spark-class
+    - org.apache.spark.deploy.worker.Worker
+    - spark://spark-master:7077
+    - --cores
+    - "${SPARK_WORKER_CORES:-2}"
+    - --memory
+    - "${SPARK_WORKER_MEMORY:-2g}"
+    - --webui-port
+    - "8081"
+  volumes:
+    - ../src:/opt/spark/src:ro
+    - ../generator:/opt/spark/generator:ro
+
 services:
   minio:
     image: ${MINIO_IMAGE:-workshop-spark-measures-minio:2025-09-07}
@@ -69,26 +89,19 @@ services:
       - ../src:/opt/spark/src:ro
       - ../generator:/opt/spark/generator:ro
 
-  spark-worker:
-    image: ${SPARK_RUNTIME_IMAGE:-workshop-spark-measures-spark:4.1.2}
+  spark-worker-1:
+    <<: *spark-worker-common
     container_name: wsm-spark-worker-1
-    depends_on:
-      spark-master:
-        condition: service_started
-    environment: *spark-env
-    command:
-      - /opt/spark/bin/spark-class
-      - org.apache.spark.deploy.worker.Worker
-      - spark://spark-master:7077
-      - --cores
-      - "${SPARK_WORKER_CORES:-2}"
-      - --memory
-      - "${SPARK_WORKER_MEMORY:-2g}"
-      - --webui-port
-      - "8081"
-    volumes:
-      - ../src:/opt/spark/src:ro
-      - ../generator:/opt/spark/generator:ro
+
+  spark-worker-2:
+    <<: *spark-worker-common
+    container_name: wsm-spark-worker-2
+
+  spark-worker-3:
+    <<: *spark-worker-common
+    profiles:
+      - three-workers
+    container_name: wsm-spark-worker-3
 
   spark-history:
     image: ${SPARK_HISTORY_IMAGE:-workshop-spark-measures-spark-history:4.1.2}
@@ -96,6 +109,12 @@ services:
     depends_on:
       minio-init:
         condition: service_completed_successfully
+      spark-master:
+        condition: service_started
+      spark-worker-1:
+        condition: service_started
+      spark-worker-2:
+        condition: service_started
     environment:
       <<: *spark-env
       SPARK_HISTORY_OPTS: >-

@@ -24,5 +24,11 @@ wait_for() {
 
 wait_for "MinIO" curl -fsS "http://127.0.0.1:${MINIO_API_PORT}/minio/health/ready"
 wait_for "Spark Master" curl -fsS "http://127.0.0.1:${SPARK_MASTER_UI_PORT}"
-wait_for "Spark Worker" bash -c "curl -fsS 'http://127.0.0.1:${SPARK_MASTER_UI_PORT}' | grep -q ALIVE"
+expected_workers="${SPARK_WORKER_EXPECTED_REPLICAS:-${SPARK_WORKER_REPLICAS:-2}}"
+export SPARK_WORKER_EXPECTED_REPLICAS="${expected_workers}"
+wait_for "Spark Workers (${expected_workers})" bash -c '
+  page="$(curl -fsS "http://127.0.0.1:${SPARK_MASTER_UI_PORT}")"
+  alive="$(sed -nE "s/.*<strong>Workers:<\/strong>[[:space:]]*([0-9]+)[[:space:]]+Alive,.*/\1/p" <<< "$page" | head -n 1)"
+  test "${alive:-0}" -ge "${SPARK_WORKER_EXPECTED_REPLICAS}"
+'
 wait_for "Spark History" curl -fsS "http://127.0.0.1:${SPARK_HISTORY_UI_PORT}/api/v1/applications"
