@@ -29,3 +29,52 @@ experiments:
           mode: overwrite
           options:
             overwriteSchema: true
+
+  lab0-source-observability-native:
+    app_name: workshop-lab0-source-observability-native
+    observability:
+      enabled: false
+      persist: false
+    artifacts:
+      inputs:
+        vendors:
+          format: delta
+          path: ${LAB0_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB0_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB0_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
+        sales:
+          format: delta
+          path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+
+  lab0-source-observability-sparkmeasure:
+    app_name: workshop-lab0-source-observability-sparkmeasure
+    observability:
+      enabled: true
+      collector: stage
+      persist: true
+      output_artifact: metrics
+    artifacts:
+      inputs:
+        vendors:
+          format: delta
+          path: ${LAB0_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB0_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB0_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
+        sales:
+          format: delta
+          path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+      outputs:
+        metrics:
+          format: delta
+          path: ${LAB0_SPARKMEASURE_METRICS_PATH:-s3a://observability/spark-measure/lab0/source-observability/latest}
+          mode: overwrite
+          options:
+            overwriteSchema: true
