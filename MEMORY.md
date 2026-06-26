@@ -13,3 +13,4 @@
 - [2026-06-25] (Mem-0011) Lab 0 source observability compares the same generated bronze-source profiling workload first without sparkMeasure and then with stage-level sparkMeasure metrics persisted to observability.
 - [2026-06-26] (Mem-0012) Lab 0 submit output now uses terminal section dividers and native-mode Spark explain plans before the sparkMeasure run, making the workshop comparison easier to follow.
 - [2026-06-26] (Mem-0013) Lab 0 is split into `source_inventory` for generated-source readiness and `sparkmeasure_presentation` for a focused Bronze-to-Silver sparkMeasure comparison with metric persistence disabled.
+- [2026-06-26] (Mem-0014) Lab 0 source inventory reports physical source volume (`rows`, files, total bytes, and min/avg/max file bytes) and only keeps vendor imbalance as a short source characteristic note.

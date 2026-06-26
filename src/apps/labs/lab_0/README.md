@@ -26,7 +26,7 @@ MinIO credentials are loaded from `.env`; the local defaults are usually `sparkw
 
 ## 1. Source inventory
 
-Run this first to confirm the bronze tables exist, contain rows, and preserve the generated relationships.
+Run this first to confirm the bronze tables exist, understand their physical size, and preserve the generated relationships.
 
 ```bash
 docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
@@ -41,9 +41,9 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 Expected terminal markers:
 
-- `LAB0_SOURCE_PROFILE`: rows, files, columns, and partitions per source table.
-- `LAB0_SALES_SKEW`: top vendors by sales row count.
+- `LAB0_SOURCE_VOLUME`: rows, file count, total physical bytes, min/avg/max file bytes, and columns per source table.
 - `LAB0_RELATIONSHIP_CHECK`: FK violation counts for generated relationships.
+- `LAB0_SOURCE_CHARACTERISTIC`: final short note that the generated `sales` source has vendor imbalance for later diagnostic labs.
 - `LAB0_SOURCE_INVENTORY_OK`: successful completion marker.
 
 This script uses `lab0-source-inventory` from `src/config/experiments.yaml` and keeps sparkMeasure disabled.
@@ -114,7 +114,7 @@ Playwright validation against the local UI confirmed these navigation details:
 
 - The History Server home table shows the app name, but the clickable application link is the App ID.
 - Application pages expose `Jobs`, `Stages`, `Storage`, `Environment`, `Executors`, and `SQL / DataFrame` tabs.
-- The source inventory app is intentionally noisy because it profiles several tables and FK checks; the validated run showed many jobs and stages. Do not use it as the sparkMeasure comparison point.
+- The source inventory app is intentionally noisier because it profiles several tables, physical file sizes, and FK checks; do not use it as the sparkMeasure comparison point.
 - The presentation app is the comparison point. It has one intentional refinement write, but Delta metadata and commit internals still appear as Spark jobs and stages. Exact UI counts can change depending on prior table state and overwrite behavior.
 
 ## MinIO walkthrough

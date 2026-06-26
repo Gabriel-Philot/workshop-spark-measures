@@ -27,7 +27,8 @@ It reads these Delta input artifacts:
 - `sales`
 
 This lab intentionally does not enable sparkMeasure. Its purpose is to show
-which generated sources are available before running diagnostic workloads.
+source row counts, physical file counts, physical byte size, relationship
+readiness, and a final note about the generated vendor imbalance.
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ from typing import Any
 
 from pyspark.sql import DataFrame, functions as F
 
+from spark_workshop.artifacts import data_file_stats_for_dataframe
 from spark_workshop.config import load_experiment_config
 from spark_workshop.experiments import (
     ExperimentContext,
@@ -56,17 +58,17 @@ class Lab0SourceInventory(SparkExperiment):
     def workload(self, context: ExperimentContext) -> dict[str, Any]:
         tables = {name: context.read(name) for name in SOURCE_TABLES}
         source_profiles = _profile_sources(context, tables)
-        sales_skew = _profile_sales_skew(
+        relationship_checks = _check_relationships(context, tables)
+        imbalance_note = _profile_sales_vendor_imbalance(
             context=context,
             sales=tables["sales"],
             total_sales=source_profiles["sales"]["rows"],
         )
-        relationship_checks = _check_relationships(context, tables)
 
         return {
             "source_profiles": source_profiles,
-            "sales_skew": sales_skew,
             "relationship_checks": relationship_checks,
+            "imbalance_note": imbalance_note,
         }
 
     def validate(self, result: dict[str, Any], context: ExperimentContext) -> None:
@@ -82,76 +84,76 @@ class Lab0SourceInventory(SparkExperiment):
         if any(value != 0 for value in violations.values()):
             raise RuntimeError(f"Lab 0 relationship checks failed: {violations}")
 
-        context.logger.info(f"LAB0_SOURCE_INVENTORY_VALIDATION_OK experiment={context.config.name}")
+        context.logger.info(
+            f"LAB0_SOURCE_INVENTORY_VALIDATION_OK experiment={context.config.name}"
+        )
 
 
 def _profile_sources(
     context: ExperimentContext,
     tables: dict[str, DataFrame],
-) -> dict[str, dict[str, int]]:
-    profiles: dict[str, dict[str, int]] = {}
+) -> dict[str, dict[str, int | float]]:
+    profiles: dict[str, dict[str, int | float]] = {}
     for table_name, dataframe in tables.items():
-        row_count = dataframe.count()
-        file_count = (
-            dataframe.select(F.input_file_name().alias("file_name"))
-            .where(F.col("file_name") != "")
-            .distinct()
-            .count()
-        )
+        row_count = int(dataframe.count())
+        file_stats = data_file_stats_for_dataframe(dataframe)
         profile = {
-            "rows": int(row_count),
-            "files": int(file_count),
+            "rows": row_count,
+            "files": file_stats.file_count,
+            "total_bytes": file_stats.total_bytes,
+            "min_file_bytes": file_stats.min_file_bytes,
+            "avg_file_bytes": file_stats.avg_file_bytes,
+            "max_file_bytes": file_stats.max_file_bytes,
             "columns": len(dataframe.columns),
-            "partitions": int(dataframe.rdd.getNumPartitions()),
         }
         profiles[table_name] = profile
         context.logger.info(
-            "LAB0_SOURCE_PROFILE "
+            "LAB0_SOURCE_VOLUME "
             f"table={table_name} "
             f"rows={profile['rows']} "
             f"files={profile['files']} "
-            f"columns={profile['columns']} "
-            f"partitions={profile['partitions']}"
+            f"total_bytes={profile['total_bytes']} "
+            f"min_file_bytes={profile['min_file_bytes']} "
+            f"avg_file_bytes={profile['avg_file_bytes']:.1f} "
+            f"max_file_bytes={profile['max_file_bytes']} "
+            f"columns={profile['columns']}"
         )
     return profiles
 
 
-def _profile_sales_skew(
+def _profile_sales_vendor_imbalance(
     context: ExperimentContext,
     sales: DataFrame,
-    total_sales: int,
-) -> list[dict[str, int | float]]:
-    top_vendors = (
+    total_sales: int | float,
+) -> dict[str, int | float]:
+    top_vendor = (
         sales.groupBy("vendor_id")
-        .agg(
-            F.count("*").alias("row_count"),
-            F.round(F.sum("sale_amount"), 2).alias("sale_amount"),
-        )
+        .agg(F.count("*").alias("row_count"))
         .orderBy(F.desc("row_count"))
-        .limit(5)
+        .limit(1)
         .collect()
     )
-
-    summary: list[dict[str, int | float]] = []
-    for rank, row in enumerate(top_vendors, start=1):
-        share = float(row.row_count / total_sales) if total_sales else 0.0
-        item = {
-            "rank": rank,
-            "vendor_id": int(row.vendor_id),
-            "rows": int(row.row_count),
-            "share": share,
-            "sale_amount": float(row.sale_amount or 0.0),
+    if not top_vendor:
+        note = {"top_vendor_id": 0, "top_vendor_rows": 0, "top_vendor_share": 0.0}
+    else:
+        row = top_vendor[0]
+        top_vendor_rows = int(row.row_count)
+        note = {
+            "top_vendor_id": int(row.vendor_id),
+            "top_vendor_rows": top_vendor_rows,
+            "top_vendor_share": (
+                float(top_vendor_rows / total_sales) if total_sales else 0.0
+            ),
         }
-        summary.append(item)
-        context.logger.info(
-            "LAB0_SALES_SKEW "
-            f"rank={item['rank']} "
-            f"vendor_id={item['vendor_id']} "
-            f"rows={item['rows']} "
-            f"share={item['share']:.4f} "
-            f"sale_amount={item['sale_amount']:.2f}"
-        )
-    return summary
+
+    context.logger.info(
+        "LAB0_SOURCE_CHARACTERISTIC "
+        "table=sales characteristic=vendor_imbalance "
+        f"top_vendor_id={note['top_vendor_id']} "
+        f"top_vendor_rows={note['top_vendor_rows']} "
+        f"top_vendor_share={note['top_vendor_share']:.4f}"
+    )
+    return note
 
 
 def _check_relationships(
@@ -199,7 +201,7 @@ def main() -> int:
     logger.info(
         terminal_section(
             "Lab 0 - Source inventory",
-            "Generated bronze tables, file layout, skew, and FK readiness",
+            "Rows, physical bytes, file layout, FK readiness, and imbalance note",
         )
     )
     run = _run_experiment()
