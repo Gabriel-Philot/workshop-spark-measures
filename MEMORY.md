@@ -11,3 +11,4 @@
 - [2026-06-23] (Mem-0009) Implemented the first schema-first retail data generator slice: Spark-native materialization writes related vendors/products/customers/sales Delta tables to bronze, validates FK coverage and hot-vendor skew, emits a generator manifest to observability, and exposes `make generate`.
 - [2026-06-24] (Mem-0010) Local Spark topology now defaults to two explicit workers and exposes `make compose-three-workers` for a WSL-friendly three-worker demo; readiness validates alive workers from Spark Master UI.
 - [2026-06-25] (Mem-0011) Lab 0 source observability compares the same generated bronze-source profiling workload first without sparkMeasure and then with stage-level sparkMeasure metrics persisted to observability.
+- [2026-06-26] (Mem-0012) Lab 0 submit output now uses terminal section dividers and native-mode Spark explain plans before the sparkMeasure run, making the workshop comparison easier to follow.

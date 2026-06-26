@@ -50,7 +50,7 @@ from spark_workshop.experiments import (
     ExperimentRunner,
     SparkExperiment,
 )
-from spark_workshop.utils import logger
+from spark_workshop.utils import logger, terminal_section
 
 
 NATIVE_EXPERIMENT_NAME = "lab0-source-observability-native"
@@ -64,10 +64,8 @@ class Lab0SourceObservability(SparkExperiment):
     def workload(self, context: ExperimentContext) -> dict[str, Any]:
         tables = {name: context.read(name) for name in SOURCE_TABLES}
 
-        # Uncomment during live demos to show Spark's native physical plan
-        # before comparing it with sparkMeasure stage metrics.
-        #
-        # tables["sales"].groupBy("vendor_id").count().explain(mode="formatted")
+        if not context.config.observability.enabled:
+            _explain_native_plans(context, tables)
 
         source_profiles = _profile_sources(context, tables)
         sales_skew = _profile_sales_skew(
@@ -97,6 +95,34 @@ class Lab0SourceObservability(SparkExperiment):
             raise RuntimeError(f"Lab 0 relationship checks failed: {violations}")
 
         context.logger.info(f"LAB0_VALIDATION_OK experiment={context.config.name}")
+
+
+def _explain_native_plans(
+    context: ExperimentContext,
+    tables: dict[str, DataFrame],
+) -> None:
+    context.logger.info(
+        terminal_section(
+            "Native Spark explain output",
+            "Verbose physical plans before sparkMeasure collection",
+        )
+    )
+
+    source_count_plan = tables["sales"].groupBy("vendor_id").count()
+    context.logger.info(
+        "LAB0_NATIVE_EXPLAIN plan=sales_vendor_count mode=formatted"
+    )
+    source_count_plan.explain(mode="formatted")
+
+    relationship_plan = tables["sales"].join(
+        tables["products"].select("product_id", "vendor_id"),
+        ["product_id", "vendor_id"],
+        "left_anti",
+    )
+    context.logger.info(
+        "LAB0_NATIVE_EXPLAIN plan=sales_products_left_anti mode=formatted"
+    )
+    relationship_plan.explain(mode="formatted")
 
 
 def _profile_sources(
@@ -232,12 +258,30 @@ def _log_run_summary(run: ExperimentRun) -> None:
 
 
 def main() -> int:
+    logger.info(
+        terminal_section(
+            "Lab 0 - Native Spark baseline",
+            "Spark UI, History Server, logs, and explain output",
+        )
+    )
     native_run = _run_experiment(NATIVE_EXPERIMENT_NAME)
     _log_run_summary(native_run)
 
+    logger.info(
+        terminal_section(
+            "Lab 0 - sparkMeasure observed run",
+            "Same workload with stage metrics collected and persisted",
+        )
+    )
     sparkmeasure_run = _run_experiment(SPARKMEASURE_EXPERIMENT_NAME)
     _log_run_summary(sparkmeasure_run)
 
+    logger.info(
+        terminal_section(
+            "Lab 0 complete",
+            "Native Spark output and sparkMeasure metrics are ready to compare",
+        )
+    )
     logger.info("LAB0_SOURCE_OBSERVABILITY_OK")
     return 0
 
