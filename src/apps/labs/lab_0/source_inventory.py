@@ -1,4 +1,4 @@
-"""# Lab 0: Source observability baseline
+"""# Lab 0: Source inventory
 
 ## Submit command
 
@@ -13,28 +13,21 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab0_source_observability.py
+  /opt/spark/src/apps/labs/lab_0/source_inventory.py
 ```
 
 ## Required configuration
 
-This script uses two named experiments from `src/config/experiments.yaml`:
-
-- `lab0-source-observability-native`: runs the workload with sparkMeasure disabled.
-- `lab0-source-observability-sparkmeasure`: runs the same workload with sparkMeasure enabled.
-
-Both experiments require these Delta input artifacts:
+This script uses `lab0-source-inventory` from `src/config/experiments.yaml`.
+It reads these Delta input artifacts:
 
 - `vendors`
 - `products`
 - `customers`
 - `sales`
 
-The sparkMeasure experiment persists stage metrics to:
-
-```text
-s3a://observability/spark-measure/lab0/source-observability/latest
-```
+This lab intentionally does not enable sparkMeasure. Its purpose is to show
+which generated sources are available before running diagnostic workloads.
 """
 
 from __future__ import annotations
@@ -53,20 +46,15 @@ from spark_workshop.experiments import (
 from spark_workshop.utils import logger, terminal_section
 
 
-NATIVE_EXPERIMENT_NAME = "lab0-source-observability-native"
-SPARKMEASURE_EXPERIMENT_NAME = "lab0-source-observability-sparkmeasure"
+EXPERIMENT_NAME = "lab0-source-inventory"
 SOURCE_TABLES = ("vendors", "products", "customers", "sales")
 
 
-class Lab0SourceObservability(SparkExperiment):
-    """Profiles generated bronze sources with a small, repeatable workload."""
+class Lab0SourceInventory(SparkExperiment):
+    """Profiles generated bronze sources before diagnostic labs."""
 
     def workload(self, context: ExperimentContext) -> dict[str, Any]:
         tables = {name: context.read(name) for name in SOURCE_TABLES}
-
-        if not context.config.observability.enabled:
-            _explain_native_plans(context, tables)
-
         source_profiles = _profile_sources(context, tables)
         sales_skew = _profile_sales_skew(
             context=context,
@@ -94,35 +82,7 @@ class Lab0SourceObservability(SparkExperiment):
         if any(value != 0 for value in violations.values()):
             raise RuntimeError(f"Lab 0 relationship checks failed: {violations}")
 
-        context.logger.info(f"LAB0_VALIDATION_OK experiment={context.config.name}")
-
-
-def _explain_native_plans(
-    context: ExperimentContext,
-    tables: dict[str, DataFrame],
-) -> None:
-    context.logger.info(
-        terminal_section(
-            "Native Spark explain output",
-            "Verbose physical plans before sparkMeasure collection",
-        )
-    )
-
-    source_count_plan = tables["sales"].groupBy("vendor_id").count()
-    context.logger.info(
-        "LAB0_NATIVE_EXPLAIN plan=sales_vendor_count mode=formatted"
-    )
-    source_count_plan.explain(mode="formatted")
-
-    relationship_plan = tables["sales"].join(
-        tables["products"].select("product_id", "vendor_id"),
-        ["product_id", "vendor_id"],
-        "left_anti",
-    )
-    context.logger.info(
-        "LAB0_NATIVE_EXPLAIN plan=sales_products_left_anti mode=formatted"
-    )
-    relationship_plan.explain(mode="formatted")
+        context.logger.info(f"LAB0_SOURCE_INVENTORY_VALIDATION_OK experiment={context.config.name}")
 
 
 def _profile_sources(
@@ -147,7 +107,6 @@ def _profile_sources(
         profiles[table_name] = profile
         context.logger.info(
             "LAB0_SOURCE_PROFILE "
-            f"experiment={context.config.name} "
             f"table={table_name} "
             f"rows={profile['rows']} "
             f"files={profile['files']} "
@@ -186,7 +145,6 @@ def _profile_sales_skew(
         summary.append(item)
         context.logger.info(
             "LAB0_SALES_SKEW "
-            f"experiment={context.config.name} "
             f"rank={item['rank']} "
             f"vendor_id={item['vendor_id']} "
             f"rows={item['rows']} "
@@ -225,7 +183,6 @@ def _check_relationships(
     normalized = {name: int(value) for name, value in checks.items()}
     context.logger.info(
         "LAB0_RELATIONSHIP_CHECK "
-        f"experiment={context.config.name} "
         f"vendor_fk_violations={normalized['vendor_fk_violations']} "
         f"product_fk_violations={normalized['product_fk_violations']} "
         f"customer_fk_violations={normalized['customer_fk_violations']}"
@@ -233,56 +190,21 @@ def _check_relationships(
     return normalized
 
 
-def _run_experiment(experiment_name: str) -> ExperimentRun:
-    config = load_experiment_config(experiment_name)
-    return ExperimentRunner(config).run(Lab0SourceObservability())
-
-
-def _log_run_summary(run: ExperimentRun) -> None:
-    logger.info(f"LAB0_EXPERIMENT={run.experiment_name}")
-    if not run.metrics:
-        logger.info("LAB0_NATIVE_SPARKMEASURE_ENABLED=false")
-        logger.info("LAB0_NATIVE_OK")
-        return
-
-    logger.info("LAB0_SPARKMEASURE_ENABLED=true")
-    logger.info(f"LAB0_SPARKMEASURE_DELTA_PATH={run.metrics_output_path}")
-    logger.info(
-        "LAB0_SPARKMEASURE_METRICS "
-        f"numStages={run.metrics.get('numStages', 0)} "
-        f"numTasks={run.metrics.get('numTasks', 0)} "
-        f"executorRunTime={run.metrics.get('executorRunTime', 0)} "
-        f"shuffleBytesWritten={run.metrics.get('shuffleBytesWritten', 0)}"
-    )
-    logger.info("LAB0_SPARKMEASURE_OK")
+def _run_experiment() -> ExperimentRun:
+    config = load_experiment_config(EXPERIMENT_NAME)
+    return ExperimentRunner(config).run(Lab0SourceInventory())
 
 
 def main() -> int:
     logger.info(
         terminal_section(
-            "Lab 0 - Native Spark baseline",
-            "Spark UI, History Server, logs, and explain output",
+            "Lab 0 - Source inventory",
+            "Generated bronze tables, file layout, skew, and FK readiness",
         )
     )
-    native_run = _run_experiment(NATIVE_EXPERIMENT_NAME)
-    _log_run_summary(native_run)
-
-    logger.info(
-        terminal_section(
-            "Lab 0 - sparkMeasure observed run",
-            "Same workload with stage metrics collected and persisted",
-        )
-    )
-    sparkmeasure_run = _run_experiment(SPARKMEASURE_EXPERIMENT_NAME)
-    _log_run_summary(sparkmeasure_run)
-
-    logger.info(
-        terminal_section(
-            "Lab 0 complete",
-            "Native Spark output and sparkMeasure metrics are ready to compare",
-        )
-    )
-    logger.info("LAB0_SOURCE_OBSERVABILITY_OK")
+    run = _run_experiment()
+    logger.info(f"LAB0_EXPERIMENT={run.experiment_name}")
+    logger.info("LAB0_SOURCE_INVENTORY_OK")
     return 0
 
 

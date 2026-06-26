@@ -30,8 +30,8 @@ experiments:
           options:
             overwriteSchema: true
 
-  lab0-source-observability-native:
-    app_name: workshop-lab0-source-observability-native
+  lab0-source-inventory:
+    app_name: workshop-lab0-source-inventory
     observability:
       enabled: false
       persist: false
@@ -50,31 +50,46 @@ experiments:
           format: delta
           path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
 
-  lab0-source-observability-sparkmeasure:
-    app_name: workshop-lab0-source-observability-sparkmeasure
+  lab0-sparkmeasure-presentation-native:
+    app_name: workshop-lab0-sparkmeasure-presentation-native
     observability:
-      enabled: true
-      collector: stage
-      persist: true
-      output_artifact: metrics
+      enabled: false
+      persist: false
     artifacts:
       inputs:
-        vendors:
-          format: delta
-          path: ${LAB0_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
-        products:
-          format: delta
-          path: ${LAB0_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
-        customers:
-          format: delta
-          path: ${LAB0_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
         sales:
           format: delta
           path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
       outputs:
+        vendor_sales_summary:
+          format: delta
+          path: ${LAB0_VENDOR_SALES_SUMMARY_PATH:-s3a://lakehouse/silver/lab0/vendor_sales_summary}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+
+  lab0-sparkmeasure-presentation-observed:
+    app_name: workshop-lab0-sparkmeasure-presentation-observed
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+      output_artifact: metrics
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+      outputs:
+        vendor_sales_summary:
+          format: delta
+          path: ${LAB0_VENDOR_SALES_SUMMARY_PATH:-s3a://lakehouse/silver/lab0/vendor_sales_summary}
+          mode: overwrite
+          options:
+            overwriteSchema: true
         metrics:
           format: delta
-          path: ${LAB0_SPARKMEASURE_METRICS_PATH:-s3a://observability/spark-measure/lab0/source-observability/latest}
+          path: ${LAB0_SPARKMEASURE_METRICS_PATH:-s3a://observability/spark-measure/lab0/presentation/latest}
           mode: overwrite
           options:
             overwriteSchema: true

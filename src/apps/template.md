@@ -23,7 +23,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/<script_name>.py
+  /opt/spark/src/apps/labs/<lab_name>/<script_name>.py
 ```
 
 ## Configuration contract
@@ -55,7 +55,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --deploy-mode client \
   --conf spark.driver.host=spark-master \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/example_lab.py
+  /opt/spark/src/apps/labs/lab_0/example_lab.py
 ```
 
 ## Required configuration
