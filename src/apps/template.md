@@ -23,7 +23,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/<script_name>.py
+  /opt/spark/src/apps/labs/<lab_name>/<script_name>.py
 ```
 
 ## Configuration contract
@@ -55,7 +55,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --deploy-mode client \
   --conf spark.driver.host=spark-master \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/example_lab.py
+  /opt/spark/src/apps/labs/lab_0/example_lab.py
 ```
 
 ## Required configuration
@@ -73,7 +73,7 @@ from spark_workshop.experiments import (
     ExperimentRunner,
     SparkExperiment,
 )
-from spark_workshop.utils import logger
+from spark_workshop.utils import logger, terminal_section
 
 
 EXPERIMENT_NAME = "example-lab"
@@ -107,6 +107,12 @@ class ExampleLab(SparkExperiment):
 
 
 def main() -> int:
+    logger.info(
+        terminal_section(
+            "Example lab",
+            "Readable separator for submit logs and live demos",
+        )
+    )
     config = load_experiment_config(EXPERIMENT_NAME)
     run = ExperimentRunner(config).run(ExampleLab())
 
@@ -131,6 +137,7 @@ if __name__ == "__main__":
 - Keep the measured Spark actions inside `workload()`; setup, validation, metric persistence, and cleanup stay outside the measured boundary.
 - Use `context.read()` and `context.write()` for named artifacts.
 - Use `context.logger` or the shared `logger`; do not use `print()` for lab output.
+- Use `terminal_section()` when a script has multiple visible phases in the same submit output.
 - Keep app identity and artifact paths in `src/config/experiments.yaml`.
 - Keep `.explain()` snippets commented by default to avoid noisy output before the sparkMeasure comparison.
 - Avoid broad `collect()`, `show()`, and `toPandas()` patterns. Use small bounded driver results only when they are intentional lab output.

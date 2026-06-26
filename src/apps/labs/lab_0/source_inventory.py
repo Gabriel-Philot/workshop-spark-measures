@@ -1,0 +1,214 @@
+"""# Lab 0: Source inventory
+
+## Submit command
+
+Assumes the Compose stack is running and the bronze retail sources exist at
+the configured input artifact paths.
+
+```bash
+docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --deploy-mode client \
+  --conf spark.driver.host=spark-master \
+  --conf spark.eventLog.dir=s3a://observability/event-logs \
+  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+  /opt/spark/src/apps/labs/lab_0/source_inventory.py
+```
+
+## Required configuration
+
+This script uses `lab0-source-inventory` from `src/config/experiments.yaml`.
+It reads these Delta input artifacts:
+
+- `vendors`
+- `products`
+- `customers`
+- `sales`
+
+This lab intentionally does not enable sparkMeasure. Its purpose is to show
+source row counts, physical file counts, physical byte size, relationship
+readiness, and a final note about the generated vendor imbalance.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from pyspark.sql import DataFrame, functions as F
+
+from spark_workshop.artifacts import data_file_stats_for_dataframe
+from spark_workshop.config import load_experiment_config
+from spark_workshop.experiments import (
+    ExperimentContext,
+    ExperimentRun,
+    ExperimentRunner,
+    SparkExperiment,
+)
+from spark_workshop.utils import logger, terminal_section
+
+
+EXPERIMENT_NAME = "lab0-source-inventory"
+SOURCE_TABLES = ("vendors", "products", "customers", "sales")
+
+
+class Lab0SourceInventory(SparkExperiment):
+    """Profiles generated bronze sources before diagnostic labs."""
+
+    def workload(self, context: ExperimentContext) -> dict[str, Any]:
+        tables = {name: context.read(name) for name in SOURCE_TABLES}
+        source_profiles = _profile_sources(context, tables)
+        relationship_checks = _check_relationships(context, tables)
+        imbalance_note = _profile_sales_vendor_imbalance(
+            context=context,
+            sales=tables["sales"],
+            total_sales=source_profiles["sales"]["rows"],
+        )
+
+        return {
+            "source_profiles": source_profiles,
+            "relationship_checks": relationship_checks,
+            "imbalance_note": imbalance_note,
+        }
+
+    def validate(self, result: dict[str, Any], context: ExperimentContext) -> None:
+        empty_tables = [
+            table
+            for table, profile in result["source_profiles"].items()
+            if profile["rows"] <= 0
+        ]
+        if empty_tables:
+            raise RuntimeError(f"Lab 0 found empty source tables: {empty_tables}")
+
+        violations = result["relationship_checks"]
+        if any(value != 0 for value in violations.values()):
+            raise RuntimeError(f"Lab 0 relationship checks failed: {violations}")
+
+        context.logger.info(
+            f"LAB0_SOURCE_INVENTORY_VALIDATION_OK experiment={context.config.name}"
+        )
+
+
+def _profile_sources(
+    context: ExperimentContext,
+    tables: dict[str, DataFrame],
+) -> dict[str, dict[str, int | float]]:
+    profiles: dict[str, dict[str, int | float]] = {}
+    for table_name, dataframe in tables.items():
+        row_count = int(dataframe.count())
+        file_stats = data_file_stats_for_dataframe(dataframe)
+        profile = {
+            "rows": row_count,
+            "files": file_stats.file_count,
+            "total_bytes": file_stats.total_bytes,
+            "min_file_bytes": file_stats.min_file_bytes,
+            "avg_file_bytes": file_stats.avg_file_bytes,
+            "max_file_bytes": file_stats.max_file_bytes,
+            "columns": len(dataframe.columns),
+        }
+        profiles[table_name] = profile
+        context.logger.info(
+            "LAB0_SOURCE_VOLUME "
+            f"table={table_name} "
+            f"rows={profile['rows']} "
+            f"files={profile['files']} "
+            f"total_bytes={profile['total_bytes']} "
+            f"min_file_bytes={profile['min_file_bytes']} "
+            f"avg_file_bytes={profile['avg_file_bytes']:.1f} "
+            f"max_file_bytes={profile['max_file_bytes']} "
+            f"columns={profile['columns']}"
+        )
+    return profiles
+
+
+def _profile_sales_vendor_imbalance(
+    context: ExperimentContext,
+    sales: DataFrame,
+    total_sales: int | float,
+) -> dict[str, int | float]:
+    top_vendor = (
+        sales.groupBy("vendor_id")
+        .agg(F.count("*").alias("row_count"))
+        .orderBy(F.desc("row_count"))
+        .limit(1)
+        .collect()
+    )
+    if not top_vendor:
+        note = {"top_vendor_id": 0, "top_vendor_rows": 0, "top_vendor_share": 0.0}
+    else:
+        row = top_vendor[0]
+        top_vendor_rows = int(row.row_count)
+        note = {
+            "top_vendor_id": int(row.vendor_id),
+            "top_vendor_rows": top_vendor_rows,
+            "top_vendor_share": (
+                float(top_vendor_rows / total_sales) if total_sales else 0.0
+            ),
+        }
+
+    context.logger.info(
+        "LAB0_SOURCE_CHARACTERISTIC "
+        "table=sales characteristic=vendor_imbalance "
+        f"top_vendor_id={note['top_vendor_id']} "
+        f"top_vendor_rows={note['top_vendor_rows']} "
+        f"top_vendor_share={note['top_vendor_share']:.4f}"
+    )
+    return note
+
+
+def _check_relationships(
+    context: ExperimentContext,
+    tables: dict[str, DataFrame],
+) -> dict[str, int]:
+    sales = tables["sales"]
+    vendors = tables["vendors"]
+    products = tables["products"]
+    customers = tables["customers"]
+
+    checks = {
+        "vendor_fk_violations": sales.join(
+            vendors.select("vendor_id"),
+            "vendor_id",
+            "left_anti",
+        ).count(),
+        "product_fk_violations": sales.join(
+            products.select("product_id", "vendor_id"),
+            ["product_id", "vendor_id"],
+            "left_anti",
+        ).count(),
+        "customer_fk_violations": sales.join(
+            customers.select("customer_id"),
+            "customer_id",
+            "left_anti",
+        ).count(),
+    }
+    normalized = {name: int(value) for name, value in checks.items()}
+    context.logger.info(
+        "LAB0_RELATIONSHIP_CHECK "
+        f"vendor_fk_violations={normalized['vendor_fk_violations']} "
+        f"product_fk_violations={normalized['product_fk_violations']} "
+        f"customer_fk_violations={normalized['customer_fk_violations']}"
+    )
+    return normalized
+
+
+def _run_experiment() -> ExperimentRun:
+    config = load_experiment_config(EXPERIMENT_NAME)
+    return ExperimentRunner(config).run(Lab0SourceInventory())
+
+
+def main() -> int:
+    logger.info(
+        terminal_section(
+            "Lab 0 - Source inventory",
+            "Rows, physical bytes, file layout, FK readiness, and imbalance note",
+        )
+    )
+    run = _run_experiment()
+    logger.info(f"LAB0_EXPERIMENT={run.experiment_name}")
+    logger.info("LAB0_SOURCE_INVENTORY_OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
