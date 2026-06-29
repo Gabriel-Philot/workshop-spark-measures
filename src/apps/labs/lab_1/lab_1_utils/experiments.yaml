@@ -1,0 +1,80 @@
+comparison_jobs:
+  lab1-global-sort-diagnosis:
+    native:
+      config: lab1-global-sort-diagnosis-native
+      title: Lab 1 - Native global sort ranking
+      description: Spark explain and History Server before sparkMeasure
+      success_marker: LAB1_GLOBAL_SORT_NATIVE_OK
+    observed:
+      config: lab1-global-sort-diagnosis-observed-stage
+      title: Lab 1 - sparkMeasure stage diagnosis
+      description: Same global sort with stage metrics collected
+      success_marker: LAB1_GLOBAL_SORT_SPARKMEASURE_STAGE_OK
+    completion:
+      title: Lab 1 global sort diagnosis complete
+      description: Use stage metrics to isolate the ranking bottleneck
+      success_marker: LAB1_GLOBAL_SORT_DIAGNOSIS_OK
+    explain:
+      enabled: true
+      modes:
+        - native
+      title: Native Spark explain output
+      description: The plan exposes the global orderBy, but the signal is verbose
+      mode: formatted
+
+experiments:
+  lab1-global-sort-diagnosis-native:
+    app_name: workshop-lab1-global-sort-native
+    observability:
+      enabled: false
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB1_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB1_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB1_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+      outputs:
+        top_sales_global_sort:
+          format: delta
+          path: ${LAB1_TOP_SALES_GLOBAL_SORT_PATH:-s3a://lakehouse/gold/lab1/top_sales_global_sort}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+
+  lab1-global-sort-diagnosis-observed-stage:
+    app_name: workshop-lab1-global-sort-observed-stage
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+      output_artifact: metrics
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB1_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB1_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB1_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+      outputs:
+        top_sales_global_sort:
+          format: delta
+          path: ${LAB1_TOP_SALES_GLOBAL_SORT_PATH:-s3a://lakehouse/gold/lab1/top_sales_global_sort}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+        metrics:
+          format: delta
+          path: ${LAB1_SPARKMEASURE_METRICS_PATH:-s3a://observability/spark-measure/lab1/global-sort/latest}
+          mode: overwrite
+          options:
+            overwriteSchema: true
