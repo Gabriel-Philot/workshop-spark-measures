@@ -1,11 +1,12 @@
 # Lab 0: source inventory and sparkMeasure presentation
 
-Lab 0 is split into two scripts on purpose:
+Lab 0 is split into three scripts on purpose:
 
 - `source_inventory.py` checks whether the generated bronze sources are ready for the labs.
-- `sparkmeasure_presentation.py` runs a focused Bronze-to-Silver refinement twice: first with native Spark output, then with sparkMeasure enabled.
+- `sparkmeasure_native_api.py` shows sparkMeasure's natural Python API directly with `StageMetrics`.
+- `sparkmeasure_presentation.py` runs the same Silver enrichment twice: first native, then through the workshop contract with sparkMeasure enabled.
 
-This keeps the source-readiness checks separate from the sparkMeasure demonstration. The inventory script intentionally creates several Spark actions because it profiles multiple tables and relationships. The presentation script is the cleaner comparison point because both runs execute the same small refinement workload.
+This keeps source readiness, raw sparkMeasure usage, and our workshop abstraction separate.
 
 ## Prerequisites
 
@@ -44,13 +45,36 @@ Expected terminal markers:
 - `LAB0_SOURCE_VOLUME`: rows, file count, total physical bytes, min/avg/max file bytes, and columns per source table.
 - `LAB0_RELATIONSHIP_CHECK`: FK violation counts for generated relationships.
 - `LAB0_SOURCE_CHARACTERISTIC`: final short note that the generated `sales` source has vendor imbalance for later diagnostic labs.
+- `WORKSHOP_RUN_COMPLETED`: generic run summary from the shared job contract.
 - `LAB0_SOURCE_INVENTORY_OK`: successful completion marker.
 
-This script uses `lab0-source-inventory` from `src/config/experiments.yaml` and keeps sparkMeasure disabled.
+## 2. Natural sparkMeasure API
 
-## 2. sparkMeasure presentation
+Run this second to show the raw library API before the workshop abstraction.
 
-Run this script after the source inventory. It uses only the bronze `sales` table and writes one Silver Delta table.
+```bash
+docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --deploy-mode client \
+  --conf spark.driver.host=spark-master \
+  --conf spark.eventLog.dir=s3a://observability/event-logs \
+  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+  /opt/spark/src/apps/labs/lab_0/sparkmeasure_native_api.py
+```
+
+This script calls `StageMetrics(spark)`, `begin()`, executes a controlled `.show()` action over the Silver enrichment, then calls `end()`, `print_report()`, and `aggregate_stagemetrics()`.
+
+Expected terminal markers:
+
+- `SPARKMEASURE_NATURAL_API_BEGIN`
+- `SPARKMEASURE_NATURAL_API_END`
+- `SPARKMEASURE_NATURAL_API_METRICS`
+- `LAB0_SPARKMEASURE_NATURAL_API_OK`
+
+## 3. Workshop contract presentation
+
+Run this script after the natural API demo. It reads bronze `sales`, `vendors`, and `products`, builds a Silver `sales_enriched` table, and writes it to MinIO.
 
 ```bash
 docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
@@ -63,18 +87,18 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   /opt/spark/src/apps/labs/lab_0/sparkmeasure_presentation.py
 ```
 
-The script runs two named experiments:
+The script reads comparison metadata from the local `lab_0_utils/experiments.yaml`:
 
-- `lab0-sparkmeasure-presentation-native`
-- `lab0-sparkmeasure-presentation-observed`
+- `comparison_jobs.lab0-sparkmeasure-presentation.native.config`
+- `comparison_jobs.lab0-sparkmeasure-presentation.observed.config`
 
 Both write:
 
 ```text
-s3a://lakehouse/silver/lab0/vendor_sales_summary
+s3a://lakehouse/silver/lab0/sales_enriched
 ```
 
-The native run prints a formatted Spark physical plan with `explain(mode="formatted")`. The observed run enables sparkMeasure stage metrics and logs a compact line with `numStages`, `numTasks`, `executorRunTime`, and `shuffleBytesWritten`.
+The native run prints a formatted Spark physical plan with `SPARK_EXPLAIN`. The observed run enables sparkMeasure stage metrics through YAML config and logs `SPARKMEASURE_METRICS` with `numStages`, `numTasks`, `executorRunTime`, and `shuffleBytesWritten`.
 
 Metric persistence is disabled for this presentation experiment:
 
@@ -85,7 +109,7 @@ observability:
   persist: false
 ```
 
-That is intentional. It avoids extra Delta write jobs for the metrics table, so the Spark History view stays focused on the workload being demonstrated. sparkMeasure still collects metrics around `workload()` and exposes them through the terminal logs.
+That is intentional. It avoids extra Delta write jobs for the metrics table, so the Spark History view stays focused on the workload being demonstrated.
 
 ## UI walkthrough
 
@@ -94,6 +118,7 @@ After submitting the scripts, open the Spark History Server at <http://127.0.0.1
 Look for these applications:
 
 - `workshop-lab0-source-inventory`
+- `workshop-lab0-sparkmeasure-native-api`
 - `workshop-lab0-sparkmeasure-presentation-native`
 - `workshop-lab0-sparkmeasure-presentation-observed`
 
@@ -103,19 +128,7 @@ For each application:
 2. Use the `Jobs` tab to compare how many jobs the application created.
 3. Use the `Stages` tab to inspect stage duration, task counts, and shuffle columns.
 4. Use the `SQL / DataFrame` tab when available to inspect Spark SQL execution details.
-5. Use the terminal output from the observed run to compare native Spark UI detail with sparkMeasure's compact stage summary.
-
-The useful contrast for the workshop is:
-
-- Spark native UI is detailed and useful, but students need to navigate jobs, stages, SQL plans, and logs.
-- sparkMeasure gives a compact workload-level summary directly in the submit output, which is easier to use while diagnosing a specific experiment.
-
-Playwright validation against the local UI confirmed these navigation details:
-
-- The History Server home table shows the app name, but the clickable application link is the App ID.
-- Application pages expose `Jobs`, `Stages`, `Storage`, `Environment`, `Executors`, and `SQL / DataFrame` tabs.
-- The source inventory app is intentionally noisier because it profiles several tables, physical file sizes, and FK checks; do not use it as the sparkMeasure comparison point.
-- The presentation app is the comparison point. It has one intentional refinement write, but Delta metadata and commit internals still appear as Spark jobs and stages. Exact UI counts can change depending on prior table state and overwrite behavior.
+5. Use the terminal output from natural API and observed contract runs to compare direct sparkMeasure with the workshop wrapper.
 
 ## MinIO walkthrough
 
@@ -127,7 +140,7 @@ Useful paths:
 - `lakehouse/bronze/retail/products`
 - `lakehouse/bronze/retail/customers`
 - `lakehouse/bronze/retail/sales`
-- `lakehouse/silver/lab0/vendor_sales_summary`
+- `lakehouse/silver/lab0/sales_enriched`
 - `observability/event-logs`
 
-For this lab, sparkMeasure metrics are not persisted as a Delta table. Event logs still go to `observability/event-logs` because the submit command sets `spark.eventLog.dir`.
+For this lab, sparkMeasure metrics are not persisted as a Delta table. Event logs still go to `observability/event-logs` because the submit command sets `spark.eventLog.dir`. The scripts use local `lab_0_utils/experiments.yaml` config and keep Spark/SRE markers separated as `SPARK_*`, `SPARKMEASURE_*`, `WORKSHOP_*`, and lab-specific `LAB0_*` lines.

@@ -1,0 +1,117 @@
+comparison_jobs:
+  lab0-sparkmeasure-presentation:
+    native:
+      config: lab0-sparkmeasure-presentation-native
+      title: Lab 0 - Native Bronze to Silver enrichment
+      description: Spark explain and Spark UI before sparkMeasure
+      success_marker: LAB0_PRESENTATION_NATIVE_OK
+    observed:
+      config: lab0-sparkmeasure-presentation-observed
+      title: Lab 0 - sparkMeasure presentation
+      description: Same enrichment with stage metrics collected
+      success_marker: LAB0_PRESENTATION_SPARKMEASURE_OK
+    completion:
+      title: Lab 0 presentation complete
+      description: Compare native plan output with compact sparkMeasure metrics
+      success_marker: LAB0_SPARKMEASURE_PRESENTATION_OK
+    explain:
+      enabled: true
+      modes:
+        - native
+      title: Native Spark explain output
+      description: The plan is useful but verbose before sparkMeasure
+      mode: formatted
+
+experiments:
+  lab0-source-inventory:
+    app_name: workshop-lab0-source-inventory
+    observability:
+      enabled: false
+      persist: false
+    artifacts:
+      inputs:
+        vendors:
+          format: delta
+          path: ${LAB0_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB0_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB0_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
+        sales:
+          format: delta
+          path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+
+  lab0-sparkmeasure-native-api:
+    app_name: workshop-lab0-sparkmeasure-native-api
+    observability:
+      enabled: false
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB0_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB0_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+
+  lab0-sparkmeasure-presentation-native:
+    app_name: workshop-lab0-sparkmeasure-presentation-native
+    observability:
+      enabled: false
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB0_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB0_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+      outputs:
+        sales_enriched:
+          format: delta
+          path: ${LAB0_SALES_ENRICHED_PATH:-s3a://lakehouse/silver/lab0/sales_enriched}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+
+  lab0-sparkmeasure-presentation-observed:
+    app_name: workshop-lab0-sparkmeasure-presentation-observed
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+      output_artifact: metrics
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB0_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB0_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB0_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+      outputs:
+        sales_enriched:
+          format: delta
+          path: ${LAB0_SALES_ENRICHED_PATH:-s3a://lakehouse/silver/lab0/sales_enriched}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+        metrics:
+          format: delta
+          path: ${LAB0_SPARKMEASURE_METRICS_PATH:-s3a://observability/spark-measure/lab0/presentation/latest}
+          mode: overwrite
+          options:
+            overwriteSchema: true

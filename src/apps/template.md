@@ -1,6 +1,6 @@
 # Spark Measures Workshop App Template
 
-Use this template when creating a new Spark workshop script under `src/apps`, especially `src/apps/labs`.
+Use this template when creating a Spark workshop script under `src/apps`, especially `src/apps/labs`.
 
 ## Script header
 
@@ -10,8 +10,7 @@ Every app script should start with a markdown-style module docstring that includ
 - Manual `spark-submit` command.
 - Required named experiment configuration.
 - Required input and output artifacts.
-- Execution sequence.
-- Whether sparkMeasure is enabled or disabled by config.
+- Whether sparkMeasure is enabled or disabled by YAML config.
 
 Example command shape. Assumes the Compose stack is already running:
 
@@ -28,20 +27,22 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 ## Configuration contract
 
-Register each runnable app as one or more named experiments in `src/config/experiments.yaml`.
+Register each runnable app as one or more named experiments. Shared defaults live in `src/config/experiments.yaml`; lab-specific experiments and comparison metadata can live under a lab utility package such as `<lab>_utils/experiments.yaml`.
 
 Required fields:
 
 - `app_name`: Spark application name visible in Spark UI and History Server.
-- `artifacts.inputs`: named inputs consumed with `context.read("<name>")`.
-- `observability.enabled`: controls whether sparkMeasure wraps `workload()`.
-- `artifacts.outputs.metrics`: required when `observability.persist=true`.
+- `artifacts.inputs`: named inputs consumed with `self.read("<name>")`.
+- `artifacts.outputs`: named outputs written with `self.write("<name>", dataframe)`.
+- `observability.enabled`: controls whether sparkMeasure wraps the measured contract.
+- `observability.collector`: `stage` or `task`; keep this in YAML, not in the lab script.
+- `artifacts.outputs.metrics`: required only when `observability.persist=true`.
 
 Keep storage paths in config. App code should reference artifact names, not hard-coded lake paths.
 
-## Job contract
+## Single job contract
 
-Use `SparkExperiment` so config loading, logging, Spark session lifecycle, named artifact IO, sparkMeasure collection, metric persistence, and clean shutdown are handled consistently.
+Use `SparkWorkshopJob` so config loading, logging, Spark session lifecycle, named artifact IO, sparkMeasure collection, metric persistence, and clean shutdown are handled consistently.
 
 ```python
 """# Example lab
@@ -60,84 +61,101 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 ## Required configuration
 
-This script expects an `example-lab` experiment in `src/config/experiments.yaml`
-with a `source` input artifact and, when sparkMeasure persistence is enabled, a
-`metrics` output artifact.
+This script expects an `example-lab` experiment in `src/config/experiments.yaml`.
 """
 
-from typing import Any
+from pathlib import Path
 
-from spark_workshop.config import load_experiment_config
-from spark_workshop.experiments import (
-    ExperimentContext,
-    ExperimentRunner,
-    SparkExperiment,
-)
-from spark_workshop.utils import logger, terminal_section
+from pyspark.sql import DataFrame, functions as F
+
+from spark_workshop.jobs import SparkWorkshopJob
 
 
-EXPERIMENT_NAME = "example-lab"
+CONFIG_PATH = Path(__file__).parent / "<lab>_utils" / "experiments.yaml"
 
 
-class ExampleLab(SparkExperiment):
-    def prepare(self, context: ExperimentContext) -> None:
-        # Optional setup that should not be measured by sparkMeasure.
-        pass
+class ExampleLab(SparkWorkshopJob):
+    config_name = "example-lab"
+    config_path = CONFIG_PATH
+    title = "Example lab"
+    description = "Readable separator for submit logs and live demos"
+    success_marker = "EXAMPLE_LAB_OK"
 
-    def workload(self, context: ExperimentContext) -> Any:
-        source = context.read("source")
-        result = source.groupBy("key").count()
+    def extract(self) -> DataFrame:
+        return self.read("source")
 
-        # Uncomment during live demos when you want to compare Spark's native
-        # physical plan output with sparkMeasure metrics.
-        #
-        # result.explain(mode="formatted")
+    def transform(self, source: DataFrame) -> DataFrame:
+        return source.groupBy("key").agg(F.count("*").alias("row_count"))
 
-        # Small bounded driver results are acceptable for lab summaries.
-        return result.limit(10).collect()
+    def load(self, result: DataFrame) -> str:
+        self.write("target", result)
+        return self.output_path("target")
 
-    def validate(self, result: Any, context: ExperimentContext) -> None:
-        if not result:
-            raise RuntimeError("Example lab returned no rows")
-        context.logger.info("EXAMPLE_LAB_VALIDATION_OK")
-
-    def cleanup(self, context: ExperimentContext) -> None:
-        # Optional cleanup that should not be measured by sparkMeasure.
-        pass
+    def validate_result(self, output_path: str) -> None:
+        if not output_path:
+            raise RuntimeError("Example lab returned no output path")
+        self.logger.info("EXAMPLE_LAB_VALIDATION_OK")
 
 
 def main() -> int:
-    logger.info(
-        terminal_section(
-            "Example lab",
-            "Readable separator for submit logs and live demos",
-        )
-    )
-    config = load_experiment_config(EXPERIMENT_NAME)
-    run = ExperimentRunner(config).run(ExampleLab())
-
-    logger.info(f"EXPERIMENT={run.experiment_name}")
-    if run.metrics:
-        logger.info(f"SPARKMEASURE_DELTA_PATH={run.metrics_output_path}")
-        logger.info(
-            "SPARKMEASURE_METRICS "
-            f"numStages={run.metrics.get('numStages', 0)} "
-            f"numTasks={run.metrics.get('numTasks', 0)} "
-            f"executorRunTime={run.metrics.get('executorRunTime', 0)}"
-        )
-    return 0
+    return ExampleLab().run()
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
+## Native vs sparkMeasure comparison contract
+
+Use `SparkWorkshopComparisonJob` when the same Spark contract should run once natively and once with sparkMeasure enabled by config.
+
+```python
+from pathlib import Path
+
+from pyspark.sql import DataFrame, functions as F
+
+from spark_workshop.jobs import SparkWorkshopComparisonJob
+
+
+CONFIG_PATH = Path(__file__).parent / "<lab>_utils" / "experiments.yaml"
+
+
+class ExampleComparisonLab(SparkWorkshopComparisonJob):
+    config_path = CONFIG_PATH
+    job_name = "example-comparison"
+
+    def extract(self) -> DataFrame:
+        return self.read("source")
+
+    def transform(self, source: DataFrame) -> DataFrame:
+        return source.groupBy("key").agg(F.count("*").alias("row_count"))
+
+    def load(self, result: DataFrame) -> str:
+        self.write("target", result)
+        return self.output_path("target")
+
+
+def main() -> int:
+    return ExampleComparisonLab().run()
+```
+
+## Log namespaces
+
+Keep logs segmented by concern:
+
+- `WORKSHOP_*`: lab narrative, sections, run summaries, output summaries.
+- `SPARK_*`: Spark artifact IO and physical plan output.
+- `SPARKMEASURE_*`: collector state, aggregate metrics, optional persisted metrics path.
+- `LAB*_*` or lab-specific markers: assertions or teaching markers for one lab.
+
 ## Rules
 
-- Keep the measured Spark actions inside `workload()`; setup, validation, metric persistence, and cleanup stay outside the measured boundary.
-- Use `context.read()` and `context.write()` for named artifacts.
-- Use `context.logger` or the shared `logger`; do not use `print()` for lab output.
-- Use `terminal_section()` when a script has multiple visible phases in the same submit output.
-- Keep app identity and artifact paths in `src/config/experiments.yaml`.
-- Keep `.explain()` snippets commented by default to avoid noisy output before the sparkMeasure comparison.
-- Avoid broad `collect()`, `show()`, and `toPandas()` patterns. Use small bounded driver results only when they are intentional lab output.
+- Keep transformation logic in `transform()` whenever possible.
+- Use `extract()` only to read configured artifacts or construct input DataFrames.
+- Use `load()` for writes and for the Spark action you want sparkMeasure to observe.
+- Use `validate_result()` for validation after the measured workload.
+- Use `self.read()`, `self.write()`, `self.input_path()`, and `self.output_path()` for named artifacts.
+- Use `self.logger` or the shared logger; do not use `print()` for lab output.
+- Keep app identity, comparison labels, markers, artifact paths, and `collector: stage | task` in YAML config. Prefer a local `<lab>_utils/experiments.yaml` when the experiments are lab-specific.
+- Avoid broad `collect()`, `show()`, and `toPandas()` in normal workload scripts.
+- Keep `.explain()` controlled by `explain_plan=True`; the base contract prints it outside the measured sparkMeasure boundary.

@@ -18,79 +18,78 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 ## Required configuration
 
-This script uses `lab0-source-inventory` from `src/config/experiments.yaml`.
-It reads these Delta input artifacts:
+This script uses `lab0-source-inventory` from `lab_0_utils/experiments.yaml`.
+It reads `vendors`, `products`, `customers`, and `sales` as Delta inputs.
 
-- `vendors`
-- `products`
-- `customers`
-- `sales`
-
-This lab intentionally does not enable sparkMeasure. Its purpose is to show
+This lab intentionally keeps sparkMeasure disabled. Its purpose is to show
 source row counts, physical file counts, physical byte size, relationship
 readiness, and a final note about the generated vendor imbalance.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from pyspark.sql import DataFrame, functions as F
 
 from spark_workshop.artifacts import data_file_stats_for_dataframe
-from spark_workshop.config import load_experiment_config
-from spark_workshop.experiments import (
-    ExperimentContext,
-    ExperimentRun,
-    ExperimentRunner,
-    SparkExperiment,
-)
-from spark_workshop.utils import logger, terminal_section
+from spark_workshop.jobs import SparkWorkshopJob
 
 
-EXPERIMENT_NAME = "lab0-source-inventory"
-SOURCE_TABLES = ("vendors", "products", "customers", "sales")
+CONFIG_PATH = Path(__file__).parent / "lab_0_utils" / "experiments.yaml"
 
 
-class Lab0SourceInventory(SparkExperiment):
+class Lab0SourceInventory(SparkWorkshopJob):
     """Profiles generated bronze sources before diagnostic labs."""
 
-    def workload(self, context: ExperimentContext) -> dict[str, Any]:
-        tables = {name: context.read(name) for name in SOURCE_TABLES}
-        source_profiles = _profile_sources(context, tables)
-        relationship_checks = _check_relationships(context, tables)
+    config_name = "lab0-source-inventory"
+    config_path = CONFIG_PATH
+    title = "Lab 0 - Source inventory"
+    description = "Rows, physical bytes, file layout, FK readiness, and imbalance note"
+    success_marker = "LAB0_SOURCE_INVENTORY_OK"
+    source_tables = ("vendors", "products", "customers", "sales")
+
+    def extract(self) -> dict[str, DataFrame]:
+        return {name: self.read(name) for name in self.source_tables}
+
+    def transform(self, tables: dict[str, DataFrame]) -> dict[str, Any]:
+        source_profiles = _profile_sources(self.logger, tables)
+        relationship_checks = _check_relationships(self.logger, tables)
         imbalance_note = _profile_sales_vendor_imbalance(
-            context=context,
+            logger=self.logger,
             sales=tables["sales"],
             total_sales=source_profiles["sales"]["rows"],
         )
-
         return {
             "source_profiles": source_profiles,
             "relationship_checks": relationship_checks,
             "imbalance_note": imbalance_note,
         }
 
-    def validate(self, result: dict[str, Any], context: ExperimentContext) -> None:
+    def load(self, inventory: dict[str, Any]) -> dict[str, Any]:
+        return inventory
+
+    def validate_result(self, inventory: dict[str, Any]) -> None:
         empty_tables = [
             table
-            for table, profile in result["source_profiles"].items()
+            for table, profile in inventory["source_profiles"].items()
             if profile["rows"] <= 0
         ]
         if empty_tables:
             raise RuntimeError(f"Lab 0 found empty source tables: {empty_tables}")
 
-        violations = result["relationship_checks"]
+        violations = inventory["relationship_checks"]
         if any(value != 0 for value in violations.values()):
             raise RuntimeError(f"Lab 0 relationship checks failed: {violations}")
 
-        context.logger.info(
-            f"LAB0_SOURCE_INVENTORY_VALIDATION_OK experiment={context.config.name}"
+        self.logger.info(
+            f"LAB0_SOURCE_INVENTORY_VALIDATION_OK experiment={self.context.config.name}"
         )
 
 
 def _profile_sources(
-    context: ExperimentContext,
+    logger: Any,
     tables: dict[str, DataFrame],
 ) -> dict[str, dict[str, int | float]]:
     profiles: dict[str, dict[str, int | float]] = {}
@@ -107,7 +106,7 @@ def _profile_sources(
             "columns": len(dataframe.columns),
         }
         profiles[table_name] = profile
-        context.logger.info(
+        logger.info(
             "LAB0_SOURCE_VOLUME "
             f"table={table_name} "
             f"rows={profile['rows']} "
@@ -121,43 +120,8 @@ def _profile_sources(
     return profiles
 
 
-def _profile_sales_vendor_imbalance(
-    context: ExperimentContext,
-    sales: DataFrame,
-    total_sales: int | float,
-) -> dict[str, int | float]:
-    top_vendor = (
-        sales.groupBy("vendor_id")
-        .agg(F.count("*").alias("row_count"))
-        .orderBy(F.desc("row_count"))
-        .limit(1)
-        .collect()
-    )
-    if not top_vendor:
-        note = {"top_vendor_id": 0, "top_vendor_rows": 0, "top_vendor_share": 0.0}
-    else:
-        row = top_vendor[0]
-        top_vendor_rows = int(row.row_count)
-        note = {
-            "top_vendor_id": int(row.vendor_id),
-            "top_vendor_rows": top_vendor_rows,
-            "top_vendor_share": (
-                float(top_vendor_rows / total_sales) if total_sales else 0.0
-            ),
-        }
-
-    context.logger.info(
-        "LAB0_SOURCE_CHARACTERISTIC "
-        "table=sales characteristic=vendor_imbalance "
-        f"top_vendor_id={note['top_vendor_id']} "
-        f"top_vendor_rows={note['top_vendor_rows']} "
-        f"top_vendor_share={note['top_vendor_share']:.4f}"
-    )
-    return note
-
-
 def _check_relationships(
-    context: ExperimentContext,
+    logger: Any,
     tables: dict[str, DataFrame],
 ) -> dict[str, int]:
     sales = tables["sales"]
@@ -183,7 +147,7 @@ def _check_relationships(
         ).count(),
     }
     normalized = {name: int(value) for name, value in checks.items()}
-    context.logger.info(
+    logger.info(
         "LAB0_RELATIONSHIP_CHECK "
         f"vendor_fk_violations={normalized['vendor_fk_violations']} "
         f"product_fk_violations={normalized['product_fk_violations']} "
@@ -192,22 +156,43 @@ def _check_relationships(
     return normalized
 
 
-def _run_experiment() -> ExperimentRun:
-    config = load_experiment_config(EXPERIMENT_NAME)
-    return ExperimentRunner(config).run(Lab0SourceInventory())
+def _profile_sales_vendor_imbalance(
+    logger: Any,
+    sales: DataFrame,
+    total_sales: int | float,
+) -> dict[str, int | float]:
+    top_vendor = (
+        sales.groupBy("vendor_id")
+        .agg(F.count("*").alias("row_count"))
+        .orderBy(F.desc("row_count"))
+        .limit(1)
+        .collect()
+    )
+    if not top_vendor:
+        note = {"top_vendor_id": 0, "top_vendor_rows": 0, "top_vendor_share": 0.0}
+    else:
+        row = top_vendor[0]
+        top_vendor_rows = int(row.row_count)
+        note = {
+            "top_vendor_id": int(row.vendor_id),
+            "top_vendor_rows": top_vendor_rows,
+            "top_vendor_share": (
+                float(top_vendor_rows / total_sales) if total_sales else 0.0
+            ),
+        }
+
+    logger.info(
+        "LAB0_SOURCE_CHARACTERISTIC "
+        "table=sales characteristic=vendor_imbalance "
+        f"top_vendor_id={note['top_vendor_id']} "
+        f"top_vendor_rows={note['top_vendor_rows']} "
+        f"top_vendor_share={note['top_vendor_share']:.4f}"
+    )
+    return note
 
 
 def main() -> int:
-    logger.info(
-        terminal_section(
-            "Lab 0 - Source inventory",
-            "Rows, physical bytes, file layout, FK readiness, and imbalance note",
-        )
-    )
-    run = _run_experiment()
-    logger.info(f"LAB0_EXPERIMENT={run.experiment_name}")
-    logger.info("LAB0_SOURCE_INVENTORY_OK")
-    return 0
+    return Lab0SourceInventory().run()
 
 
 if __name__ == "__main__":

@@ -33,7 +33,8 @@ class ExperimentRunner:
     def run(self, experiment: SparkExperiment) -> ExperimentRun:
         logger.set_level(self.config.log_level)
         logger.info(
-            f"Starting experiment={self.config.name} app_name={self.config.app_name}"
+            "WORKSHOP_EXPERIMENT_STARTED "
+            f"experiment={self.config.name} app_name={self.config.app_name}"
         )
 
         spark = SparkSessionSingleton.get_or_create(
@@ -62,7 +63,8 @@ class ExperimentRunner:
                 metrics=metrics,
             )
             logger.info(
-                f"Completed experiment={self.config.name} run_id={run_id} "
+                "WORKSHOP_EXPERIMENT_COMPLETED "
+                f"experiment={self.config.name} run_id={run_id} "
                 f"application_id={application_id}"
             )
             return ExperimentRun(
@@ -86,9 +88,18 @@ class ExperimentRunner:
     ) -> tuple[Any, Mapping[str, int | float]]:
         observability = self.config.observability
         if not observability.enabled:
-            logger.info("sparkMeasure collection is disabled for this experiment")
+            logger.info(
+                "SPARKMEASURE_ENABLED=false "
+                f"experiment={self.config.name}"
+            )
             return experiment.workload(context), {}
 
+        logger.info(
+            "SPARKMEASURE_ENABLED=true "
+            f"experiment={self.config.name} "
+            f"collector={observability.collector} "
+            f"persist={str(observability.persist).lower()}"
+        )
         collector = SparkMeasureFactory.create(observability.collector, context.spark)
         collector.begin()
         try:
