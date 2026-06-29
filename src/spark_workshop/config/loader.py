@@ -20,18 +20,29 @@ def load_experiment_config(
     config_path: str | Path | None = None,
 ) -> ExperimentConfig:
     path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
-    with path.open("r", encoding="utf-8") as config_file:
-        raw = yaml.safe_load(config_file) or {}
+    raw = _load_yaml(path)
 
-    experiments = raw.get("experiments") or {}
+    if path.resolve() == DEFAULT_CONFIG_PATH.resolve():
+        defaults = raw.get("defaults") or {}
+        experiments = raw.get("experiments") or {}
+    else:
+        global_raw = _load_yaml(DEFAULT_CONFIG_PATH)
+        defaults = _deep_merge(global_raw.get("defaults") or {}, raw.get("defaults") or {})
+        experiments = raw.get("experiments") or {}
+
     if experiment_name not in experiments:
         available = sorted(experiments)
         raise KeyError(
             f"Unknown experiment '{experiment_name}'. Available experiments: {available}"
         )
 
-    merged = _deep_merge(raw.get("defaults") or {}, experiments[experiment_name])
+    merged = _deep_merge(defaults, experiments[experiment_name])
     return ExperimentConfig.from_mapping(experiment_name, _expand_env(merged))
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as config_file:
+        return yaml.safe_load(config_file) or {}
 
 
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:

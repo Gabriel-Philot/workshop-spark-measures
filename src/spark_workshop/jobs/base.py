@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from pathlib import Path
 from typing import Any
 
 from spark_workshop.config import load_experiment_config
@@ -19,6 +20,7 @@ class SparkWorkshopJob(SparkExperiment, ABC):
     """ETL-style workshop contract for a single configured Spark experiment."""
 
     config_name: str = ""
+    config_path: str | Path | None = None
     title: str = "Spark workshop job"
     description: str | None = None
     success_marker: str | None = None
@@ -64,7 +66,7 @@ class SparkWorkshopJob(SparkExperiment, ABC):
         self._run_mode = mode
         if log_section:
             self.log_section(title or self.title, description or self.description)
-        config = load_experiment_config(config_name)
+        config = load_experiment_config(config_name, config_path=self.config_path)
         try:
             return ExperimentRunner(config).run(self)
         finally:

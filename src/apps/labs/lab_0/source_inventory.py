@@ -18,7 +18,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 ## Required configuration
 
-This script uses `lab0-source-inventory` from `src/config/experiments.yaml`.
+This script uses `lab0-source-inventory` from the local `experiments.yaml`.
 It reads `vendors`, `products`, `customers`, and `sales` as Delta inputs.
 
 This lab intentionally keeps sparkMeasure disabled. Its purpose is to show
@@ -28,6 +28,7 @@ readiness, and a final note about the generated vendor imbalance.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from pyspark.sql import DataFrame, functions as F
@@ -36,10 +37,14 @@ from spark_workshop.artifacts import data_file_stats_for_dataframe
 from spark_workshop.jobs import SparkWorkshopJob
 
 
+CONFIG_PATH = Path(__file__).with_name("experiments.yaml")
+
+
 class Lab0SourceInventory(SparkWorkshopJob):
     """Profiles generated bronze sources before diagnostic labs."""
 
     config_name = "lab0-source-inventory"
+    config_path = CONFIG_PATH
     title = "Lab 0 - Source inventory"
     description = "Rows, physical bytes, file layout, FK readiness, and imbalance note"
     success_marker = "LAB0_SOURCE_INVENTORY_OK"

@@ -34,7 +34,7 @@ def patch_runner(monkeypatch):
     monkeypatch.setattr(
         jobs_module,
         "load_experiment_config",
-        lambda name: SimpleNamespace(name=name),
+        lambda name, config_path=None: SimpleNamespace(name=name, config_path=config_path),
     )
 
 
@@ -145,3 +145,25 @@ def test_explain_plan_runs_only_for_native_comparison(monkeypatch):
 
     assert ExplainComparison().run() == 0
     assert dataframe.explains == 1
+
+
+def test_workshop_job_passes_config_path_to_loader(monkeypatch):
+    seen = []
+
+    monkeypatch.setattr(jobs_module, "ExperimentRunner", FakeRunner)
+    monkeypatch.setattr(
+        jobs_module,
+        "load_experiment_config",
+        lambda name, config_path=None: seen.append((name, config_path))
+        or SimpleNamespace(name=name, config_path=config_path),
+    )
+
+    class LocalConfigJob(SparkWorkshopJob):
+        config_name = "unit-local"
+        config_path = "local/experiments.yaml"
+
+        def load(self, data):
+            return "ok"
+
+    assert LocalConfigJob().run() == 0
+    assert seen == [("unit-local", "local/experiments.yaml")]

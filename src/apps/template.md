@@ -27,7 +27,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 ## Configuration contract
 
-Register each runnable app as one or more named experiments in `src/config/experiments.yaml`.
+Register each runnable app as one or more named experiments. Shared defaults live in `src/config/experiments.yaml`; lab-specific experiments can live next to the lab as `experiments.yaml`.
 
 Required fields:
 
@@ -64,13 +64,19 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 This script expects an `example-lab` experiment in `src/config/experiments.yaml`.
 """
 
+from pathlib import Path
+
 from pyspark.sql import DataFrame, functions as F
 
 from spark_workshop.jobs import SparkWorkshopJob
 
 
+CONFIG_PATH = Path(__file__).with_name("experiments.yaml")
+
+
 class ExampleLab(SparkWorkshopJob):
     config_name = "example-lab"
+    config_path = CONFIG_PATH
     title = "Example lab"
     description = "Readable separator for submit logs and live demos"
     success_marker = "EXAMPLE_LAB_OK"
@@ -104,12 +110,18 @@ if __name__ == "__main__":
 Use `SparkWorkshopComparisonJob` when the same Spark contract should run once natively and once with sparkMeasure enabled by config.
 
 ```python
+from pathlib import Path
+
 from pyspark.sql import DataFrame, functions as F
 
 from spark_workshop.jobs import SparkWorkshopComparisonJob
 
 
+CONFIG_PATH = Path(__file__).with_name("experiments.yaml")
+
+
 class ExampleComparisonLab(SparkWorkshopComparisonJob):
+    config_path = CONFIG_PATH
     native_config = "example-native"
     observed_config = "example-observed"
 
@@ -151,6 +163,6 @@ Keep logs segmented by concern:
 - Use `validate_result()` for validation after the measured workload.
 - Use `self.read()`, `self.write()`, `self.input_path()`, and `self.output_path()` for named artifacts.
 - Use `self.logger` or the shared logger; do not use `print()` for lab output.
-- Keep app identity, artifact paths, and `collector: stage | task` in `src/config/experiments.yaml`.
+- Keep app identity, artifact paths, and `collector: stage | task` in YAML config. Prefer a local `experiments.yaml` next to a lab when the experiments are lab-specific.
 - Avoid broad `collect()`, `show()`, and `toPandas()` in normal workload scripts.
 - Keep `.explain()` controlled by `explain_plan=True`; the base contract prints it outside the measured sparkMeasure boundary.
