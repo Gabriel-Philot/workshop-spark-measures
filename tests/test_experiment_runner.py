@@ -6,12 +6,12 @@ from spark_workshop.config import (
     ExperimentConfig,
     ObservabilityConfig,
 )
-from spark_workshop.experiments import (
+from spark_workshop.runtime import (
     ExperimentContext,
     ExperimentRunner,
     SparkExperiment,
 )
-from spark_workshop.experiments import runner as runner_module
+from spark_workshop.runtime import runner as runner_module
 
 
 class RecordingExperiment(SparkExperiment):
@@ -55,9 +55,17 @@ class FakeCollector:
 
 
 def fake_spark():
+    job_calls = []
     spark_context = SimpleNamespace(
         applicationId="app-test",
         setLogLevel=lambda level: None,
+        setJobDescription=lambda description: job_calls.append(
+            ("setJobDescription", description)
+        ),
+        setLocalProperty=lambda key, value: job_calls.append(
+            ("setLocalProperty", key, value)
+        ),
+        job_calls=job_calls,
     )
     return SimpleNamespace(
         sparkContext=spark_context,
@@ -125,6 +133,13 @@ def test_runner_wraps_only_workload_with_collector(monkeypatch):
     assert run.metrics["numStages"] == 2
     assert run.metrics_output_path == "s3a://observability/unit"
     assert writes[0][0] == "metrics"
+    assert spark.sparkContext.job_calls == [
+        (
+            "setJobDescription",
+            "SPARKMEASURE | persist_metrics | artifact=metrics",
+        ),
+        ("setLocalProperty", "spark.job.description", None),
+    ]
     assert stopped == [True]
 
 

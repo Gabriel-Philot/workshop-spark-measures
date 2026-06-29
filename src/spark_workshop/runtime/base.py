@@ -1,4 +1,4 @@
-"""Experiment interface and execution context."""
+"""Runtime workload interface and execution context."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -31,7 +31,7 @@ class ExperimentContext:
 
 
 class SparkExperiment(ABC):
-    """Behavior implemented by each workshop experiment."""
+    """Behavior implemented by each runtime-managed workshop workload."""
 
     def prepare(self, context: ExperimentContext) -> None:
         pass

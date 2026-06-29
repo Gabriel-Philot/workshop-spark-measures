@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from spark_workshop.config import load_comparison_job_config, load_experiment_config
-from spark_workshop.experiments import (
+from spark_workshop.runtime import (
     ExperimentContext,
     ExperimentRun,
     ExperimentRunner,

@@ -69,6 +69,7 @@ from pathlib import Path
 from pyspark.sql import DataFrame, functions as F
 
 from spark_workshop.jobs import SparkWorkshopJob
+from spark_workshop.utils import spark_job_description
 
 
 CONFIG_PATH = Path(__file__).parent / "<lab>_utils" / "experiments.yaml"
@@ -88,7 +89,11 @@ class ExampleLab(SparkWorkshopJob):
         return source.groupBy("key").agg(F.count("*").alias("row_count"))
 
     def load(self, result: DataFrame) -> str:
-        self.write("target", result)
+        with spark_job_description(
+            self.context.spark,
+            "EXAMPLE | load | write_target",
+        ):
+            self.write("target", result)
         return self.output_path("target")
 
     def validate_result(self, output_path: str) -> None:
@@ -115,6 +120,7 @@ from pathlib import Path
 from pyspark.sql import DataFrame, functions as F
 
 from spark_workshop.jobs import SparkWorkshopComparisonJob
+from spark_workshop.utils import spark_job_description
 
 
 CONFIG_PATH = Path(__file__).parent / "<lab>_utils" / "experiments.yaml"
@@ -131,7 +137,11 @@ class ExampleComparisonLab(SparkWorkshopComparisonJob):
         return source.groupBy("key").agg(F.count("*").alias("row_count"))
 
     def load(self, result: DataFrame) -> str:
-        self.write("target", result)
+        with spark_job_description(
+            self.context.spark,
+            f"EXAMPLE | comparison | mode={self._run_mode} | write_target",
+        ):
+            self.write("target", result)
         return self.output_path("target")
 
 
@@ -155,6 +165,7 @@ Keep logs segmented by concern:
 - Use `load()` for writes and for the Spark action you want sparkMeasure to observe.
 - Use `validate_result()` for validation after the measured workload.
 - Use `self.read()`, `self.write()`, `self.input_path()`, and `self.output_path()` for named artifacts.
+- Wrap meaningful Spark actions with `spark_job_description(...)` so the History Server Jobs tab is readable during demos.
 - Use `self.logger` or the shared logger; do not use `print()` for lab output.
 - Keep app identity, comparison labels, markers, artifact paths, and `collector: stage | task` in YAML config. Prefer a local `<lab>_utils/experiments.yaml` when the experiments are lab-specific.
 - Avoid broad `collect()`, `show()`, and `toPandas()` in normal workload scripts.

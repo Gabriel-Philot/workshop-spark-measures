@@ -35,6 +35,7 @@ from pyspark.sql import DataFrame, functions as F
 
 from spark_workshop.artifacts import data_file_stats_for_dataframe
 from spark_workshop.jobs import SparkWorkshopJob
+from spark_workshop.utils import spark_job_description
 
 
 CONFIG_PATH = Path(__file__).parent / "lab_0_utils" / "experiments.yaml"
@@ -94,7 +95,11 @@ def _profile_sources(
 ) -> dict[str, dict[str, int | float]]:
     profiles: dict[str, dict[str, int | float]] = {}
     for table_name, dataframe in tables.items():
-        row_count = int(dataframe.count())
+        with spark_job_description(
+            dataframe.sparkSession,
+            f"LAB0 | source_profile | table={table_name} | count_rows",
+        ):
+            row_count = int(dataframe.count())
         file_stats = data_file_stats_for_dataframe(dataframe)
         profile = {
             "rows": row_count,
@@ -129,22 +134,38 @@ def _check_relationships(
     products = tables["products"]
     customers = tables["customers"]
 
-    checks = {
-        "vendor_fk_violations": sales.join(
+    with spark_job_description(
+        sales.sparkSession,
+        "LAB0 | relationship_check | sales_to_vendors",
+    ):
+        vendor_fk_violations = sales.join(
             vendors.select("vendor_id"),
             "vendor_id",
             "left_anti",
-        ).count(),
-        "product_fk_violations": sales.join(
+        ).count()
+    with spark_job_description(
+        sales.sparkSession,
+        "LAB0 | relationship_check | sales_to_products",
+    ):
+        product_fk_violations = sales.join(
             products.select("product_id", "vendor_id"),
             ["product_id", "vendor_id"],
             "left_anti",
-        ).count(),
-        "customer_fk_violations": sales.join(
+        ).count()
+    with spark_job_description(
+        sales.sparkSession,
+        "LAB0 | relationship_check | sales_to_customers",
+    ):
+        customer_fk_violations = sales.join(
             customers.select("customer_id"),
             "customer_id",
             "left_anti",
-        ).count(),
+        ).count()
+
+    checks = {
+        "vendor_fk_violations": vendor_fk_violations,
+        "product_fk_violations": product_fk_violations,
+        "customer_fk_violations": customer_fk_violations,
     }
     normalized = {name: int(value) for name, value in checks.items()}
     logger.info(
@@ -161,13 +182,17 @@ def _profile_sales_vendor_imbalance(
     sales: DataFrame,
     total_sales: int | float,
 ) -> dict[str, int | float]:
-    top_vendor = (
-        sales.groupBy("vendor_id")
-        .agg(F.count("*").alias("row_count"))
-        .orderBy(F.desc("row_count"))
-        .limit(1)
-        .collect()
-    )
+    with spark_job_description(
+        sales.sparkSession,
+        "LAB0 | source_characteristic | sales_vendor_imbalance",
+    ):
+        top_vendor = (
+            sales.groupBy("vendor_id")
+            .agg(F.count("*").alias("row_count"))
+            .orderBy(F.desc("row_count"))
+            .limit(1)
+            .collect()
+        )
     if not top_vendor:
         note = {"top_vendor_id": 0, "top_vendor_rows": 0, "top_vendor_share": 0.0}
     else:

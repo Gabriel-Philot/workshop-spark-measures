@@ -125,7 +125,7 @@ Look for these applications:
 For each application:
 
 1. Open the application from the History Server list.
-2. Use the `Jobs` tab to compare how many jobs the application created.
+2. Use the `Jobs` tab to compare readable job descriptions such as `LAB0 | source_profile | table=sales | count_rows` and `LAB0 | presentation | mode=observed | write_sales_enriched`.
 3. Use the `Stages` tab to inspect stage duration, task counts, and shuffle columns.
 4. Use the `SQL / DataFrame` tab when available to inspect Spark SQL execution details.
 5. Use the terminal output from natural API and observed contract runs to compare direct sparkMeasure with the workshop wrapper.

@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from spark_workshop.experiments import ExperimentRun
+from spark_workshop.runtime import ExperimentRun
 from spark_workshop.jobs import SparkWorkshopComparisonJob, SparkWorkshopJob
 from spark_workshop.jobs import base as jobs_module
 
