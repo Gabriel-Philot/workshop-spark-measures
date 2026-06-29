@@ -36,6 +36,7 @@ from pyspark.sql import DataFrame
 
 from apps.labs.lab_0.lab_0_utils.transformations import build_sales_enriched
 from spark_workshop.jobs import SparkWorkshopComparisonJob
+from spark_workshop.utils import spark_job_description
 
 
 CONFIG_PATH = Path(__file__).parent / "lab_0_utils" / "experiments.yaml"
@@ -58,7 +59,11 @@ class Lab0SparkMeasurePresentation(SparkWorkshopComparisonJob):
         return build_sales_enriched(inputs)
 
     def load(self, sales_enriched: DataFrame) -> str:
-        self.write("sales_enriched", sales_enriched)
+        with spark_job_description(
+            self.context.spark,
+            f"LAB0 | presentation | mode={self._run_mode} | write_sales_enriched",
+        ):
+            self.write("sales_enriched", sales_enriched)
         return self.output_path("sales_enriched")
 
     def validate_result(self, output_path: str) -> None:

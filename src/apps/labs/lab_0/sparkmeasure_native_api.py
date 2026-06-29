@@ -31,7 +31,7 @@ from apps.labs.lab_0.lab_0_utils.transformations import build_sales_enriched
 from spark_workshop.artifacts import read_artifact
 from spark_workshop.config import load_experiment_config
 from spark_workshop.session import SparkSessionSingleton
-from spark_workshop.utils import logger, terminal_section
+from spark_workshop.utils import logger, spark_job_description, terminal_section
 
 
 CONFIG_PATH = Path(__file__).parent / "lab_0_utils" / "experiments.yaml"
@@ -68,13 +68,17 @@ def main() -> int:
         try:
             sales_enriched = build_sales_enriched(inputs)
             # Intentional action for teaching the native sparkMeasure API.
-            sales_enriched.select(
-                "sale_id",
-                "sale_date",
-                "vendor_name",
-                "product_name",
-                "sale_amount",
-            ).limit(SAMPLE_ROWS).show(truncate=False)
+            with spark_job_description(
+                spark,
+                "LAB0 | natural_api | show_sales_enriched_sample",
+            ):
+                sales_enriched.select(
+                    "sale_id",
+                    "sale_date",
+                    "vendor_name",
+                    "product_name",
+                    "sale_amount",
+                ).limit(SAMPLE_ROWS).show(truncate=False)
         finally:
             stage_metrics.end()
             logger.info("SPARKMEASURE_NATURAL_API_END collector=stage")

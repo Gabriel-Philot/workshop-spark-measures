@@ -13,7 +13,7 @@ from spark_workshop.metrics import (
     validate_aggregate_metrics,
 )
 from spark_workshop.session import SparkSessionSingleton
-from spark_workshop.utils import logger
+from spark_workshop.utils import logger, spark_job_description
 
 
 @dataclass(frozen=True)
@@ -137,8 +137,12 @@ class ExperimentRunner:
             "collected_at_utc": datetime.now(timezone.utc).isoformat(),
             "spark_version": context.spark.version,
         }
-        context.write(
-            observability.output_artifact,
-            context.spark.createDataFrame([record]),
-        )
+        with spark_job_description(
+            context.spark,
+            f"SPARKMEASURE | persist_metrics | artifact={observability.output_artifact}",
+        ):
+            context.write(
+                observability.output_artifact,
+                context.spark.createDataFrame([record]),
+            )
         return output.path
