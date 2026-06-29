@@ -10,7 +10,7 @@ def read_artifact(spark: Any, spec: ArtifactSpec) -> Any:
     reader = spark.read.format(spec.format)
     for key, value in spec.options.items():
         reader = reader.option(key, _option_value(value))
-    logger.info(f"Reading artifact format={spec.format} path={spec.path}")
+    logger.info(f"SPARK_ARTIFACT_READ format={spec.format} path={spec.path}")
     return reader.load(spec.path)
 
 
@@ -21,7 +21,7 @@ def write_artifact(dataframe: Any, spec: ArtifactSpec) -> None:
     if spec.partition_by:
         writer = writer.partitionBy(*spec.partition_by)
     logger.info(
-        f"Writing artifact format={spec.format} mode={spec.mode} path={spec.path}"
+        f"SPARK_ARTIFACT_WRITE format={spec.format} mode={spec.mode} path={spec.path}"
     )
     writer.save(spec.path)
 

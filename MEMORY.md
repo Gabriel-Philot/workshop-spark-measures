@@ -14,3 +14,4 @@
 - [2026-06-26] (Mem-0012) Lab 0 submit output now uses terminal section dividers and native-mode Spark explain plans before the sparkMeasure run, making the workshop comparison easier to follow.
 - [2026-06-26] (Mem-0013) Lab 0 is split into `source_inventory` for generated-source readiness and `sparkmeasure_presentation` for a focused Bronze-to-Silver sparkMeasure comparison with metric persistence disabled.
 - [2026-06-26] (Mem-0014) Lab 0 source inventory reports physical source volume (`rows`, files, total bytes, and min/avg/max file bytes) and only keeps vendor imbalance as a short source characteristic note.
+- [2026-06-29] (Mem-0015) Lab scripts now use `SparkWorkshopJob` / `SparkWorkshopComparisonJob` as the readable contract: labs expose `extract`, `transform`, `load`, and `validate_result`, while Spark session, sparkMeasure, summaries, and section logging stay in the shared job base.

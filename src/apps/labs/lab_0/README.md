@@ -44,6 +44,7 @@ Expected terminal markers:
 - `LAB0_SOURCE_VOLUME`: rows, file count, total physical bytes, min/avg/max file bytes, and columns per source table.
 - `LAB0_RELATIONSHIP_CHECK`: FK violation counts for generated relationships.
 - `LAB0_SOURCE_CHARACTERISTIC`: final short note that the generated `sales` source has vendor imbalance for later diagnostic labs.
+- `WORKSHOP_RUN_COMPLETED`: generic run summary from the shared job contract.
 - `LAB0_SOURCE_INVENTORY_OK`: successful completion marker.
 
 This script uses `lab0-source-inventory` from `src/config/experiments.yaml` and keeps sparkMeasure disabled.
@@ -74,7 +75,7 @@ Both write:
 s3a://lakehouse/silver/lab0/vendor_sales_summary
 ```
 
-The native run prints a formatted Spark physical plan with `explain(mode="formatted")`. The observed run enables sparkMeasure stage metrics and logs a compact line with `numStages`, `numTasks`, `executorRunTime`, and `shuffleBytesWritten`.
+The native run prints a formatted Spark physical plan with `explain(mode="formatted")`. The observed run enables sparkMeasure stage metrics through YAML config and logs `SPARKMEASURE_METRICS` with `numStages`, `numTasks`, `executorRunTime`, and `shuffleBytesWritten`.
 
 Metric persistence is disabled for this presentation experiment:
 
@@ -130,4 +131,4 @@ Useful paths:
 - `lakehouse/silver/lab0/vendor_sales_summary`
 - `observability/event-logs`
 
-For this lab, sparkMeasure metrics are not persisted as a Delta table. Event logs still go to `observability/event-logs` because the submit command sets `spark.eventLog.dir`.
+For this lab, sparkMeasure metrics are not persisted as a Delta table. Event logs still go to `observability/event-logs` because the submit command sets `spark.eventLog.dir`. The scripts use `SparkWorkshopJob` / `SparkWorkshopComparisonJob`, so Spark/SRE markers stay separated as `SPARK_*`, `SPARKMEASURE_*`, `WORKSHOP_*`, and lab-specific `LAB0_*` lines.
