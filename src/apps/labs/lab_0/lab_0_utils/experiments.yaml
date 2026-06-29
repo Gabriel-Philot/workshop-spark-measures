@@ -1,3 +1,27 @@
+comparison_jobs:
+  lab0-sparkmeasure-presentation:
+    native:
+      config: lab0-sparkmeasure-presentation-native
+      title: Lab 0 - Native Bronze to Silver enrichment
+      description: Spark explain and Spark UI before sparkMeasure
+      success_marker: LAB0_PRESENTATION_NATIVE_OK
+    observed:
+      config: lab0-sparkmeasure-presentation-observed
+      title: Lab 0 - sparkMeasure presentation
+      description: Same enrichment with stage metrics collected
+      success_marker: LAB0_PRESENTATION_SPARKMEASURE_OK
+    completion:
+      title: Lab 0 presentation complete
+      description: Compare native plan output with compact sparkMeasure metrics
+      success_marker: LAB0_SPARKMEASURE_PRESENTATION_OK
+    explain:
+      enabled: true
+      modes:
+        - native
+      title: Native Spark explain output
+      description: The plan is useful but verbose before sparkMeasure
+      mode: formatted
+
 experiments:
   lab0-source-inventory:
     app_name: workshop-lab0-source-inventory

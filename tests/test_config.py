@@ -1,6 +1,10 @@
 import pytest
 
-from spark_workshop.config import ArtifactSpec, load_experiment_config
+from spark_workshop.config import (
+    ArtifactSpec,
+    load_comparison_job_config,
+    load_experiment_config,
+)
 
 
 def test_load_experiment_config_merges_defaults_and_named_experiment():
@@ -59,3 +63,53 @@ def test_load_local_experiment_config_inherits_global_defaults(tmp_path):
     assert config.spark_config["spark.sql.extensions"] == "io.delta.sql.DeltaSparkSessionExtension"
     assert config.artifacts.location("lakehouse") == "s3a://lakehouse"
     assert config.artifacts.input("source").path == "s3a://lakehouse/bronze/source"
+
+
+def test_load_comparison_job_config_reads_local_metadata(tmp_path):
+    local_config = tmp_path / "experiments.yaml"
+    local_config.write_text(
+        """comparison_jobs:
+  local-comparison:
+    native:
+      config: local-native
+      title: Native title
+      description: Native description
+      success_marker: NATIVE_OK
+    observed:
+      config: local-observed
+      title: Observed title
+      description: Observed description
+      success_marker: OBSERVED_OK
+    completion:
+      title: Done title
+      description: Done description
+      success_marker: DONE_OK
+    explain:
+      enabled: true
+      modes:
+        - native
+      title: Explain title
+      description: Explain description
+      mode: extended
+""",
+        encoding="utf-8",
+    )
+
+    config = load_comparison_job_config("local-comparison", config_path=local_config)
+
+    assert config.native_config == "local-native"
+    assert config.observed_config == "local-observed"
+    assert config.native_title == "Native title"
+    assert config.native_description == "Native description"
+    assert config.observed_title == "Observed title"
+    assert config.observed_description == "Observed description"
+    assert config.completion_title == "Done title"
+    assert config.completion_description == "Done description"
+    assert config.success_marker == "DONE_OK"
+    assert config.native_success_marker == "NATIVE_OK"
+    assert config.observed_success_marker == "OBSERVED_OK"
+    assert config.explain_plan is True
+    assert config.explain_plan_modes == ("native",)
+    assert config.explain_plan_title == "Explain title"
+    assert config.explain_plan_description == "Explain description"
+    assert config.explain_plan_mode == "extended"

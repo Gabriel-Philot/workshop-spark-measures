@@ -38,6 +38,29 @@ def patch_runner(monkeypatch):
     )
 
 
+def fake_comparison_config(**overrides):
+    values = {
+        "native_config": "unit-native",
+        "observed_config": "unit-observed",
+        "native_title": "Unit native",
+        "native_description": "Native path",
+        "observed_title": "Unit observed",
+        "observed_description": "Observed path",
+        "completion_title": "Unit done",
+        "completion_description": "Comparison done",
+        "success_marker": "UNIT_COMPARISON_OK",
+        "native_success_marker": "UNIT_NATIVE_OK",
+        "observed_success_marker": "UNIT_OBSERVED_OK",
+        "explain_plan": False,
+        "explain_plan_modes": ("native",),
+        "explain_plan_title": "Unit explain",
+        "explain_plan_description": "Explain description",
+        "explain_plan_mode": "formatted",
+    }
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
 def test_workshop_job_runs_extract_transform_load_validate(monkeypatch):
     patch_runner(monkeypatch)
 
@@ -167,3 +190,40 @@ def test_workshop_job_passes_config_path_to_loader(monkeypatch):
 
     assert LocalConfigJob().run() == 0
     assert seen == [("unit-local", "local/experiments.yaml")]
+
+
+def test_comparison_job_loads_metadata_from_yaml_config(monkeypatch):
+    patch_runner(monkeypatch)
+    seen = []
+
+    monkeypatch.setattr(
+        jobs_module,
+        "load_comparison_job_config",
+        lambda name, config_path=None: seen.append((name, config_path))
+        or fake_comparison_config(
+            native_config="yaml-native",
+            observed_config="yaml-observed",
+            success_marker="YAML_DONE",
+        ),
+    )
+
+    class ConfiguredComparison(SparkWorkshopComparisonJob):
+        job_name = "yaml-comparison"
+        config_path = "local/experiments.yaml"
+
+        def load(self, data):
+            return f"{self._run_mode}-output"
+
+    job = ConfiguredComparison()
+
+    assert job.run() == 0
+    assert seen == [("yaml-comparison", "local/experiments.yaml")]
+    assert FakeRunner.calls == [
+        ("yaml-native", "native-output"),
+        ("yaml-observed", "observed-output"),
+    ]
+    assert job.native_config == "yaml-native"
+    assert job.observed_config == "yaml-observed"
+    assert job.native_title == "Unit native"
+    assert job.observed_title == "Unit observed"
+    assert job.success_marker == "YAML_DONE"

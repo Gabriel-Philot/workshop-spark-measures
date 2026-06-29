@@ -6,7 +6,7 @@ from abc import ABC
 from pathlib import Path
 from typing import Any
 
-from spark_workshop.config import load_experiment_config
+from spark_workshop.config import load_comparison_job_config, load_experiment_config
 from spark_workshop.experiments import (
     ExperimentContext,
     ExperimentRun,
@@ -165,6 +165,7 @@ class SparkWorkshopJob(SparkExperiment, ABC):
 class SparkWorkshopComparisonJob(SparkWorkshopJob):
     """Workshop job that runs the same contract with native and observed configs."""
 
+    job_name: str = ""
     native_config: str = ""
     observed_config: str = ""
     native_title: str = "Native Spark run"
@@ -177,6 +178,7 @@ class SparkWorkshopComparisonJob(SparkWorkshopJob):
     observed_success_marker: str | None = None
 
     def run(self) -> int:
+        self._apply_comparison_config()
         native_run = self.run_once(
             self.native_config,
             mode="native",
@@ -205,6 +207,28 @@ class SparkWorkshopComparisonJob(SparkWorkshopJob):
             logger.info(self.success_marker)
         self._run_mode = None
         return 0
+
+
+    def _apply_comparison_config(self) -> None:
+        if not self.job_name:
+            return
+        config = load_comparison_job_config(self.job_name, config_path=self.config_path)
+        self.native_config = config.native_config
+        self.observed_config = config.observed_config
+        self.native_title = config.native_title
+        self.native_description = config.native_description
+        self.observed_title = config.observed_title
+        self.observed_description = config.observed_description
+        self.completion_title = config.completion_title
+        self.completion_description = config.completion_description
+        self.success_marker = config.success_marker
+        self.native_success_marker = config.native_success_marker
+        self.observed_success_marker = config.observed_success_marker
+        self.explain_plan = config.explain_plan
+        self.explain_plan_modes = config.explain_plan_modes
+        self.explain_plan_title = config.explain_plan_title
+        self.explain_plan_description = config.explain_plan_description
+        self.explain_plan_mode = config.explain_plan_mode
 
     def after_comparison(
         self,

@@ -134,3 +134,77 @@ class ExperimentConfig:
             ),
             artifacts=ArtifactCatalog.from_mapping(value.get("artifacts") or {}),
         )
+
+
+@dataclass(frozen=True)
+class ComparisonJobConfig:
+    """Runtime metadata for a native-vs-observed workshop comparison job."""
+
+    name: str
+    native_config: str
+    observed_config: str
+    native_title: str = "Native Spark run"
+    native_description: str | None = None
+    observed_title: str = "sparkMeasure observed run"
+    observed_description: str | None = None
+    completion_title: str = "Workshop comparison complete"
+    completion_description: str | None = None
+    success_marker: str | None = None
+    native_success_marker: str | None = None
+    observed_success_marker: str | None = None
+    explain_plan: bool = False
+    explain_plan_modes: tuple[str | None, ...] = ("native",)
+    explain_plan_title: str = "Native Spark explain output"
+    explain_plan_description: str = "Physical plan before sparkMeasure"
+    explain_plan_mode: str = "formatted"
+
+    @classmethod
+    def from_mapping(cls, name: str, value: Mapping[str, Any]) -> "ComparisonJobConfig":
+        native = value.get("native") or {}
+        observed = value.get("observed") or {}
+        completion = value.get("completion") or {}
+        explain = value.get("explain") or {}
+
+        native_config = str(native.get("config", ""))
+        observed_config = str(observed.get("config", ""))
+        if not native_config:
+            raise ValueError(f"Comparison job '{name}' requires native.config")
+        if not observed_config:
+            raise ValueError(f"Comparison job '{name}' requires observed.config")
+
+        explain_modes = explain.get("modes", ("native",))
+        if isinstance(explain_modes, str):
+            explain_modes = (explain_modes,)
+
+        return cls(
+            name=name,
+            native_config=native_config,
+            observed_config=observed_config,
+            native_title=str(native.get("title", "Native Spark run")),
+            native_description=_optional_string(native.get("description")),
+            observed_title=str(observed.get("title", "sparkMeasure observed run")),
+            observed_description=_optional_string(observed.get("description")),
+            completion_title=str(
+                completion.get("title", "Workshop comparison complete")
+            ),
+            completion_description=_optional_string(completion.get("description")),
+            success_marker=_optional_string(completion.get("success_marker")),
+            native_success_marker=_optional_string(native.get("success_marker")),
+            observed_success_marker=_optional_string(observed.get("success_marker")),
+            explain_plan=bool(explain.get("enabled", False)),
+            explain_plan_modes=tuple(
+                None if item in ("single", "none", None) else str(item)
+                for item in explain_modes
+            ),
+            explain_plan_title=str(explain.get("title", "Native Spark explain output")),
+            explain_plan_description=str(
+                explain.get("description", "Physical plan before sparkMeasure")
+            ),
+            explain_plan_mode=str(explain.get("mode", "formatted")),
+        )
+
+
+def _optional_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)

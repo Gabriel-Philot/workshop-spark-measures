@@ -18,7 +18,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 ## Required configuration
 
-This script compares two named experiments from the local `experiments.yaml`:
+This script reads comparison metadata from `lab_0_utils/experiments.yaml`:
 
 - `lab0-sparkmeasure-presentation-native`
 - `lab0-sparkmeasure-presentation-observed`
@@ -34,34 +34,18 @@ from pathlib import Path
 
 from pyspark.sql import DataFrame
 
-from apps.labs.lab_0.transformations import build_sales_enriched
+from apps.labs.lab_0.lab_0_utils.transformations import build_sales_enriched
 from spark_workshop.jobs import SparkWorkshopComparisonJob
 
 
-CONFIG_PATH = Path(__file__).with_name("experiments.yaml")
+CONFIG_PATH = Path(__file__).parent / "lab_0_utils" / "experiments.yaml"
 
 
 class Lab0SparkMeasurePresentation(SparkWorkshopComparisonJob):
     """Runs one Bronze-to-Silver enrichment for sparkMeasure demos."""
 
     config_path = CONFIG_PATH
-    native_config = "lab0-sparkmeasure-presentation-native"
-    observed_config = "lab0-sparkmeasure-presentation-observed"
-
-    native_title = "Lab 0 - Native Bronze to Silver enrichment"
-    native_description = "Spark explain and Spark UI before sparkMeasure"
-    observed_title = "Lab 0 - sparkMeasure presentation"
-    observed_description = "Same enrichment with stage metrics collected"
-    completion_title = "Lab 0 presentation complete"
-    completion_description = "Compare native plan output with compact sparkMeasure metrics"
-
-    explain_plan = True
-    explain_plan_title = "Native Spark explain output"
-    explain_plan_description = "The plan is useful but verbose before sparkMeasure"
-
-    native_success_marker = "LAB0_PRESENTATION_NATIVE_OK"
-    observed_success_marker = "LAB0_PRESENTATION_SPARKMEASURE_OK"
-    success_marker = "LAB0_SPARKMEASURE_PRESENTATION_OK"
+    job_name = "lab0-sparkmeasure-presentation"
 
     def extract(self) -> dict[str, DataFrame]:
         return {

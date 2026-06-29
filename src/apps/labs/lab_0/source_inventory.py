@@ -18,7 +18,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 ## Required configuration
 
-This script uses `lab0-source-inventory` from the local `experiments.yaml`.
+This script uses `lab0-source-inventory` from `lab_0_utils/experiments.yaml`.
 It reads `vendors`, `products`, `customers`, and `sales` as Delta inputs.
 
 This lab intentionally keeps sparkMeasure disabled. Its purpose is to show
@@ -37,7 +37,7 @@ from spark_workshop.artifacts import data_file_stats_for_dataframe
 from spark_workshop.jobs import SparkWorkshopJob
 
 
-CONFIG_PATH = Path(__file__).with_name("experiments.yaml")
+CONFIG_PATH = Path(__file__).parent / "lab_0_utils" / "experiments.yaml"
 
 
 class Lab0SourceInventory(SparkWorkshopJob):

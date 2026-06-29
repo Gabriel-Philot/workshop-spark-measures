@@ -27,14 +27,14 @@ from pathlib import Path
 
 from sparkmeasure import StageMetrics
 
-from apps.labs.lab_0.transformations import build_sales_enriched
+from apps.labs.lab_0.lab_0_utils.transformations import build_sales_enriched
 from spark_workshop.artifacts import read_artifact
 from spark_workshop.config import load_experiment_config
 from spark_workshop.session import SparkSessionSingleton
 from spark_workshop.utils import logger, terminal_section
 
 
-CONFIG_PATH = Path(__file__).with_name("experiments.yaml")
+CONFIG_PATH = Path(__file__).parent / "lab_0_utils" / "experiments.yaml"
 EXPERIMENT_NAME = "lab0-sparkmeasure-native-api"
 SAMPLE_ROWS = 10
 

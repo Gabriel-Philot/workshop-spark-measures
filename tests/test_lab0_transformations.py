@@ -1,4 +1,4 @@
-from apps.labs.lab_0.transformations import SALES_ENRICHED_COLUMNS
+from apps.labs.lab_0.lab_0_utils.transformations import SALES_ENRICHED_COLUMNS
 
 
 def test_sales_enriched_columns_are_silver_schema_order():

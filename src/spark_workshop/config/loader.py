@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from spark_workshop.config.models import ExperimentConfig
+from spark_workshop.config.models import ComparisonJobConfig, ExperimentConfig
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "experiments.yaml"
@@ -38,6 +38,23 @@ def load_experiment_config(
 
     merged = _deep_merge(defaults, experiments[experiment_name])
     return ExperimentConfig.from_mapping(experiment_name, _expand_env(merged))
+
+
+def load_comparison_job_config(
+    job_name: str,
+    config_path: str | Path | None = None,
+) -> ComparisonJobConfig:
+    path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
+    raw = _load_yaml(path)
+    jobs = raw.get("comparison_jobs") or {}
+
+    if job_name not in jobs:
+        available = sorted(jobs)
+        raise KeyError(
+            f"Unknown comparison job '{job_name}'. Available comparison jobs: {available}"
+        )
+
+    return ComparisonJobConfig.from_mapping(job_name, _expand_env(jobs[job_name]))
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:

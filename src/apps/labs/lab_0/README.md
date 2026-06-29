@@ -87,10 +87,10 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   /opt/spark/src/apps/labs/lab_0/sparkmeasure_presentation.py
 ```
 
-The script runs two named experiments from the local `experiments.yaml`:
+The script reads comparison metadata from the local `lab_0_utils/experiments.yaml`:
 
-- `lab0-sparkmeasure-presentation-native`
-- `lab0-sparkmeasure-presentation-observed`
+- `comparison_jobs.lab0-sparkmeasure-presentation.native.config`
+- `comparison_jobs.lab0-sparkmeasure-presentation.observed.config`
 
 Both write:
 
@@ -143,4 +143,4 @@ Useful paths:
 - `lakehouse/silver/lab0/sales_enriched`
 - `observability/event-logs`
 
-For this lab, sparkMeasure metrics are not persisted as a Delta table. Event logs still go to `observability/event-logs` because the submit command sets `spark.eventLog.dir`. The scripts use local `experiments.yaml` config and keep Spark/SRE markers separated as `SPARK_*`, `SPARKMEASURE_*`, `WORKSHOP_*`, and lab-specific `LAB0_*` lines.
+For this lab, sparkMeasure metrics are not persisted as a Delta table. Event logs still go to `observability/event-logs` because the submit command sets `spark.eventLog.dir`. The scripts use local `lab_0_utils/experiments.yaml` config and keep Spark/SRE markers separated as `SPARK_*`, `SPARKMEASURE_*`, `WORKSHOP_*`, and lab-specific `LAB0_*` lines.
