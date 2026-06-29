@@ -6,12 +6,12 @@ from spark_workshop.config import (
     ExperimentConfig,
     ObservabilityConfig,
 )
-from spark_workshop.experiments import (
+from spark_workshop.runtime import (
     ExperimentContext,
     ExperimentRunner,
     SparkExperiment,
 )
-from spark_workshop.experiments import runner as runner_module
+from spark_workshop.runtime import runner as runner_module
 
 
 class RecordingExperiment(SparkExperiment):

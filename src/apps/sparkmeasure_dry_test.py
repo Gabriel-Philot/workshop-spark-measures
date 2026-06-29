@@ -5,7 +5,7 @@ from typing import Any
 from pyspark.sql import functions as F
 
 from spark_workshop.config import load_experiment_config
-from spark_workshop.experiments import (
+from spark_workshop.runtime import (
     ExperimentContext,
     ExperimentRunner,
     SparkExperiment,

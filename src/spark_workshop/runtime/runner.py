@@ -6,7 +6,7 @@ from typing import Any, Mapping
 from uuid import uuid4
 
 from spark_workshop.config import ExperimentConfig
-from spark_workshop.experiments.base import ExperimentContext, SparkExperiment
+from spark_workshop.runtime.base import ExperimentContext, SparkExperiment
 from spark_workshop.metrics import (
     SparkMeasureFactory,
     normalize_metrics,
