@@ -88,3 +88,68 @@ focused on the ranking workload instead of extra Delta jobs for metrics writes.
 - Inputs: `lakehouse/bronze/retail/sales`, `vendors`, and `products`
 - Output: `lakehouse/gold/lab1/top_sales_global_sort`
 - Event logs: `observability/event-logs`
+
+## Random task outlier diagnosis
+
+This second Lab 1 exercise introduces task-level sparkMeasure metrics without
+using vendor/product/customer skew. The workload creates a technical
+`audit_bucket` from a hash of `sale_id`; one of 16 buckets performs a much more
+expensive fingerprint expression, which creates a task straggler.
+
+Task metrics are diagnostic-only here. They are printed and inspected during the
+run, but not persisted as Delta metrics artifacts.
+
+Run stage-level first:
+
+```bash
+docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --deploy-mode client \
+  --conf spark.driver.host=spark-master \
+  --conf spark.eventLog.dir=s3a://observability/event-logs \
+  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py --collector stage
+```
+
+Then run task-level:
+
+```bash
+docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --deploy-mode client \
+  --conf spark.driver.host=spark-master \
+  --conf spark.eventLog.dir=s3a://observability/event-logs \
+  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py --collector task
+```
+
+Expected task-level teaching marker:
+
+```text
+LAB1_TASK_OUTLIER rank=1 stageId=... taskIndex=... executorRunTime=...
+```
+
+The live-code fix is already commented in `random_task_outlier_diagnosis.py`.
+For repeatable validation without editing the file, run:
+
+```bash
+docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --deploy-mode client \
+  --conf spark.driver.host=spark-master \
+  --conf spark.eventLog.dir=s3a://observability/event-logs \
+  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py --collector task --variant fixed
+```
+
+Expected markers:
+
+- `LAB1_RANDOM_TASK_OUTLIER_STAGE_OK`
+- `LAB1_RANDOM_TASK_OUTLIER_TASK_OK`
+- `LAB1_RANDOM_TASK_OUTLIER_FIXED_TASK_OK`
+
+See `task_metrics_native_api.md` for the native `TaskMetrics` API and the YAML
+equivalent used by this lab.

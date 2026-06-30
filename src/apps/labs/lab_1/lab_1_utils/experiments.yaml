@@ -78,3 +78,115 @@ experiments:
           mode: overwrite
           options:
             overwriteSchema: true
+
+  lab1-random-task-outlier-stage:
+    app_name: workshop-lab1-random-task-outlier-stage
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 64
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB1_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB1_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB1_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+      outputs:
+        audit_outlier:
+          format: delta
+          path: ${LAB1_RANDOM_TASK_OUTLIER_PATH:-s3a://lakehouse/gold/lab1/random_task_outlier/problematic}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+
+  lab1-random-task-outlier-task:
+    app_name: workshop-lab1-random-task-outlier-task
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 64
+    observability:
+      enabled: true
+      collector: task
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB1_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB1_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB1_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+      outputs:
+        audit_outlier:
+          format: delta
+          path: ${LAB1_RANDOM_TASK_OUTLIER_PATH:-s3a://lakehouse/gold/lab1/random_task_outlier/problematic}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+
+  lab1-random-task-outlier-fixed-stage:
+    app_name: workshop-lab1-random-task-outlier-fixed-stage
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 64
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB1_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB1_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB1_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+      outputs:
+        audit_outlier:
+          format: delta
+          path: ${LAB1_RANDOM_TASK_OUTLIER_FIXED_PATH:-s3a://lakehouse/gold/lab1/random_task_outlier/fixed}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+
+  lab1-random-task-outlier-fixed-task:
+    app_name: workshop-lab1-random-task-outlier-fixed-task
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 64
+    observability:
+      enabled: true
+      collector: task
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB1_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB1_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB1_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+      outputs:
+        audit_outlier:
+          format: delta
+          path: ${LAB1_RANDOM_TASK_OUTLIER_FIXED_PATH:-s3a://lakehouse/gold/lab1/random_task_outlier/fixed}
+          mode: overwrite
+          options:
+            overwriteSchema: true
