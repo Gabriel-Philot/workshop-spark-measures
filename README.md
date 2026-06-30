@@ -73,3 +73,8 @@ The generator is schema-first: the YAML contract owns relationships, distributio
 ## Why stage metrics first
 
 Stage-level collection has lower overhead and is sufficient for the first workshop diagnostic flow. Task-level metrics and Flight Recorder mode are intentionally deferred.
+
+## Labs
+
+- `src/apps/labs/lab_0`: source inventory, natural sparkMeasure API, and the first native-vs-observed presentation.
+- `src/apps/labs/lab_1`: global sales ranking diagnosis using stage-level sparkMeasure metrics.
