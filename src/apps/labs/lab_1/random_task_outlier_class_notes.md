@@ -10,10 +10,10 @@ is a controlled task straggler used to introduce `TaskMetrics`.
 
 ## What stage metrics show
 
-Run the workload first with the stage collector:
+Run the workload first with `CONFIG_NAME` set to the stage config:
 
-```bash
-/opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py --collector stage
+```python
+CONFIG_NAME = "lab1-random-task-outlier-stage"
 ```
 
 Stage metrics answer aggregate questions:
@@ -34,10 +34,10 @@ does not identify the individual slow task inside the stage.
 
 ## What task metrics add
 
-Run the same workload with the task collector:
+Run the same workload with `CONFIG_NAME` set to the task config:
 
-```bash
-/opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py --collector task
+```python
+CONFIG_NAME = "lab1-random-task-outlier-task"
 ```
 
 The task collector exposes one row per task. The lab prints a compact top-N view
@@ -107,7 +107,7 @@ artifact.
    slow.
 3. Switch to task metrics and show `LAB1_TASK_OUTLIER`.
 4. Connect `stageId` and `taskIndex` back to the Spark UI if desired.
-5. Apply the prepared fix or run `--variant fixed`.
+5. Apply the prepared fix or switch `CONFIG_NAME` to `lab1-random-task-outlier-fixed-task`.
 6. Compare worst-task runtime and aggregate executor runtime.
 
 The lesson should end with this mental model:

@@ -99,20 +99,16 @@ expensive fingerprint expression, which creates a task straggler.
 Task metrics are diagnostic-only here. They are printed and inspected during the
 run, but not persisted as Delta metrics artifacts.
 
-Run stage-level first:
+Use `CONFIG_NAME` in `random_task_outlier_diagnosis.py` as the classroom
+switch:
 
-```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
-  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --deploy-mode client \
-  --conf spark.driver.host=spark-master \
-  --conf spark.eventLog.dir=s3a://observability/event-logs \
-  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py --collector stage
+```python
+CONFIG_NAME = "lab1-random-task-outlier-stage"       # stage aggregate view
+CONFIG_NAME = "lab1-random-task-outlier-task"        # task diagnostic view
+CONFIG_NAME = "lab1-random-task-outlier-fixed-task"  # fixed validation view
 ```
 
-Then run task-level:
+Run the same submit command after changing `CONFIG_NAME`:
 
 ```bash
 docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
@@ -122,7 +118,18 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py --collector task
+  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py
+```
+
+The selected YAML config controls both the sparkMeasure collector and the
+workload variant:
+
+```yaml
+observability:
+  collector: task
+  persist: false
+workload:
+  variant: problematic
 ```
 
 Expected task-level teaching marker:
@@ -132,18 +139,8 @@ LAB1_TASK_OUTLIER rank=1 stageId=... taskIndex=... executorRunTime=...
 ```
 
 The live-code fix is already commented in `random_task_outlier_diagnosis.py`.
-For repeatable validation without editing the file, run:
-
-```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
-  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --deploy-mode client \
-  --conf spark.driver.host=spark-master \
-  --conf spark.eventLog.dir=s3a://observability/event-logs \
-  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py --collector task --variant fixed
-```
+For repeatable validation without editing the transform call, switch
+`CONFIG_NAME` to `lab1-random-task-outlier-fixed-task`.
 
 Expected markers:
 

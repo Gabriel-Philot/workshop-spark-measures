@@ -1,24 +1,24 @@
 from apps.labs.lab_1.random_task_outlier_diagnosis import (
-    CONFIG_BY_MODE,
-    parse_args,
+    CONFIG_NAME,
+    _load_workload_settings,
     render_task_outlier_line,
 )
 
 
-def test_random_task_outlier_parse_args_defaults_to_stage_problematic():
-    args = parse_args([])
+def test_random_task_outlier_default_config_is_stage_problematic():
+    assert CONFIG_NAME == "lab1-random-task-outlier-stage"
 
-    assert args.collector == "stage"
-    assert args.variant == "problematic"
-    assert CONFIG_BY_MODE[(args.collector, args.variant)] == "lab1-random-task-outlier-stage"
+    settings = _load_workload_settings(CONFIG_NAME)
+
+    assert settings.variant == "problematic"
+    assert settings.success_marker == "LAB1_RANDOM_TASK_OUTLIER_STAGE_OK"
 
 
-def test_random_task_outlier_parse_args_supports_task_fixed():
-    args = parse_args(["--collector", "task", "--variant", "fixed"])
+def test_random_task_outlier_fixed_task_settings_come_from_yaml():
+    settings = _load_workload_settings("lab1-random-task-outlier-fixed-task")
 
-    assert args.collector == "task"
-    assert args.variant == "fixed"
-    assert CONFIG_BY_MODE[(args.collector, args.variant)] == "lab1-random-task-outlier-fixed-task"
+    assert settings.variant == "fixed"
+    assert settings.success_marker == "LAB1_RANDOM_TASK_OUTLIER_FIXED_TASK_OK"
 
 
 def test_render_task_outlier_line_includes_task_identity_and_cost():

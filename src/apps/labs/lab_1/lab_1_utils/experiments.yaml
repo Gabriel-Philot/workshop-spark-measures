@@ -81,6 +81,9 @@ experiments:
 
   lab1-random-task-outlier-stage:
     app_name: workshop-lab1-random-task-outlier-stage
+    workload:
+      variant: problematic
+      success_marker: LAB1_RANDOM_TASK_OUTLIER_STAGE_OK
     spark:
       config:
         spark.sql.shuffle.partitions: 64
@@ -109,6 +112,9 @@ experiments:
 
   lab1-random-task-outlier-task:
     app_name: workshop-lab1-random-task-outlier-task
+    workload:
+      variant: problematic
+      success_marker: LAB1_RANDOM_TASK_OUTLIER_TASK_OK
     spark:
       config:
         spark.sql.shuffle.partitions: 64
@@ -137,6 +143,9 @@ experiments:
 
   lab1-random-task-outlier-fixed-stage:
     app_name: workshop-lab1-random-task-outlier-fixed-stage
+    workload:
+      variant: fixed
+      success_marker: LAB1_RANDOM_TASK_OUTLIER_FIXED_STAGE_OK
     spark:
       config:
         spark.sql.shuffle.partitions: 64
@@ -165,6 +174,9 @@ experiments:
 
   lab1-random-task-outlier-fixed-task:
     app_name: workshop-lab1-random-task-outlier-fixed-task
+    workload:
+      variant: fixed
+      success_marker: LAB1_RANDOM_TASK_OUTLIER_FIXED_TASK_OK
     spark:
       config:
         spark.sql.shuffle.partitions: 64

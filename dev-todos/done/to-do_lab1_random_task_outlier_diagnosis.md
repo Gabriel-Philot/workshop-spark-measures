@@ -98,7 +98,7 @@ lab1-random-task-outlier-task:
     persist: false
 ```
 
-The script accepts `--collector stage|task` and maps it to the corresponding named config. Task metrics are diagnostic-only in this lab: they are printed and inspected in-process, not persisted as Delta artifacts.
+The script uses a single `CONFIG_NAME` classroom switch and reads `observability.collector` plus `workload.variant` from the selected YAML config. Task metrics are diagnostic-only in this lab: they are printed and inspected in-process, not persisted as Delta artifacts.
 
 ## Native task metrics documentation
 

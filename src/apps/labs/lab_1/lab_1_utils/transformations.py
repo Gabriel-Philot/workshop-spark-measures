@@ -5,8 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pyspark.sql import DataFrame
+    from pyspark.sql import Column, DataFrame
 
+
+# -----------------------------------------------------------------------------
+# Lab 1 shared source model: Bronze retail -> enriched sales
+# -----------------------------------------------------------------------------
 
 SALES_ENRICHED_COLUMNS = (
     "sale_id",
@@ -24,11 +28,9 @@ SALES_ENRICHED_COLUMNS = (
     "sale_amount",
 )
 
-TOP_SALES_GLOBAL_SORT_COLUMNS = SALES_ENRICHED_COLUMNS
-
 
 def build_sales_enriched(inputs: dict[str, "DataFrame"]) -> "DataFrame":
-    """Build the enriched sales dataset used by the Lab 1 ranking workload."""
+    """Build the enriched sales dataset used by the Lab 1 workloads."""
 
     vendors = inputs["vendors"].select("vendor_id", "vendor_name", "region").alias("v")
     products = (
@@ -43,17 +45,6 @@ def build_sales_enriched(inputs: dict[str, "DataFrame"]) -> "DataFrame":
         .transform(_join_vendor_metadata, vendors)
         .transform(_join_product_metadata, products)
         .transform(_select_sales_enriched_columns)
-    )
-
-
-def build_top_sales_global_sort(sales_enriched: "DataFrame") -> "DataFrame":
-    """Create the diagnostic workload with an intentionally global sort."""
-
-    from pyspark.sql import functions as F
-
-    return sales_enriched.select(*TOP_SALES_GLOBAL_SORT_COLUMNS).orderBy(
-        F.desc("sale_amount"),
-        F.asc("sale_id"),
     )
 
 
@@ -92,6 +83,29 @@ def _select_sales_enriched_columns(sales: "DataFrame") -> "DataFrame":
         F.col("s.unit_price").cast("double").alias("unit_price"),
         F.col("s.sale_amount").cast("double").alias("sale_amount"),
     )
+
+
+# -----------------------------------------------------------------------------
+# Lab 1A: global sort diagnosis with stage-level sparkMeasure
+# -----------------------------------------------------------------------------
+
+TOP_SALES_GLOBAL_SORT_COLUMNS = SALES_ENRICHED_COLUMNS
+
+
+def build_top_sales_global_sort(sales_enriched: "DataFrame") -> "DataFrame":
+    """Create the diagnostic workload with an intentionally global sort."""
+
+    from pyspark.sql import functions as F
+
+    return sales_enriched.select(*TOP_SALES_GLOBAL_SORT_COLUMNS).orderBy(
+        F.desc("sale_amount"),
+        F.asc("sale_id"),
+    )
+
+
+# -----------------------------------------------------------------------------
+# Lab 1B: random audit-bucket task outlier diagnosis
+# -----------------------------------------------------------------------------
 
 AUDIT_BUCKETS = 16
 SLOW_AUDIT_BUCKET = 7
