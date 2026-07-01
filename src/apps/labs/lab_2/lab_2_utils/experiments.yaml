@@ -1,0 +1,60 @@
+experiments:
+  lab2-shuffle-aggregation-baseline:
+    app_name: workshop-lab2-shuffle-aggregation-baseline
+    workload:
+      variant: baseline
+      success_marker: LAB2_SHUFFLE_AGGREGATION_BASELINE_OK
+      shuffle_partitions: 96
+      round_robin_partitions: 1024
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 96
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB2_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB2_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+      outputs:
+        regional_monthly_sales:
+          format: delta
+          path: ${LAB2_SHUFFLE_AGGREGATION_BASELINE_PATH:-s3a://lakehouse/gold/lab2/shuffle_aggregation/baseline}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+
+  lab2-shuffle-aggregation-optimized:
+    app_name: workshop-lab2-shuffle-aggregation-optimized
+    workload:
+      variant: optimized
+      success_marker: LAB2_SHUFFLE_AGGREGATION_OPTIMIZED_OK
+      shuffle_partitions: 96
+      keyed_partitions: 32
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 96
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB2_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB2_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+      outputs:
+        regional_monthly_sales:
+          format: delta
+          path: ${LAB2_SHUFFLE_AGGREGATION_OPTIMIZED_PATH:-s3a://lakehouse/gold/lab2/shuffle_aggregation/optimized}
+          mode: overwrite
+          options:
+            overwriteSchema: true
