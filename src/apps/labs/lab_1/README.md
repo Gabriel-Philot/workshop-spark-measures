@@ -152,4 +152,5 @@ Expected markers:
 - `LAB1_RANDOM_TASK_OUTLIER_FIXED_TASK_OK`
 
 See `task_metrics_native_api.md` for the native `TaskMetrics` API and the YAML
-equivalent used by this lab.
+equivalent used by this lab. Use `random_task_outlier_class_notes.md` for the
+instructor narrative and validated before/after interpretation.
