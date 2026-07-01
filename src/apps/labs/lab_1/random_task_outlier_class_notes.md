@@ -116,3 +116,36 @@ The lesson should end with this mental model:
 - use task metrics when the question becomes "which task is the long tail?";
 - avoid persisting task metrics by default unless there is a clear analytical
   reason to store them.
+
+## Why task duration can look similar after the fix
+
+It is possible for the fixed run to show a similar top-task `duration` while
+still showing a lower `executorRunTime`. This is expected enough in a local
+workshop cluster and should not be treated as a contradiction.
+
+In sparkMeasure task metrics:
+
+- `duration` is the task wall-clock time from start to finish;
+- `executorRunTime` is the time spent executing work inside the executor.
+
+The prepared fix reduces the concentrated compute cost of the heavy audit
+bucket. That improvement is better represented by `executorRunTime` than by raw
+`duration`.
+
+A similar `duration` can still happen because the local run includes other costs
+around the compute itself:
+
+- limited local cores and task scheduling effects;
+- Delta/S3A write and commit overhead;
+- shuffle, serialization, or fetch overhead;
+- fixed overheads that are large compared with the XS dataset size.
+
+The instructor interpretation should be:
+
+```text
+similar duration = the wall-clock task still includes non-compute overhead
+lower executorRunTime = the concentrated compute outlier was reduced
+```
+
+For this lesson, use `executorRunTime` as the primary signal for the task-level
+compute outlier, and use `duration` as a complementary signal.

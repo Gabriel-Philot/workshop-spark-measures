@@ -1,21 +1,28 @@
-from apps.labs.lab_1.random_task_outlier_diagnosis import (
-    CONFIG_NAME,
-    _load_workload_settings,
+from apps.labs.lab_1 import random_task_outlier_diagnosis
+from apps.labs.lab_1.random_task_outlier_diagnosis import CONFIG_PATH
+from apps.labs.lab_1.lab_1_utils.random_task_outlier_runtime import (
+    load_workload_settings,
     render_task_outlier_line,
 )
 
 
 def test_random_task_outlier_default_config_is_stage_problematic():
-    assert CONFIG_NAME == "lab1-random-task-outlier-stage"
+    assert random_task_outlier_diagnosis.CONFIG_NAME == "lab1-random-task-outlier-stage"
 
-    settings = _load_workload_settings(CONFIG_NAME)
+    settings = load_workload_settings(
+        random_task_outlier_diagnosis.CONFIG_NAME,
+        CONFIG_PATH,
+    )
 
     assert settings.variant == "problematic"
     assert settings.success_marker == "LAB1_RANDOM_TASK_OUTLIER_STAGE_OK"
 
 
 def test_random_task_outlier_fixed_task_settings_come_from_yaml():
-    settings = _load_workload_settings("lab1-random-task-outlier-fixed-task")
+    settings = load_workload_settings(
+        "lab1-random-task-outlier-fixed-task",
+        CONFIG_PATH,
+    )
 
     assert settings.variant == "fixed"
     assert settings.success_marker == "LAB1_RANDOM_TASK_OUTLIER_FIXED_TASK_OK"
