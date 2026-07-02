@@ -52,3 +52,43 @@ def test_lab2_shuffle_aggregation_spark_configs_are_explicit():
 
     assert baseline.spark_config["spark.sql.shuffle.partitions"] == 96
     assert optimized.spark_config["spark.sql.shuffle.partitions"] == 96
+
+
+def test_lab2_stage_metrics_drill_configs_use_stage_metrics_without_persistence():
+    default = load_experiment_config(
+        "lab2-stage-metrics-drill-default",
+        config_path=LAB2_CONFIG,
+    )
+    pressure = load_experiment_config(
+        "lab2-stage-metrics-drill-pressure",
+        config_path=LAB2_CONFIG,
+    )
+
+    assert default.observability.enabled is True
+    assert pressure.observability.enabled is True
+    assert default.observability.collector == "stage"
+    assert pressure.observability.collector == "stage"
+    assert default.observability.persist is False
+    assert pressure.observability.persist is False
+    assert (
+        default.artifacts.output("stage_metrics_summary").path
+        == "s3a://lakehouse/gold/lab2/stage_metrics_drill/default"
+    )
+    assert (
+        pressure.artifacts.output("stage_metrics_summary").path
+        == "s3a://lakehouse/gold/lab2/stage_metrics_drill/pressure"
+    )
+
+
+def test_lab2_stage_metrics_drill_spark_configs_are_explicit():
+    default = load_experiment_config(
+        "lab2-stage-metrics-drill-default",
+        config_path=LAB2_CONFIG,
+    )
+    pressure = load_experiment_config(
+        "lab2-stage-metrics-drill-pressure",
+        config_path=LAB2_CONFIG,
+    )
+
+    assert default.spark_config["spark.sql.shuffle.partitions"] == 96
+    assert pressure.spark_config["spark.sql.shuffle.partitions"] == 96

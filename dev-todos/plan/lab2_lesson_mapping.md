@@ -160,8 +160,8 @@ Quality assessment:
 Implementation effort later:
 
 - Low to medium.
-- Add `src/apps/labs/lab_2/shuffle_aggregation_diagnosis.py`.
-- Add `src/apps/labs/lab_2/shuffle_aggregation_diagnosis_class_notes.md`.
+- Add `src/apps/labs/lab_2/lab_2a_shuffle_aggregation_diagnosis.py`.
+- Add `src/apps/labs/lab_2/lab_2a_shuffle_aggregation_diagnosis_class_notes.md`.
 - Add `lab_2_utils/experiments.yaml` and `lab_2_utils/transformations.py`.
 - Reuse the Lab 1 app contract style.
 
