@@ -140,3 +140,54 @@ execution symptoms rather than different business logic.
 
 See `lab_2b_stage_metrics_interpretation_drill_class_notes.md` for the source-question
 summary, expected answers, and instructor narrative.
+
+## Lab 2C: task duration skew diagnosis
+
+The third Lab 2 exercise moves from stage-level counters to task-level
+distribution. It mirrors a Spark UI Summary Metrics question where the maximum
+task duration and input size are much larger than the 75th percentile.
+
+The lab is intentionally task-only because the source question is about the
+distribution inside one completed stage. Use the task config in
+`lab_2c_task_duration_skew_diagnosis.py`:
+
+```python
+CONFIG_NAME = "lab2c-task-skew-task"
+```
+
+Run the submit command:
+
+```bash
+docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --deploy-mode client \
+  --conf spark.driver.host=spark-master \
+  --conf spark.eventLog.dir=s3a://observability/event-logs \
+  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+  /opt/spark/src/apps/labs/lab_2/lab_2c_task_duration_skew_diagnosis.py
+```
+
+The task config uses sparkMeasure TaskMetrics to print one boxed Summary
+Metrics-style diagnostic report for the selected stage:
+
+- `duration`
+- `executorRunTime`
+- `shuffleTotalBytesRead`
+- `shuffleRecordsRead`
+- read/write records when available
+
+Expected markers:
+
+- `LAB2C_TASK_SKEW_TASK_OK`
+
+Latest validated local behavior on the current WSL stack with `SCALE=xs`:
+
+| Scale | Config | Total tasks | Selected stage | Selected-stage tasks | Key signal |
+|---|---|---:|---:|---:|---|
+| `xs` | `lab2c-task-skew-task` | 299 | 12 | 27 | `shuffleTotalBytesRead` max/p75 ~46.85x |
+
+The task config also showed `duration` max/p75 ~8.96x on the selected stage.
+
+Validated local metrics are documented in
+`lab_2c_task_duration_skew_diagnosis_class_notes.md`.
