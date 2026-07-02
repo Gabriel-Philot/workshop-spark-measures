@@ -215,7 +215,7 @@ a compact before/after comparison after the change.
 ## Classroom flow
 
 1. Start with `CONFIG_NAME = "lab2-shuffle-aggregation-baseline"`.
-2. Run the submit command from `shuffle_aggregation_diagnosis.py`.
+2. Run the submit command from `lab_2a_shuffle_aggregation_diagnosis.py`.
 3. Read the `SPARKMEASURE_METRICS` line in the terminal.
 4. Open the Spark History Server and inspect the application
    `workshop-lab2-shuffle-aggregation-baseline`.

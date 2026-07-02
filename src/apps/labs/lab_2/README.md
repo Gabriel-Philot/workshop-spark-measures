@@ -26,7 +26,7 @@ The first Lab 2 exercise uses a common aggregation pattern: join sales with
 vendor metadata, aggregate by region/month, and inspect the shuffle cost with
 sparkMeasure StageMetrics.
 
-Use `CONFIG_NAME` in `shuffle_aggregation_diagnosis.py` as the classroom switch:
+Use `CONFIG_NAME` in `lab_2a_shuffle_aggregation_diagnosis.py` as the classroom switch:
 
 ```python
 CONFIG_NAME = "lab2-shuffle-aggregation-baseline"
@@ -43,7 +43,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_2/shuffle_aggregation_diagnosis.py
+  /opt/spark/src/apps/labs/lab_2/lab_2a_shuffle_aggregation_diagnosis.py
 ```
 
 Both variants collect sparkMeasure StageMetrics and write a Gold Delta aggregate.
@@ -76,5 +76,67 @@ Latest validated local behavior on the current WSL stack with `SCALE=xs`:
 `sales` table. Re-run `s` before using larger-scale numbers in class because the
 baseline was later adjusted to make the wide-row shuffle problem clearer.
 
-See `shuffle_aggregation_diagnosis_class_notes.md` for the instructor narrative
+See `lab_2a_shuffle_aggregation_diagnosis_class_notes.md` for the instructor narrative
 and source-question summary.
+
+## Lab 2B: stage metrics interpretation drill
+
+The second Lab 2 exercise is a certification-style metric-reading drill. It
+connects two common Spark UI questions to sparkMeasure StageMetrics:
+
+- high GC time as a memory-pressure signal;
+- shuffle spill memory/disk as evidence that Spark spilled shuffle data.
+
+Use `CONFIG_NAME` in `lab_2b_stage_metrics_interpretation_drill.py` as the classroom
+switch:
+
+```python
+CONFIG_NAME = "lab2-stage-metrics-drill-pressure"
+CONFIG_NAME = "lab2-stage-metrics-drill-default"
+```
+
+Run the submit command:
+
+```bash
+docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --deploy-mode client \
+  --conf spark.driver.host=spark-master \
+  --conf spark.eventLog.dir=s3a://observability/event-logs \
+  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+  /opt/spark/src/apps/labs/lab_2/lab_2b_stage_metrics_interpretation_drill.py
+```
+
+The pressure variant carries wider payload columns through a round-robin
+shuffle before narrowing the data. The default variant computes the same Gold
+summary while narrowing payload width earlier and repartitioning by the
+business keys.
+
+Expected metrics to compare:
+
+- `shuffleBytesWritten`
+- `shuffleTotalBytesRead`
+- `memoryBytesSpilled`
+- `diskBytesSpilled`
+- `jvmGCTime`
+- `executorRunTime`
+- `numTasks`
+
+Expected markers:
+
+- `LAB2_STAGE_METRICS_DRILL_PRESSURE_OK`
+- `LAB2_STAGE_METRICS_DRILL_DEFAULT_OK`
+
+Latest validated local behavior on the current WSL stack with `SCALE=xs`:
+
+| Scale | Variant | Rows in `sales` | Stages | Tasks | Executor runtime | Shuffle written | Memory spilled | Disk spilled | GC ratio |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `xs` | default | 5,000,000 | 16 | 356 | ~59.3s | ~40.0 MiB | 0 B | 0 B | ~2.8% |
+| `xs` | pressure | 5,000,000 | 17 | 839 | ~94.2s | ~670.9 MiB | ~800.0 MiB | ~382.2 MiB | ~3.4% |
+
+Both variants write the same 50-row Gold summary, so the lesson compares
+execution symptoms rather than different business logic.
+
+See `lab_2b_stage_metrics_interpretation_drill_class_notes.md` for the source-question
+summary, expected answers, and instructor narrative.

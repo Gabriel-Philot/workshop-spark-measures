@@ -45,8 +45,8 @@ Add the Lab 2 structure if it does not exist:
 ```text
 src/apps/labs/lab_2/
   README.md
-  shuffle_aggregation_diagnosis.py
-  shuffle_aggregation_diagnosis_class_notes.md
+  lab_2a_shuffle_aggregation_diagnosis.py
+  lab_2a_shuffle_aggregation_diagnosis_class_notes.md
   lab_2_utils/
     __init__.py
     experiments.yaml
@@ -125,7 +125,7 @@ Each config should make the classroom mode obvious:
 Create:
 
 ```text
-src/apps/labs/lab_2/shuffle_aggregation_diagnosis_class_notes.md
+src/apps/labs/lab_2/lab_2a_shuffle_aggregation_diagnosis_class_notes.md
 ```
 
 The notes must explain:
