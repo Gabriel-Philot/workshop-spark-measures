@@ -359,3 +359,71 @@ def _aggregate_task_skew_vendor_summary(sales: "DataFrame") -> "DataFrame":
         )
         .select(*TASK_SKEW_VENDOR_SUMMARY_COLUMNS)
     )
+
+
+# -----------------------------------------------------------------------------
+# Lab 2D: empty partition diagnosis with task-level sparkMeasure
+# -----------------------------------------------------------------------------
+
+EMPTY_PARTITIONS_SUMMARY_COLUMNS = (
+    "partition_bucket",
+    "sale_count",
+    "gross_sales_amount",
+    "payload_bytes_observed",
+    "average_sale_amount",
+)
+
+
+def build_empty_partitions_sales_summary(
+    inputs: dict[str, "DataFrame"],
+    *,
+    shuffle_partitions: int,
+    active_buckets: int,
+) -> "DataFrame":
+    """Build an over-partitioned aggregation that exposes empty task partitions."""
+
+    return (
+        inputs["sales"]
+        .transform(_select_empty_partition_sales)
+        .transform(_add_empty_partition_bucket, active_buckets)
+        .repartition(shuffle_partitions, "partition_bucket")
+        .transform(_aggregate_empty_partition_sales_summary)
+    )
+
+
+def _select_empty_partition_sales(sales: "DataFrame") -> "DataFrame":
+    from pyspark.sql import functions as F
+
+    payload_columns = _payload_columns(sales)
+    return sales.select(
+        F.col("sale_id").cast("long").alias("sale_id"),
+        F.col("sale_amount").cast("double").alias("sale_amount"),
+        _payload_width_expression(F, payload_columns).cast("long").alias("payload_width"),
+    )
+
+
+def _add_empty_partition_bucket(
+    sales: "DataFrame",
+    active_buckets: int,
+) -> "DataFrame":
+    from pyspark.sql import functions as F
+
+    return sales.withColumn(
+        "partition_bucket",
+        F.pmod(F.xxhash64("sale_id"), F.lit(active_buckets)).cast("int"),
+    )
+
+
+def _aggregate_empty_partition_sales_summary(sales: "DataFrame") -> "DataFrame":
+    from pyspark.sql import functions as F
+
+    return (
+        sales.groupBy("partition_bucket")
+        .agg(
+            F.count("*").cast("long").alias("sale_count"),
+            F.round(F.sum("sale_amount"), 2).alias("gross_sales_amount"),
+            F.sum("payload_width").cast("long").alias("payload_bytes_observed"),
+            F.round(F.avg("sale_amount"), 2).alias("average_sale_amount"),
+        )
+        .select(*EMPTY_PARTITIONS_SUMMARY_COLUMNS)
+    )

@@ -38,11 +38,11 @@ symptoms from skew symptoms.
 The classroom story should be:
 
 1. Run a workload with too many partitions for the data volume.
-2. Show that stage-level metrics may reveal too many tasks, but not the full
-   distribution story.
-3. Use TaskMetrics or Spark UI task pages to show many tiny/empty tasks.
-4. Apply a simple fix by reducing or controlling partition count.
-5. Compare task distribution and runtime before and after the fix.
+2. Use TaskMetrics or Spark UI task pages to show a low-end distribution
+   problem: `min << median`.
+3. Explain why `max ~= p75` means this is not high-end skew.
+4. Connect the observed distribution directly to the certification-style
+   question.
 
 This lesson should be task-level and should come after the task skew lesson, so
 students can contrast low-end outliers with high-end outliers.
@@ -53,8 +53,8 @@ Add or extend the Lab 2 structure:
 
 ```text
 src/apps/labs/lab_2/
-  empty_partitions_diagnosis.py
-  empty_partitions_diagnosis_class_notes.md
+  lab_2d_empty_partitions_diagnosis.py
+  lab_2d_empty_partitions_diagnosis_class_notes.md
   lab_2_utils/
     __init__.py
     experiments.yaml
@@ -99,7 +99,6 @@ Candidate workload:
 3. Apply a simple aggregation or projection that triggers tasks across those
    partitions.
 4. Use TaskMetrics to show many low-duration or low-record tasks.
-5. Compare with a corrected partition count.
 
 The problem should be created in the lab code/config, not in the data generator.
 This keeps the generator reusable and makes the lesson easier to explain.
@@ -109,32 +108,30 @@ This keeps the generator reusable and makes the lesson easier to explain.
 Suggested config names:
 
 ```text
-lab2-empty-partitions-stage
-lab2-empty-partitions-task
-lab2-empty-partitions-task-fixed
+lab2d-empty-partitions-task
 ```
 
 Expected behavior:
 
-- `stage`: shows the aggregate symptom, especially high task count relative to
-  useful work;
-- `task`: shows low-end outliers through TaskMetrics;
-- `task-fixed`: uses a smaller/controlled partition count and compares output.
+- `task`: shows low-end outliers through TaskMetrics.
 
 The excessive partition count should be configurable from YAML so the instructor
 can tune it for the local machine without editing transformation logic.
+
+Use the boxed diagnostic report pattern introduced in Lab 2C so task-level
+signals do not get buried in submit logs.
 
 ## Class notes requirements
 
 Create:
 
 ```text
-src/apps/labs/lab_2/empty_partitions_diagnosis_class_notes.md
+src/apps/labs/lab_2/lab_2d_empty_partitions_diagnosis_class_notes.md
 ```
 
 The notes must explain:
 
-- which certification-vault question inspired the lab;
+- the self-contained certification-style question that inspired the lab;
 - why `min << median` points to empty or near-empty partitions;
 - why `max ~= 75th percentile` argues against high-end skew;
 - how to compare this lesson with the task skew lesson;
@@ -151,19 +148,17 @@ The notes must explain:
   excessive partitioning so students can see the pattern.
 - On a small local WSL stack, too many partitions can create scheduler overhead
   and noisy timings. Keep the default partition count safe.
-- The fix should be obvious and reversible: reduce partition count or avoid the
-  unnecessary repartition.
+- Do not add a fixed run in the first implementation slice. Keep the lesson as a
+  diagnosis exercise linked to the source question.
 - The generated data does not need to change.
 - Keep TaskMetrics output compact; do not dump a full task DataFrame.
 
 ## Acceptance criteria
 
 - The lab runs with the standard local stack and generated retail data.
-- The stage-only run shows a high task count or weak useful-work signal.
 - The task-level run shows low-end outlier tasks clearly.
-- The fixed variant reduces empty/near-empty task symptoms.
 - Spark UI job descriptions make the lab identifiable.
-- Class notes include the certification-vault reference path.
+- Class notes are self-contained and do not include private vault paths.
 - No generated data, local runtime files, JARs, or secrets are committed.
 
 ## Validation
@@ -179,9 +174,9 @@ make generate XS
 Then run all configured variants with `spark-submit` and confirm:
 
 - Spark UI / History Server uses readable names;
-- StageMetrics and TaskMetrics behavior match the selected config;
+- TaskMetrics behavior matches the selected config;
 - the task-level output exposes empty/near-empty task symptoms clearly;
-- the fixed variant produces a useful comparison.
+- class notes connect the observed metrics to the source question.
 
 If XS data is not enough, document the tested generator size and why it is
 needed.
