@@ -10,6 +10,11 @@ from apps.labs.lab_2.lab_2_utils.stage_metrics_runtime import (
     StageMetricsDrillSettings,
     load_stage_metrics_drill_settings,
 )
+from apps.labs.lab_2.lab_2_utils.empty_partitions_runtime import (
+    EmptyPartitionsSettings,
+    load_empty_partitions_settings,
+    render_empty_partitions_report,
+)
 from apps.labs.lab_2.lab_2_utils.task_duration_skew_runtime import (
     TaskSkewSettings,
     load_task_skew_settings,
@@ -19,6 +24,7 @@ from apps.labs.lab_2.lab_2_utils.task_duration_skew_runtime import (
     render_task_summary_line,
 )
 from apps.labs.lab_2.lab_2_utils.transformations import (
+    EMPTY_PARTITIONS_SUMMARY_COLUMNS,
     REGIONAL_MONTHLY_SALES_COLUMNS,
     STAGE_METRICS_DRILL_COLUMNS,
     TASK_SKEW_VENDOR_SUMMARY_COLUMNS,
@@ -284,3 +290,99 @@ def test_lab2c_task_skew_report_is_single_readable_block():
     assert "803.0 KiB" in report
     assert "strong skew signal" in report
     assert "Top 1 task outliers by shuffleTotalBytesRead" in report
+
+
+def test_lab2d_empty_partitions_schema_is_classroom_friendly():
+    assert EMPTY_PARTITIONS_SUMMARY_COLUMNS == (
+        "partition_bucket",
+        "sale_count",
+        "gross_sales_amount",
+        "payload_bytes_observed",
+        "average_sale_amount",
+    )
+
+
+def test_lab2d_empty_partitions_settings_are_loaded_from_yaml():
+    task = load_empty_partitions_settings(
+        "lab2d-empty-partitions-task",
+        LAB2_CONFIG,
+    )
+
+    assert task == EmptyPartitionsSettings(
+        variant="empty",
+        success_marker="LAB2D_EMPTY_PARTITIONS_TASK_OK",
+        shuffle_partitions=27,
+        active_buckets=48,
+    )
+
+
+def test_lab2d_empty_partitions_rejects_unknown_variants(tmp_path):
+    config = tmp_path / "experiments.yaml"
+    config.write_text(
+        """
+experiments:
+  broken:
+    workload:
+      variant: fixed
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Unsupported Lab 2D workload variant"):
+        load_empty_partitions_settings("broken", config)
+
+
+def test_lab2d_empty_partitions_report_is_single_readable_block():
+    report = render_empty_partitions_report(
+        {
+            "stageId": 9,
+            "taskCount": 27,
+            "dataMetric": "shuffleRecordsRead",
+            "emptyTaskCount": 4,
+            "dataMedianToMin": 999999.0,
+            "dataMaxToP75": 1.05,
+        },
+        [
+            {
+                "stageId": 9,
+                "metric": "duration",
+                "taskCount": 27,
+                "min": 1,
+                "median": 2000,
+                "p75": 3000,
+                "max": 3100,
+                "medianToMin": 2000.0,
+                "maxToP75": 1.033,
+            },
+            {
+                "stageId": 9,
+                "metric": "shuffleRecordsRead",
+                "taskCount": 27,
+                "min": 0,
+                "median": 55,
+                "p75": 67,
+                "max": 276,
+                "medianToMin": 999999.0,
+                "maxToP75": 4.1194,
+            },
+        ],
+        [
+            {
+                "stageId": 9,
+                "index": 3,
+                "executorId": "1",
+                "duration": 1,
+                "shuffleRecordsRead": 0,
+                "shuffleTotalBytesRead": 0,
+                "recordsWritten": 0,
+                "memoryBytesSpilled": 0,
+            }
+        ],
+    )
+
+    assert "LAB 2D TASKMETRICS EMPTY PARTITIONS REPORT" in report
+    assert "stageId=9 | tasks=27 | emptyTasks=4" in report
+    assert "dataMetric=shuffleRecordsRead | median/min=∞" in report
+    assert "shuffleRecordsRead" in report
+    assert "Lowest 1 task outliers by shuffleRecordsRead" in report
+    assert "min << median" in report

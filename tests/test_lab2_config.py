@@ -118,3 +118,28 @@ def test_lab2c_task_skew_spark_configs_are_explicit():
     assert task.spark_config["spark.sql.shuffle.partitions"] == 27
     assert task.spark_config["spark.sql.adaptive.enabled"] is False
     assert task.spark_config["spark.sql.autoBroadcastJoinThreshold"] == -1
+
+
+def test_lab2d_empty_partitions_config_uses_task_metrics_without_persistence():
+    task = load_experiment_config(
+        "lab2d-empty-partitions-task",
+        config_path=LAB2_CONFIG,
+    )
+
+    assert task.observability.enabled is True
+    assert task.observability.collector == "task"
+    assert task.observability.persist is False
+    assert (
+        task.artifacts.output("empty_partitions_summary").path
+        == "s3a://lakehouse/gold/lab2/empty_partitions/task"
+    )
+
+
+def test_lab2d_empty_partitions_spark_configs_are_explicit():
+    task = load_experiment_config(
+        "lab2d-empty-partitions-task",
+        config_path=LAB2_CONFIG,
+    )
+
+    assert task.spark_config["spark.sql.shuffle.partitions"] == 27
+    assert task.spark_config["spark.sql.adaptive.enabled"] is False

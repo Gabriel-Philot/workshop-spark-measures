@@ -191,3 +191,57 @@ The task config also showed `duration` max/p75 ~8.96x on the selected stage.
 
 Validated local metrics are documented in
 `lab_2c_task_duration_skew_diagnosis_class_notes.md`.
+
+## Lab 2D: empty partitions diagnosis
+
+The fourth Lab 2 exercise keeps the task-level lens but changes the diagnostic
+question. Instead of high-end skew (`max >> p75`), it mirrors a Spark UI Summary
+Metrics question where one or a few tasks are tiny at the low end
+(`min << median`) while the high end remains tight (`max ~= p75`).
+
+The lab is intentionally task-only because the source question is about the
+distribution inside one completed stage. Use the task config in
+`lab_2d_empty_partitions_diagnosis.py`:
+
+```python
+CONFIG_NAME = "lab2d-empty-partitions-task"
+```
+
+Run the submit command:
+
+```bash
+docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --deploy-mode client \
+  --conf spark.driver.host=spark-master \
+  --conf spark.eventLog.dir=s3a://observability/event-logs \
+  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+  /opt/spark/src/apps/labs/lab_2/lab_2d_empty_partitions_diagnosis.py
+```
+
+The task config uses sparkMeasure TaskMetrics to print one boxed Summary
+Metrics-style diagnostic report for the selected stage:
+
+- `duration`
+- `executorRunTime`
+- `shuffleRecordsRead`
+- `shuffleTotalBytesRead`
+- read/write records when available
+
+Expected marker:
+
+- `LAB2D_EMPTY_PARTITIONS_TASK_OK`
+
+Latest validated local behavior on the current WSL stack with `SCALE=xs`:
+
+| Scale | Config | Total tasks | Selected stage | Selected-stage tasks | Key signal |
+|---|---|---:|---:|---:|---|
+| `xs` | `lab2d-empty-partitions-task` | 244 | 9 | 27 | `shuffleRecordsRead` min=0, median=104,633, max/p75 ~1.67x |
+
+The task config also showed 4 empty tasks on the selected stage. Duration can be
+noisy on the local WSL stack, so this lab uses data-volume distribution as the
+primary diagnosis signal.
+
+Validated local metrics are documented in
+`lab_2d_empty_partitions_diagnosis_class_notes.md`.

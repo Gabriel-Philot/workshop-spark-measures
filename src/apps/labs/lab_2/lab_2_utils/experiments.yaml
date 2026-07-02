@@ -155,3 +155,31 @@ experiments:
           mode: overwrite
           options:
             overwriteSchema: true
+
+  lab2d-empty-partitions-task:
+    app_name: workshop-lab2d-empty-partitions-task
+    workload:
+      variant: empty
+      success_marker: LAB2D_EMPTY_PARTITIONS_TASK_OK
+      shuffle_partitions: 27
+      active_buckets: 48
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 27
+        spark.sql.adaptive.enabled: false
+    observability:
+      enabled: true
+      collector: task
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB2_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+      outputs:
+        empty_partitions_summary:
+          format: delta
+          path: ${LAB2D_EMPTY_PARTITIONS_TASK_PATH:-s3a://lakehouse/gold/lab2/empty_partitions/task}
+          mode: overwrite
+          options:
+            overwriteSchema: true
