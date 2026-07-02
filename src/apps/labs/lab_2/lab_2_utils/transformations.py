@@ -266,3 +266,96 @@ def _payload_width_expression(F: object, payload_columns: tuple[str, ...]) -> ob
     if not payload_columns:
         return F.lit(0)
     return F.length(F.concat_ws("", *(F.col(column) for column in payload_columns)))
+
+
+# -----------------------------------------------------------------------------
+# Lab 2C: task duration skew diagnosis with task-level sparkMeasure
+# -----------------------------------------------------------------------------
+
+TASK_SKEW_VENDOR_SUMMARY_COLUMNS = (
+    "vendor_id",
+    "vendor_region",
+    "sale_count",
+    "gross_sales_amount",
+    "payload_bytes_observed",
+    "average_sale_amount",
+)
+
+
+def build_task_skew_vendor_summary(
+    inputs: dict[str, "DataFrame"],
+    *,
+    shuffle_partitions: int,
+) -> "DataFrame":
+    """Build a hot-key join and aggregation that exposes task skew."""
+
+    return (
+        inputs["sales"]
+        .transform(_select_task_skew_sales)
+        .repartition(shuffle_partitions, "vendor_id")
+        .transform(
+            _join_task_skew_vendors,
+            inputs["vendors"].transform(_select_task_skew_vendors),
+            shuffle_partitions,
+        )
+        .transform(_select_task_skew_fact)
+        .transform(_aggregate_task_skew_vendor_summary)
+    )
+
+
+def _select_task_skew_sales(sales: "DataFrame") -> "DataFrame":
+    from pyspark.sql import functions as F
+
+    payload_columns = _payload_columns(sales)
+    return sales.select(
+        F.col("vendor_id").cast("long").alias("vendor_id"),
+        F.col("sale_amount").cast("double").alias("sale_amount"),
+        _payload_width_expression(F, payload_columns).cast("long").alias("payload_width"),
+    )
+
+
+def _select_task_skew_vendors(vendors: "DataFrame") -> "DataFrame":
+    from pyspark.sql import functions as F
+
+    return vendors.select(
+        F.col("vendor_id").cast("long").alias("vendor_id"),
+        F.col("region").alias("vendor_region"),
+    )
+
+
+def _join_task_skew_vendors(
+    sales: "DataFrame",
+    vendors: "DataFrame",
+    shuffle_partitions: int,
+) -> "DataFrame":
+    return sales.join(
+        vendors.repartition(shuffle_partitions, "vendor_id"),
+        "vendor_id",
+        "left",
+    )
+
+
+def _select_task_skew_fact(joined_sales: "DataFrame") -> "DataFrame":
+    from pyspark.sql import functions as F
+
+    return joined_sales.select(
+        F.col("vendor_id"),
+        F.coalesce(F.col("vendor_region"), F.lit("UNKNOWN")).alias("vendor_region"),
+        F.col("sale_amount"),
+        F.col("payload_width"),
+    )
+
+
+def _aggregate_task_skew_vendor_summary(sales: "DataFrame") -> "DataFrame":
+    from pyspark.sql import functions as F
+
+    return (
+        sales.groupBy("vendor_id", "vendor_region")
+        .agg(
+            F.count("*").cast("long").alias("sale_count"),
+            F.round(F.sum("sale_amount"), 2).alias("gross_sales_amount"),
+            F.sum("payload_width").cast("long").alias("payload_bytes_observed"),
+            F.round(F.avg("sale_amount"), 2).alias("average_sale_amount"),
+        )
+        .select(*TASK_SKEW_VENDOR_SUMMARY_COLUMNS)
+    )
