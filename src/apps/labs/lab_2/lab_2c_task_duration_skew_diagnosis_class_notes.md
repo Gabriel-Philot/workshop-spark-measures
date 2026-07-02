@@ -251,3 +251,162 @@ The total task count can vary across reruns because Delta overwrite work may
 change once the output path already exists. The selected 27-task shuffle stage
 is the stable classroom signal because it mirrors the source question's Summary
 Metrics table.
+
+## Footnote: how the TaskMetrics log block is built
+
+The boxed report is a classroom formatting layer on top of sparkMeasure
+TaskMetrics. It does not create new Spark measurements.
+
+The required pieces are:
+
+- an active SparkSession;
+- sparkMeasure `TaskMetrics`, started with `begin()` and stopped with `end()`;
+- the TaskMetrics DataFrame created by
+  `collector.create_taskmetrics_DF(...)`;
+- Spark SQL aggregations to compute `p75`, `max`, and `max / p75`;
+- one multiline project logger call to keep the output readable in
+  `spark-submit`.
+
+The runtime keeps `collector.print_report()` enabled so students can still see
+the native sparkMeasure output. The boxed report appears immediately after it
+and turns the raw task rows into the Summary Metrics shape used by the source
+question.
+
+Focused runtime flow:
+
+```python
+def log_task_skew_summary(spark: Any, collector: Any) -> None:
+    """Create the classroom TaskMetrics report from sparkMeasure task rows."""
+
+    task_metrics = collector.create_taskmetrics_DF(TASK_SKEW_METRICS_VIEW)
+    stage = select_task_skew_stage(task_metrics)
+    if not stage:
+        logger.warning("LAB2C_TASK_STAGE_SELECTED none")
+        return
+
+    summaries = []
+    for metric in TASK_SKEW_SUMMARY_METRICS:
+        if metric not in task_metrics.columns:
+            continue
+        summary = summarize_task_metric(task_metrics, int(stage["stageId"]), metric)
+        if summary and float(summary.get("max", 0) or 0) > 0:
+            summaries.append(summary)
+
+    outliers = collect_task_skew_outliers(spark, task_metrics, int(stage["stageId"]))
+    logger.info(render_task_skew_report(stage, summaries, outliers))
+```
+
+The selected stage is the stage with the clearest high-end data-volume skew. In
+this lab, the preferred data signal is `shuffleTotalBytesRead` because the
+workload is shuffle-heavy:
+
+```python
+def select_task_skew_stage(task_metrics: Any) -> dict[str, Any] | None:
+    """Find the stage where task-level max-vs-p75 skew is easiest to teach."""
+
+    # Condensed for class notes. The runtime also handles missing/zero values.
+    stage_stats = (
+        task_metrics.groupBy("stageId")
+        .agg(
+            F.count("*").cast("long").alias("taskCount"),
+            F.max(F.col("duration").cast("double")).alias("maxDuration"),
+            F.expr("percentile_approx(cast(duration as double), 0.75, 10000)").alias(
+                "p75Duration"
+            ),
+            F.max(F.col("shuffleTotalBytesRead").cast("double")).alias("maxData"),
+            F.expr(
+                "percentile_approx(cast(shuffleTotalBytesRead as double), 0.75, 10000)"
+            ).alias("p75Data"),
+        )
+        .withColumn(
+            "durationMaxToP75",
+            F.when(F.col("p75Duration") > 0, F.col("maxDuration") / F.col("p75Duration")),
+        )
+        .withColumn(
+            "dataMaxToP75",
+            F.when(F.col("p75Data") > 0, F.col("maxData") / F.col("p75Data")),
+        )
+    )
+
+    return stage_stats.orderBy(F.desc("dataMaxToP75")).first().asDict()
+```
+
+Each metric row in the boxed report is computed with the same classroom rule:
+compare the 75th percentile with the maximum task.
+
+```python
+def summarize_task_metric(
+    task_metrics: Any,
+    stage_id: int,
+    metric: str,
+) -> dict[str, Any] | None:
+    """Summarize one TaskMetrics column using Spark UI Summary Metrics shape."""
+
+    # Condensed for class notes. The runtime also includes min/p25/median.
+    row = (
+        task_metrics.filter(F.col("stageId") == stage_id)
+        .agg(
+            F.count("*").cast("long").alias("taskCount"),
+            F.expr(f"percentile_approx(cast({metric} as double), 0.75, 10000)").alias(
+                "p75"
+            ),
+            F.max(F.col(metric).cast("double")).alias("max"),
+        )
+        .first()
+    )
+
+    summary = row.asDict()
+    summary["metric"] = metric
+    summary["maxToP75"] = summary["max"] / summary["p75"]
+    return summary
+```
+
+The outlier table is intentionally small. It orders tasks by the data-volume
+metric and keeps only the top rows, so the instructor can point at one dominant
+task without flooding the terminal:
+
+```python
+def collect_task_skew_outliers(
+    spark: Any,
+    task_metrics: Any,
+    stage_id: int,
+) -> list[Mapping[str, Any]]:
+    """Collect the top task outliers for classroom display."""
+
+    rows = (
+        task_metrics.filter(F.col("stageId") == stage_id)
+        .select("stageId", "index", "duration", "shuffleRecordsRead", "shuffleTotalBytesRead")
+        .orderBy(F.desc("shuffleTotalBytesRead"), F.desc("duration"))
+        .limit(5)
+        .collect()
+    )
+    return [row.asDict() for row in rows]
+```
+
+Finally, the terminal block is pure Python formatting. The important part is
+that it returns one multiline string and sends it through a single
+`logger.info(...)` call:
+
+```python
+def render_task_skew_report(
+    stage: Mapping[str, Any],
+    summaries: list[Mapping[str, Any]],
+    outliers: list[Mapping[str, Any]],
+) -> str:
+    """Return one classroom-friendly block with the Lab 2C TaskMetrics signal."""
+
+    box = _ReportBox("LAB 2C TASKMETRICS DIAGNOSTIC REPORT", width=112)
+    box.text("SparkMeasure collector=TaskMetrics | purpose=max-vs-p75 task skew diagnosis")
+    box.rule()
+    box.text("Selected stage")
+    box.text("stageId=... | tasks=... | dataMetric=... | dataMaxToP75=...")
+    box.rule()
+    box.text("Metric summary")
+    box.rule()
+    box.text("Top task outliers by shuffleTotalBytesRead")
+    return "\n" + box.render()
+```
+
+This is the tradeoff: native sparkMeasure output remains available, but the
+lesson also gets a compact, repeatable, workshop-friendly reading of the same
+TaskMetrics data.
