@@ -1,0 +1,33 @@
+experiments:
+  lab7-temporal-source-generator:
+    app_name: workshop-lab7-temporal-source-generator
+    log_level: INFO
+    workload:
+      workload_name: temporal_source_generator
+      success_marker: LAB7_TEMPORAL_SOURCE_GENERATOR_OK
+    spark:
+      log_level: WARN
+      config:
+        spark.sql.shuffle.partitions: 64
+        spark.sql.adaptive.enabled: false
+    observability:
+      enabled: false
+      collector: stage
+      persist: false
+    artifacts:
+      outputs:
+        source_events_temporal:
+          format: delta
+          path: ${LAB7_TEMPORAL_SOURCE_PATH:-s3a://lakehouse/bronze/lab7/source_events_temporal}
+          mode: append
+          options:
+            mergeSchema: true
+            maxRecordsPerFile: ${LAB7_TEMPORAL_MAX_RECORDS_PER_FILE:-250000}
+          partition_by:
+            - event_date
+        temporal_volume_plan:
+          format: delta
+          path: ${LAB7_TEMPORAL_VOLUME_PLAN_PATH:-s3a://observability/lab7/temporal_volume_plan}
+          mode: append
+          options:
+            mergeSchema: true

@@ -9,7 +9,7 @@ COMPOSE := docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
 include .env.example
 -include .env
 
-.PHONY: bootstrap build validate compose compose-three-workers dry-test generate services test tests down clean-data removeimage
+.PHONY: bootstrap build validate compose compose-three-workers dry-test generate generate-lab7 generate-all services test tests down clean-data removeimage
 
 SPARK_PYTHONPATH := /opt/spark/src:/opt/spark/generator/src
 GENERATOR_CONFIG ?= /opt/spark/generator/configs/retail_sales_skew.yaml
@@ -18,6 +18,10 @@ GENERATOR_RUN_ID ?=
 GENERATOR_VALIDATE ?= 1
 GENERATOR_VALIDATE_ARGS := $(if $(filter 0 false no,$(GENERATOR_VALIDATE)),--skip-validation,)
 GENERATOR_RUN_ID_ARGS := $(if $(GENERATOR_RUN_ID),--run-id $(GENERATOR_RUN_ID),)
+LAB7_GENERATE_MODE ?= full
+LAB7_APPEND_DATE ?=
+LAB7_APPEND_VOLUME_MULTIPLIER ?= 1
+LAB7_REPLACE_SOURCE ?= false
 
 SPARK_SUBMIT := $(COMPOSE) exec -T spark-master env PYTHONPATH=$(SPARK_PYTHONPATH) /opt/spark/bin/spark-submit \
 	--master spark://spark-master:7077 \
@@ -77,6 +81,23 @@ generate: compose
 		$(GENERATOR_RUN_ID_ARGS) \
 		$(GENERATOR_VALIDATE_ARGS) \
 		2>&1 | tee build/var/generate-$(SCALE).log
+
+generate-all: generate
+	@LAB7_GENERATE_MODE=$(LAB7_GENERATE_MODE) \
+		LAB7_APPEND_DATE=$(LAB7_APPEND_DATE) \
+		LAB7_APPEND_VOLUME_MULTIPLIER=$(LAB7_APPEND_VOLUME_MULTIPLIER) \
+		LAB7_REPLACE_SOURCE=$(LAB7_REPLACE_SOURCE) \
+		bash src/apps/labs/lab_7/run_temporal_source_generator.sh \
+		2>&1 | tee build/var/generate-lab7.log
+
+generate-lab7: compose
+	@mkdir -p build/var
+	@LAB7_GENERATE_MODE=$(LAB7_GENERATE_MODE) \
+		LAB7_APPEND_DATE=$(LAB7_APPEND_DATE) \
+		LAB7_APPEND_VOLUME_MULTIPLIER=$(LAB7_APPEND_VOLUME_MULTIPLIER) \
+		LAB7_REPLACE_SOURCE=$(LAB7_REPLACE_SOURCE) \
+		bash src/apps/labs/lab_7/run_temporal_source_generator.sh \
+		2>&1 | tee build/var/generate-lab7.log
 
 services:
 	@build/scripts/services.sh
