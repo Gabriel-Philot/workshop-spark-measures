@@ -78,3 +78,6 @@ Stage-level collection has lower overhead and is sufficient for the first worksh
 
 - `src/apps/labs/lab_0`: source inventory, natural sparkMeasure API, and the first native-vs-observed presentation.
 - `src/apps/labs/lab_1`: global sales ranking diagnosis using stage-level sparkMeasure metrics.
+- `src/apps/labs/lab_2`: certification-style stage and task metric interpretation drills.
+- `src/apps/labs/lab_3`: observability overhead benchmark post-mortem.
+- `src/apps/labs/lab_4`: stage-level workload fingerprinting using sparkMeasure aggregate metrics to classify workloads as shuffle-heavy, memory-pressure-heavy, I/O-heavy, GC-heavy, or low-signal.

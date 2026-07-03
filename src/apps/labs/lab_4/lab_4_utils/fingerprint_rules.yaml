@@ -1,0 +1,13 @@
+rules:
+  high_shuffle_amplification_ratio: 2.0
+  high_shuffle_total_bytes: 67108864
+  high_input_bytes: 134217728
+  minimum_reliable_input_bytes: 1048576
+  low_shuffle_bytes: 1048576
+  high_gc_time_ratio: 0.10
+  spill_detected_bytes: 1
+  high_task_density_score: 128.0
+  high_total_tasks: 1000
+  low_signal_executor_runtime_ms: 1000
+  low_signal_shuffle_bytes: 1048576
+  low_parallelism_task_threshold: 4

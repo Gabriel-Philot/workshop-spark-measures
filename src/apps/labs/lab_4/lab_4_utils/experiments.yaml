@@ -1,0 +1,47 @@
+experiments:
+  lab4-stage-workload-fingerprint:
+    app_name: workshop-lab4-stage-workload-fingerprint
+    workload:
+      workload_name: retail_stage_fingerprint
+      workload_variant: shuffle_fingerprint
+      success_marker: LAB4_STAGE_WORKLOAD_FINGERPRINT_OK
+      shuffle_partitions: 96
+      fingerprint_buckets: 512
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 96
+        spark.sql.adaptive.enabled: false
+        spark.sql.autoBroadcastJoinThreshold: -1
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB4_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB4_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB4_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB4_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
+      outputs:
+        workload_summary:
+          format: delta
+          path: ${LAB4_WORKLOAD_OUTPUT_PATH:-s3a://lakehouse/gold/lab4/stage_workload_fingerprint/workload_summary}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+        stage_metrics:
+          format: delta
+          path: ${LAB4_STAGE_METRICS_OUTPUT_PATH:-s3a://observability/lab4/stage_metrics}
+          mode: append
+        workload_fingerprints:
+          format: delta
+          path: ${LAB4_FINGERPRINT_OUTPUT_PATH:-s3a://observability/lab4/workload_fingerprints}
+          mode: append
