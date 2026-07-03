@@ -1,0 +1,58 @@
+experiments:
+  lab6-stage-metrics-contract-gate:
+    app_name: workshop-lab6-stage-metrics-contract-gate
+    workload:
+      workload_name: retail_stage_metrics_contract_gate
+      workload_variant: contract_ready_metrics
+      success_marker: LAB6_STAGE_METRICS_CONTRACT_GATE_OK
+      shuffle_partitions: 64
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 64
+        spark.sql.adaptive.enabled: false
+        spark.sql.autoBroadcastJoinThreshold: -1
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB6_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB6_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB6_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB6_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
+      outputs:
+        business_output:
+          format: delta
+          path: ${LAB6_BUSINESS_OUTPUT_PATH:-s3a://lakehouse/gold/lab6/stage_metrics_contract_gate/business_output}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+        stage_metrics_raw:
+          format: delta
+          path: ${LAB6_STAGE_METRICS_RAW_PATH:-s3a://observability/lab6/stage_metrics_raw}
+          mode: append
+          options:
+            mergeSchema: true
+        stage_metrics_contract_demo_input:
+          format: delta
+          path: ${LAB6_STAGE_METRICS_CONTRACT_DEMO_INPUT_PATH:-s3a://observability/lab6/stage_metrics_contract_demo_input}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+        stage_metrics_contract_results:
+          format: delta
+          path: ${LAB6_STAGE_METRICS_CONTRACT_RESULTS_PATH:-s3a://observability/lab6/stage_metrics_contract_results}
+          mode: append
+        stage_metrics_contract_summary:
+          format: delta
+          path: ${LAB6_STAGE_METRICS_CONTRACT_SUMMARY_PATH:-s3a://observability/lab6/stage_metrics_contract_summary}
+          mode: append
