@@ -21,6 +21,12 @@ from apps.labs.lab_7.lab_7_utils.transformations import (
     EARLY_PARTITION_FILTER,
     SUPPORTED_FILTER_STRATEGIES,
 )
+from apps.labs.lab_7.dashboard.config import load_dashboard_config
+from apps.labs.lab_7.dashboard.data import (
+    build_delta_scan_sql,
+    build_duckdb_secret_sql,
+    build_metrics_query,
+)
 from spark_workshop.config import load_experiment_config
 
 
@@ -275,3 +281,51 @@ dimensions:
 
     with pytest.raises(ValueError, match="outside the configured date range"):
         load_temporal_volume_plan(invalid_plan)
+
+
+def test_lab7_dashboard_config_maps_minio_endpoint_for_duckdb():
+    config = load_dashboard_config(
+        {
+            "LAB7_DASHBOARD_METRICS_URI": "s3://observability/lab7/daily_backfill_stage_metrics",
+            "LAB7_DASHBOARD_MINIO_ENDPOINT": "http://minio:9000",
+            "MINIO_ROOT_USER": "user",
+            "MINIO_ROOT_PASSWORD": "secret",
+        }
+    )
+
+    assert config.metrics_uri == "s3://observability/lab7/daily_backfill_stage_metrics"
+    assert config.duckdb_endpoint == "minio:9000"
+    assert config.access_key == "user"
+    assert config.secret_key == "secret"
+
+
+def test_lab7_dashboard_duckdb_secret_uses_path_style_minio():
+    config = load_dashboard_config(
+        {
+            "LAB7_DASHBOARD_MINIO_ENDPOINT": "http://minio:9000",
+            "MINIO_ROOT_USER": "user",
+            "MINIO_ROOT_PASSWORD": "secret",
+        }
+    )
+
+    statement = build_duckdb_secret_sql(config)
+
+    assert "TYPE s3" in statement
+    assert "ENDPOINT 'minio:9000'" in statement
+    assert "URL_STYLE 'path'" in statement
+    assert "USE_SSL false" in statement
+
+
+def test_lab7_dashboard_delta_scan_requires_s3_uri():
+    with pytest.raises(ValueError, match="expects an s3:// metrics URI"):
+        build_delta_scan_sql("s3a://observability/lab7/daily_backfill_stage_metrics")
+
+
+def test_lab7_dashboard_query_reads_stage_metrics_delta_table():
+    query = build_metrics_query("s3://observability/lab7/daily_backfill_stage_metrics")
+
+    assert "delta_scan('s3://observability/lab7/daily_backfill_stage_metrics')" in query
+    assert "CAST(run_id AS VARCHAR) AS run_id" in query
+    assert "records_read_to_expected_ratio" in query
+    assert "shuffle_written_per_source_row" in query
+    assert "ORDER BY processing_date" in query

@@ -6,5 +6,6 @@ build/cache
 build/var
 build/config/spark/jars
 build/images/spark/context
+build/images/lab7-dashboard/context
 __pycache__
 *.pyc

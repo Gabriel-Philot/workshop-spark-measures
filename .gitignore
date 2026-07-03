@@ -8,4 +8,5 @@ build/cache/
 build/config/spark/jars/*.jar
 build/config/spark/jars/.bootstrap-manifest
 build/images/spark/context/
+build/images/lab7-dashboard/context/
 build/var/

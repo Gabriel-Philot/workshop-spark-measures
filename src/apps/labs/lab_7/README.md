@@ -9,9 +9,8 @@ Understanding daily volume spikes through stage-level Spark metrics
 Lab 7 studies a common operational pattern: a daily historical backfill where
 some business dates are much larger than others.
 
-The full lab will connect temporal source volume, per-date Spark runs, persisted
-StageMetrics, and a compact dashboard table. The first implemented slice is the
-temporal source generator.
+The lab connects temporal source volume, per-date Spark runs, persisted
+StageMetrics, and a compact Streamlit dashboard.
 
 ## Part A: Temporal source generator
 
@@ -208,8 +207,63 @@ metrics. The comparison is the teaching point: a date with `100x` rows should be
 easy to compare against executor runtime, records read, shuffle, tasks, spill,
 and GC time.
 
+## Part C: Temporal backfill observability dashboard
+
+The dashboard is a read-only presentation layer over the Lab 7B metrics table.
+It does not run Spark.
+
+It uses:
+
+```text
+Streamlit -> DuckDB -> Delta table on MinIO
+```
+
+Input:
+
+```text
+s3://observability/lab7/daily_backfill_stage_metrics
+```
+
+Start it after Lab 7B has produced metrics:
+
+```bash
+make lab7-dashboard
+```
+
+Open:
+
+```text
+http://127.0.0.1:28501
+```
+
+The dashboard shows:
+
+- a `run_id` selector, defaulting to the latest Lab 7B batch;
+- expected source rows by business date;
+- `records_read` by date;
+- `shuffle_bytes_written` by date;
+- expected rows versus executor runtime;
+- expected rows versus shuffle;
+- normalized runtime, shuffle, and task metrics per million source rows;
+- the raw metrics table used for the visualizations.
+
+This is intentionally not a generic BI layer. It is a small classroom view that
+helps students connect temporal volume spikes to stage-level Spark execution
+counters.
+
+The Lab 7B metrics table is append-only. If you rerun the backfill, select one
+batch `run_id` in the dashboard sidebar before explaining the charts.
+
+If the dashboard is empty, run:
+
+```bash
+make generate-lab7
+bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
+make lab7-dashboard
+```
+
 ## Classroom takeaway
 
 Before analyzing a temporal backfill, create a source where the expected daily
-volume is known and reproducible. Later StageMetrics are more useful when they
-can be compared against a trusted business-time volume plan.
+volume is known and reproducible. StageMetrics become much more useful when
+they are persisted and visualized with trusted business-time context.

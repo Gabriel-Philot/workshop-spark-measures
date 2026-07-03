@@ -129,3 +129,23 @@ services:
         -Dspark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider
     ports:
       - "${SPARK_HISTORY_UI_PORT:-28090}:18080"
+
+  lab7-dashboard:
+    image: ${LAB7_DASHBOARD_IMAGE:-workshop-spark-measures-lab7-dashboard:0.1.0}
+    profiles:
+      - lab7-dashboard
+    container_name: wsm-lab7-dashboard
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-sparkworkshop}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-sparkworkshop123}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-sparkworkshop}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-sparkworkshop123}
+      LAB7_DASHBOARD_MINIO_ENDPOINT: http://minio:9000
+      LAB7_DASHBOARD_METRICS_URI: s3://${MINIO_OBSERVABILITY_BUCKET:-observability}/lab7/daily_backfill_stage_metrics
+    ports:
+      - "${LAB7_DASHBOARD_PORT:-28501}:8501"

@@ -14,7 +14,7 @@ source .env.example
 source .env
 set +a
 
-for image in "$SPARK_BASE_IMAGE" "$MINIO_BASE_IMAGE" "$MINIO_MC_BASE_IMAGE"; do
+for image in "$SPARK_BASE_IMAGE" "$MINIO_BASE_IMAGE" "$MINIO_MC_BASE_IMAGE" "$LAB7_DASHBOARD_BASE_IMAGE"; do
   if ! docker image inspect "$image" >/dev/null 2>&1; then
     echo "Missing bootstrapped base image: $image" >&2
     exit 1
@@ -61,5 +61,18 @@ if [[ ! -f "$WHEELS_MANIFEST" || "$(cat "$WHEELS_MANIFEST")" != "$requirements_h
 fi
 if ! find "$WHEELS_DIR" -maxdepth 1 -type f -name '*.whl' | grep -q .; then
   echo "Python wheel cache is empty" >&2
+  exit 1
+fi
+
+DASHBOARD_REQ_FILE="$ROOT_DIR/build/images/lab7-dashboard/requirements.txt"
+DASHBOARD_WHEELS_DIR="$ROOT_DIR/build/cache/lab7-dashboard-wheels"
+DASHBOARD_WHEELS_MANIFEST="$DASHBOARD_WHEELS_DIR/.requirements.sha256"
+dashboard_requirements_hash="$(sha256sum "$DASHBOARD_REQ_FILE" | awk '{print $1}')"
+if [[ ! -f "$DASHBOARD_WHEELS_MANIFEST" || "$(cat "$DASHBOARD_WHEELS_MANIFEST")" != "$dashboard_requirements_hash" ]]; then
+  echo "Missing or stale Lab 7 dashboard Python wheel cache. Run: make bootstrap" >&2
+  exit 1
+fi
+if ! find "$DASHBOARD_WHEELS_DIR" -maxdepth 1 -type f -name '*.whl' | grep -q .; then
+  echo "Lab 7 dashboard Python wheel cache is empty" >&2
   exit 1
 fi
