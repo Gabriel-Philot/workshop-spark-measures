@@ -40,6 +40,8 @@ experiments:
           format: delta
           path: ${LAB6_STAGE_METRICS_RAW_PATH:-s3a://observability/lab6/stage_metrics_raw}
           mode: append
+          options:
+            mergeSchema: true
         stage_metrics_contract_demo_input:
           format: delta
           path: ${LAB6_STAGE_METRICS_CONTRACT_DEMO_INPUT_PATH:-s3a://observability/lab6/stage_metrics_contract_demo_input}
@@ -54,4 +56,3 @@ experiments:
           format: delta
           path: ${LAB6_STAGE_METRICS_CONTRACT_SUMMARY_PATH:-s3a://observability/lab6/stage_metrics_contract_summary}
           mode: append
-

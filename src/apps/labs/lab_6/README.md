@@ -13,12 +13,11 @@ inputs for dashboards, alerts, PR review, performance gates, runtime budgets, or
 historical drift analysis, they need a contract. This lab validates whether the
 collected StageMetrics are trustworthy enough to support engineering decisions.
 
-## Why this lab exists after Lab 5
+## Why this lab exists
 
-Lab 5 turned StageMetrics into a runtime budget guardrail. That gate assumes the
-metrics are reliable.
-
-Lab 6 challenges that assumption.
+Previous labs showed that StageMetrics can support diagnosis and automation.
+Lab 6 asks a more mature platform question: can we trust the metrics before
+using them for downstream decisions?
 
 The classroom question is:
 
@@ -140,6 +139,60 @@ Without correlation keys, observability data becomes loose numbers that cannot
 support automation.
 ```
 
+## Metric availability
+
+Some StageMetrics counters are required for this lab:
+
+```text
+num_stages
+num_tasks
+executor_run_time_ms
+```
+
+Other counters are useful but collector/environment dependent:
+
+```text
+shuffle_bytes_written
+shuffle_bytes_read
+jvm_gc_time_ms
+memory_bytes_spilled
+disk_bytes_spilled
+input_bytes
+```
+
+Lab 6 keeps availability explicit. Optional counters are stored with both a
+value and a boolean availability column, for example:
+
+```text
+shuffle_bytes_written
+shuffle_bytes_written_available
+```
+
+This preserves the distinction between:
+
+```text
+shuffle_bytes_written = 0 and shuffle_bytes_written_available = true
+```
+
+and:
+
+```text
+shuffle_bytes_written = 0 and shuffle_bytes_written_available = false
+```
+
+The first means the collector emitted a real zero. The second means the collector
+did not emit that counter and the numeric value is only a safe placeholder.
+
+## Consumer assumptions
+
+| Downstream consumer | Contract assumption |
+| --- | --- |
+| Dashboard | `created_at`, `app_name`, `workload_name`, and `metric_scope` exist so the metrics can be grouped and filtered. |
+| Alerts | Runtime, shuffle, spill, and GC counters are non-negative before thresholds are evaluated. |
+| Runtime budgets | `executor_run_time_ms`, `num_stages`, `num_tasks`, and optional metric availability fields are trustworthy before a gate makes a decision. |
+| PR review evidence | `run_id` and `workload_variant` identify which workload run produced the evidence. |
+| Historical drift monitoring | Stable keys and timestamps allow metrics to be compared across runs without double-counting duplicates. |
+
 ## Output paths
 
 Business output:
@@ -180,9 +233,9 @@ Progress markers:
 LAB6_STAGE_METRICS_CAPTURED_OK
 LAB6_STAGE_METRICS_INPUT_OK
 LAB6_CONTRACT_RULES_LOADED_OK
-LAB6_SCHEMA_CONTRACT_OK
-LAB6_SEMANTIC_CONTRACT_OK
-LAB6_CORRELATION_CONTRACT_OK
+LAB6_SCHEMA_CONTRACT_EVALUATED
+LAB6_SEMANTIC_CONTRACT_EVALUATED
+LAB6_CORRELATION_CONTRACT_EVALUATED
 LAB6_CONTRACT_RESULTS_WRITTEN_OK
 ```
 
@@ -257,4 +310,3 @@ This pattern maps directly to:
 The lab is intentionally small. It is not a generic data quality framework.
 It demonstrates the reliability layer a mature Spark observability platform
 needs before metrics become automation inputs.
-

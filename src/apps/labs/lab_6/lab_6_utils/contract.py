@@ -20,6 +20,16 @@ SEMANTIC = "SEMANTIC"
 CORRELATION = "CORRELATION"
 
 REQUIRED_STAGE_METRICS = ("numStages", "numTasks", "executorRunTime")
+REQUIRED_METRIC_COLUMNS = ("num_stages", "num_tasks", "executor_run_time_ms")
+OPTIONAL_STAGE_METRIC_MAP = {
+    "shuffle_bytes_written": "shuffleBytesWritten",
+    "shuffle_bytes_read": "shuffleTotalBytesRead",
+    "jvm_gc_time_ms": "jvmGCTime",
+    "memory_bytes_spilled": "memoryBytesSpilled",
+    "disk_bytes_spilled": "diskBytesSpilled",
+    "input_bytes": "bytesRead",
+}
+OPTIONAL_METRIC_COLUMNS = tuple(OPTIONAL_STAGE_METRIC_MAP)
 
 
 @dataclass(frozen=True)
@@ -45,6 +55,12 @@ class NormalizedStageMetrics:
     input_bytes: int
     num_stages: int
     num_tasks: int
+    shuffle_bytes_written_available: bool
+    shuffle_bytes_read_available: bool
+    jvm_gc_time_ms_available: bool
+    memory_bytes_spilled_available: bool
+    disk_bytes_spilled_available: bool
+    input_bytes_available: bool
 
 
 @dataclass(frozen=True)
@@ -101,6 +117,8 @@ class ContractRules:
 
     version: str
     required_columns: tuple[str, ...]
+    required_metrics: tuple[str, ...]
+    optional_metrics: tuple[str, ...]
     schema_rules: SchemaRules
     semantic_rules: SemanticRules
     correlation_rules: CorrelationRules
@@ -185,6 +203,8 @@ def load_contract_rules(rules_path: Path) -> ContractRules:
     raw = _load_yaml(rules_path, label="Lab 6 contract rules")
     contract = raw.get("contract") or {}
     required_columns = raw.get("required_columns") or ()
+    required_metrics = raw.get("required_metrics") or REQUIRED_METRIC_COLUMNS
+    optional_metrics = raw.get("optional_metrics") or OPTIONAL_METRIC_COLUMNS
     schema_rules = raw.get("schema_rules") or {}
     semantic_rules = raw.get("semantic_rules") or {}
     correlation_rules = raw.get("correlation_rules") or {}
@@ -192,12 +212,18 @@ def load_contract_rules(rules_path: Path) -> ContractRules:
 
     if not isinstance(required_columns, list | tuple):
         raise ValueError(f"Lab 6 required_columns must be a sequence: {rules_path}")
+    if not isinstance(required_metrics, list | tuple):
+        raise ValueError(f"Lab 6 required_metrics must be a sequence: {rules_path}")
+    if not isinstance(optional_metrics, list | tuple):
+        raise ValueError(f"Lab 6 optional_metrics must be a sequence: {rules_path}")
     if not isinstance(correlation_rules.get("expected_values") or {}, Mapping):
         raise ValueError(f"Lab 6 expected_values must be a mapping: {rules_path}")
 
     return ContractRules(
         version=str(contract.get("version", "1.0.0")),
         required_columns=tuple(str(column) for column in required_columns),
+        required_metrics=tuple(str(metric) for metric in required_metrics),
+        optional_metrics=tuple(str(metric) for metric in optional_metrics),
         schema_rules=SchemaRules(
             require_columns=bool(schema_rules.get("require_columns", True)),
         ),
@@ -263,6 +289,18 @@ def normalize_stage_metrics(metrics: Mapping[str, int | float]) -> NormalizedSta
         input_bytes=_metric_int(metrics, "bytesRead"),
         num_stages=_metric_int(metrics, "numStages"),
         num_tasks=_metric_int(metrics, "numTasks"),
+        shuffle_bytes_written_available=_metric_available(
+            metrics, "shuffleBytesWritten"
+        ),
+        shuffle_bytes_read_available=_metric_available(
+            metrics, "shuffleTotalBytesRead"
+        ),
+        jvm_gc_time_ms_available=_metric_available(metrics, "jvmGCTime"),
+        memory_bytes_spilled_available=_metric_available(
+            metrics, "memoryBytesSpilled"
+        ),
+        disk_bytes_spilled_available=_metric_available(metrics, "diskBytesSpilled"),
+        input_bytes_available=_metric_available(metrics, "bytesRead"),
     )
     if normalized.num_stages < 1 or normalized.num_tasks < 1:
         raise ValueError(
@@ -303,6 +341,12 @@ def build_stage_metrics_record(
         "memory_bytes_spilled": metrics.memory_bytes_spilled,
         "disk_bytes_spilled": metrics.disk_bytes_spilled,
         "input_bytes": metrics.input_bytes,
+        "shuffle_bytes_written_available": metrics.shuffle_bytes_written_available,
+        "shuffle_bytes_read_available": metrics.shuffle_bytes_read_available,
+        "jvm_gc_time_ms_available": metrics.jvm_gc_time_ms_available,
+        "memory_bytes_spilled_available": metrics.memory_bytes_spilled_available,
+        "disk_bytes_spilled_available": metrics.disk_bytes_spilled_available,
+        "input_bytes_available": metrics.input_bytes_available,
     }
 
 
@@ -343,6 +387,20 @@ def validate_stage_metrics_contract(
     created_at = _utc_now()
     results = [
         _schema_required_columns_result(
+            dataframe,
+            rules=rules,
+            validation_run_id=validation_run_id,
+            source_path=source_path,
+            created_at=created_at,
+        ),
+        _schema_metric_availability_columns_result(
+            dataframe,
+            rules=rules,
+            validation_run_id=validation_run_id,
+            source_path=source_path,
+            created_at=created_at,
+        ),
+        _semantic_referenced_columns_result(
             dataframe,
             rules=rules,
             validation_run_id=validation_run_id,
@@ -460,6 +518,9 @@ def render_contract_gate_block(
         f"passed_rules: {summary.passed_rules}",
         f"failed_rules: {summary.failed_rules}",
         "",
+        "### Optional metric availability",
+        *_availability_lines(results),
+        "",
         "### Contract layers",
         f"schema: {layer_decision(results, SCHEMA)}",
         f"semantic: {layer_decision(results, SEMANTIC)}",
@@ -487,6 +548,20 @@ def render_contract_gate_block(
         ]
     )
     return _boxed_lines(lines, width=width)
+
+
+def _availability_lines(results: list[ContractRuleResult]) -> list[str]:
+    availability = [
+        result
+        for result in results
+        if result.rule_id == "SCHEMA_OPTIONAL_METRIC_AVAILABILITY_COLUMNS"
+    ]
+    if not availability:
+        return ["not evaluated"]
+    result = availability[0]
+    if result.decision == PASS:
+        return ["status: PASS - optional metrics expose explicit *_available columns"]
+    return [f"status: FAIL - missing availability metadata: {result.sample_failed_keys}"]
 
 
 def _schema_required_columns_result(
@@ -517,6 +592,73 @@ def _schema_required_columns_result(
     )
 
 
+def _schema_metric_availability_columns_result(
+    dataframe: Any,
+    *,
+    rules: ContractRules,
+    validation_run_id: str,
+    source_path: str,
+    created_at: str,
+) -> ContractRuleResult:
+    expected_columns = [
+        column
+        for metric in rules.optional_metrics
+        for column in (metric, f"{metric}_available")
+    ]
+    missing = [column for column in expected_columns if column not in dataframe.columns]
+    return _result(
+        validation_run_id=validation_run_id,
+        source_path=source_path,
+        rules=rules,
+        rule_id="SCHEMA_OPTIONAL_METRIC_AVAILABILITY_COLUMNS",
+        rule_name="optional metrics must expose value and availability columns",
+        rule_type=SCHEMA,
+        severity_key="missing_metric_availability_column",
+        failed_count=len(missing),
+        sample_failed_keys=",".join(missing),
+        recommendation=(
+            "Preserve the difference between an emitted zero and a metric that "
+            "was not emitted by the collector."
+        ),
+        created_at=created_at,
+    )
+
+
+def _semantic_referenced_columns_result(
+    dataframe: Any,
+    *,
+    rules: ContractRules,
+    validation_run_id: str,
+    source_path: str,
+    created_at: str,
+) -> ContractRuleResult:
+    referenced_columns = set(rules.semantic_rules.non_negative_metrics)
+    if rules.semantic_rules.num_stages_gt_zero:
+        referenced_columns.add("num_stages")
+    if rules.semantic_rules.num_tasks_gt_zero:
+        referenced_columns.add("num_tasks")
+    if rules.semantic_rules.created_at_not_null:
+        referenced_columns.add("created_at")
+
+    missing = sorted(column for column in referenced_columns if column not in dataframe.columns)
+    return _result(
+        validation_run_id=validation_run_id,
+        source_path=source_path,
+        rules=rules,
+        rule_id="SEMANTIC_REFERENCED_COLUMNS_EXIST",
+        rule_name="columns referenced by semantic rules must exist",
+        rule_type=SEMANTIC,
+        severity_key="semantic_referenced_column_missing",
+        failed_count=len(missing),
+        sample_failed_keys=",".join(missing),
+        recommendation=(
+            "If a metric is evaluated by a semantic rule, model it explicitly "
+            "instead of allowing it to disappear silently."
+        ),
+        created_at=created_at,
+    )
+
+
 def _positive_metric_result(
     dataframe: Any,
     *,
@@ -533,8 +675,8 @@ def _positive_metric_result(
     from pyspark.sql import functions as F
 
     if metric_column not in dataframe.columns:
-        failed_count = 0
-        sample = ""
+        failed_count = 1
+        sample = f"missing_column={metric_column}"
     else:
         condition = F.col(metric_column).isNull() | (F.col(metric_column) <= 0)
         failed_count = _count_failed(dataframe, condition)
@@ -565,18 +707,26 @@ def _non_negative_metrics_result(
 ) -> ContractRuleResult:
     from pyspark.sql import functions as F
 
+    missing = [
+        metric
+        for metric in rules.semantic_rules.non_negative_metrics
+        if metric not in dataframe.columns
+    ]
     conditions = [
         F.col(metric).isNull() | (F.col(metric) < 0)
         for metric in rules.semantic_rules.non_negative_metrics
         if metric in dataframe.columns
     ]
     condition = _or_conditions(conditions)
-    failed_count = _count_failed(dataframe, condition) if condition is not None else 0
-    sample = (
+    value_failures = _count_failed(dataframe, condition) if condition is not None else 0
+    failed_count = len(missing) + value_failures
+    value_sample = (
         _sample_failed_keys(dataframe, condition, rules)
         if condition is not None
         else ""
     )
+    missing_sample = ",".join(f"missing_column={metric}" for metric in missing)
+    sample = ";".join(item for item in (missing_sample, value_sample) if item)
 
     return _result(
         validation_run_id=validation_run_id,
@@ -603,9 +753,12 @@ def _created_at_not_null_result(
 ) -> ContractRuleResult:
     from pyspark.sql import functions as F
 
-    if "created_at" not in dataframe.columns or not rules.semantic_rules.created_at_not_null:
+    if not rules.semantic_rules.created_at_not_null:
         failed_count = 0
         sample = ""
+    elif "created_at" not in dataframe.columns:
+        failed_count = 1
+        sample = "missing_column=created_at"
     else:
         condition = F.col("created_at").isNull()
         failed_count = _count_failed(dataframe, condition)
@@ -636,18 +789,26 @@ def _identity_columns_not_null_result(
 ) -> ContractRuleResult:
     from pyspark.sql import functions as F
 
+    missing = [
+        column
+        for column in rules.correlation_rules.required_identity_columns
+        if column not in dataframe.columns
+    ]
     conditions = [
         F.col(column).isNull()
         for column in rules.correlation_rules.required_identity_columns
         if column in dataframe.columns
     ]
     condition = _or_conditions(conditions)
-    failed_count = _count_failed(dataframe, condition) if condition is not None else 0
-    sample = (
+    value_failures = _count_failed(dataframe, condition) if condition is not None else 0
+    failed_count = len(missing) + value_failures
+    value_sample = (
         _sample_failed_keys(dataframe, condition, rules)
         if condition is not None
         else ""
     )
+    missing_sample = ",".join(f"missing_column={column}" for column in missing)
+    sample = ";".join(item for item in (missing_sample, value_sample) if item)
 
     return _result(
         validation_run_id=validation_run_id,
@@ -675,18 +836,26 @@ def _expected_values_result(
     from pyspark.sql import functions as F
 
     expected_values = rules.correlation_rules.expected_values or {}
+    missing = [
+        column
+        for column in expected_values
+        if column not in dataframe.columns
+    ]
     conditions = [
         F.col(column).isNull() | (F.col(column) != F.lit(expected))
         for column, expected in expected_values.items()
         if column in dataframe.columns
     ]
     condition = _or_conditions(conditions)
-    failed_count = _count_failed(dataframe, condition) if condition is not None else 0
-    sample = (
+    value_failures = _count_failed(dataframe, condition) if condition is not None else 0
+    failed_count = len(missing) + value_failures
+    value_sample = (
         _sample_failed_keys(dataframe, condition, rules)
         if condition is not None
         else ""
     )
+    missing_sample = ",".join(f"missing_column={column}" for column in missing)
+    sample = ";".join(item for item in (missing_sample, value_sample) if item)
 
     return _result(
         validation_run_id=validation_run_id,
@@ -713,14 +882,19 @@ def _uniqueness_key_result(
 ) -> ContractRuleResult:
     from pyspark.sql import functions as F
 
+    missing = [
+        column
+        for column in rules.correlation_rules.uniqueness_key
+        if column not in dataframe.columns
+    ]
     key_columns = tuple(
         column
         for column in rules.correlation_rules.uniqueness_key
         if column in dataframe.columns
     )
-    if len(key_columns) != len(rules.correlation_rules.uniqueness_key):
-        failed_count = 0
-        sample = ""
+    if missing:
+        failed_count = len(missing)
+        sample = ",".join(f"missing_column={column}" for column in missing)
     else:
         duplicates = (
             dataframe.groupBy(*key_columns)
@@ -824,6 +998,10 @@ def _metric_int(metrics: Mapping[str, int | float], key: str) -> int:
     if value is None:
         return 0
     return int(value)
+
+
+def _metric_available(metrics: Mapping[str, int | float], key: str) -> bool:
+    return key in metrics and metrics.get(key) is not None
 
 
 def _positive_int(value: Any, field_name: str) -> int:

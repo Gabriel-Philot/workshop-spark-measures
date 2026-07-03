@@ -13,7 +13,8 @@ decisions.
 
 ## Narrative
 
-Lab 5 showed that StageMetrics can become a runtime budget guardrail.
+Previous labs showed that StageMetrics can become more than raw logs: they can
+support diagnosis, review, and automation.
 
 Lab 6 asks a more mature platform question:
 
@@ -34,6 +35,29 @@ The answer is a contract gate:
 ```text
 collect metrics -> validate contract -> use metrics with confidence
 ```
+
+## Metric availability is part of the contract
+
+The lab does not treat every missing optional metric as a real zero.
+
+For optional counters, Lab 6 stores both the numeric value and an availability
+flag:
+
+```text
+shuffle_bytes_written
+shuffle_bytes_written_available
+```
+
+This distinction matters:
+
+- `shuffle_bytes_written = 0` and `shuffle_bytes_written_available = true`
+  means the collector emitted a real zero.
+- `shuffle_bytes_written = 0` and `shuffle_bytes_written_available = false`
+  means the collector did not emit the counter and the zero is only a safe
+  placeholder.
+
+That keeps downstream systems from confusing "no shuffle happened" with "we do
+not have shuffle evidence."
 
 ## Three contract layers
 
@@ -76,6 +100,20 @@ The correlation contract asks:
 ```text
 Can this metrics row be traced, joined, grouped, and audited?
 ```
+
+In a real platform, the uniqueness key may need more than the workshop fields.
+Production systems often add `application_id`, attempt id, job id, pipeline id,
+Git SHA, environment, or collector window id.
+
+## Consumer assumptions
+
+| Downstream consumer | What it assumes |
+| --- | --- |
+| Dashboard | `created_at`, `app_name`, `workload_name`, and `metric_scope` exist for grouping and filtering. |
+| Alerts | Runtime, shuffle, spill, and GC counters are non-negative before thresholds fire. |
+| Runtime budgets | Required metrics and optional availability flags are trustworthy before a promotion decision. |
+| PR review evidence | `run_id` and `workload_variant` identify the workload run behind the evidence. |
+| Historical drift monitoring | Stable keys and timestamps allow comparable runs without duplicate inflation. |
 
 ## What the lab writes
 
@@ -137,4 +175,3 @@ It validates that the metrics have:
 - clear ownership through contract versioning.
 
 That is the same principle behind production-grade data products.
-

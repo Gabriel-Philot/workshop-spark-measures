@@ -79,6 +79,12 @@ def test_lab6_contract_rules_are_loaded_from_yaml():
     assert rules.version == "1.0.0"
     assert "run_id" in rules.required_columns
     assert "executor_run_time_ms" in rules.required_columns
+    assert rules.required_metrics == (
+        "num_stages",
+        "num_tasks",
+        "executor_run_time_ms",
+    )
+    assert "shuffle_bytes_written" in rules.optional_metrics
     assert rules.semantic_rules.num_stages_gt_zero is True
     assert "shuffle_bytes_written" in rules.semantic_rules.non_negative_metrics
     assert rules.correlation_rules.expected_values == {
@@ -132,6 +138,27 @@ def test_lab6_normalizes_actual_sparkmeasure_stage_metric_names():
     assert normalized.input_bytes == 1000
     assert normalized.num_stages == 4
     assert normalized.num_tasks == 25
+    assert normalized.shuffle_bytes_written_available is True
+    assert normalized.shuffle_bytes_read_available is True
+    assert normalized.jvm_gc_time_ms_available is True
+    assert normalized.memory_bytes_spilled_available is True
+    assert normalized.disk_bytes_spilled_available is True
+    assert normalized.input_bytes_available is True
+
+
+def test_lab6_distinguishes_unavailable_optional_metrics_from_zero_values():
+    normalized = normalize_stage_metrics(
+        {
+            "numStages": 4,
+            "numTasks": 25,
+            "executorRunTime": 5000,
+        }
+    )
+
+    assert normalized.shuffle_bytes_written == 0
+    assert normalized.shuffle_bytes_written_available is False
+    assert normalized.shuffle_bytes_read == 0
+    assert normalized.shuffle_bytes_read_available is False
 
 
 def test_lab6_normalization_rejects_unsupported_metric_schema():
@@ -159,6 +186,12 @@ def test_lab6_builds_contract_ready_raw_metrics_record():
             input_bytes=10,
             num_stages=2,
             num_tasks=8,
+            shuffle_bytes_written_available=True,
+            shuffle_bytes_read_available=True,
+            jvm_gc_time_ms_available=True,
+            memory_bytes_spilled_available=True,
+            disk_bytes_spilled_available=True,
+            input_bytes_available=True,
         ),
     )
 
@@ -169,6 +202,8 @@ def test_lab6_builds_contract_ready_raw_metrics_record():
     assert record["contract_version"] == "1.0.0"
     assert record["num_stages"] == 2
     assert record["num_tasks"] == 8
+    assert record["shuffle_bytes_written_available"] is True
+    assert record["input_bytes_available"] is True
     assert record["created_at"]
 
 
@@ -193,6 +228,12 @@ def test_lab6_invalid_demo_records_do_not_mutate_clean_record():
         "memory_bytes_spilled": 0,
         "disk_bytes_spilled": 0,
         "input_bytes": 10,
+        "shuffle_bytes_written_available": True,
+        "shuffle_bytes_read_available": True,
+        "jvm_gc_time_ms_available": True,
+        "memory_bytes_spilled_available": True,
+        "disk_bytes_spilled_available": True,
+        "input_bytes_available": True,
     }
 
     records = build_invalid_demo_records(clean)

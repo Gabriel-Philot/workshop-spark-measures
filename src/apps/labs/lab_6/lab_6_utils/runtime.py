@@ -117,15 +117,15 @@ class Lab6StageMetricsContractGateJob(SparkWorkshopJob):
                 source_path=validation_input_path,
             )
             logger.info(
-                "LAB6_SCHEMA_CONTRACT_OK "
+                "LAB6_SCHEMA_CONTRACT_EVALUATED "
                 f"decision={layer_decision(results, SCHEMA)}"
             )
             logger.info(
-                "LAB6_SEMANTIC_CONTRACT_OK "
+                "LAB6_SEMANTIC_CONTRACT_EVALUATED "
                 f"decision={layer_decision(results, SEMANTIC)}"
             )
             logger.info(
-                "LAB6_CORRELATION_CONTRACT_OK "
+                "LAB6_CORRELATION_CONTRACT_EVALUATED "
                 f"decision={layer_decision(results, CORRELATION)}"
             )
 
@@ -299,6 +299,12 @@ def _raw_metrics_schema() -> Any:
             T.StructField("memory_bytes_spilled", T.LongType(), True),
             T.StructField("disk_bytes_spilled", T.LongType(), True),
             T.StructField("input_bytes", T.LongType(), True),
+            T.StructField("shuffle_bytes_written_available", T.BooleanType(), True),
+            T.StructField("shuffle_bytes_read_available", T.BooleanType(), True),
+            T.StructField("jvm_gc_time_ms_available", T.BooleanType(), True),
+            T.StructField("memory_bytes_spilled_available", T.BooleanType(), True),
+            T.StructField("disk_bytes_spilled_available", T.BooleanType(), True),
+            T.StructField("input_bytes_available", T.BooleanType(), True),
         ]
     )
 
