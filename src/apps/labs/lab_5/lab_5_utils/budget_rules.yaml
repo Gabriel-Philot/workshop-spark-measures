@@ -1,0 +1,29 @@
+default_budget:
+  max_executor_runtime_growth_pct: 20.0
+  max_shuffle_written_growth_pct: 25.0
+  max_shuffle_read_growth_pct: 25.0
+  max_num_tasks_growth_pct: 35.0
+  max_num_stages_growth_pct: 25.0
+  fail_on_memory_spill_bytes_above: 0
+  fail_on_disk_spill_bytes_above: 0
+
+low_signal:
+  min_executor_runtime_ms: 1000
+  min_shuffle_bytes: 1048576
+
+profiles:
+  shuffle_heavy:
+    max_shuffle_written_growth_pct: 15.0
+    max_shuffle_read_growth_pct: 15.0
+    max_executor_runtime_growth_pct: 25.0
+    max_num_tasks_growth_pct: 25.0
+
+  memory_pressure:
+    fail_on_memory_spill_bytes_above: 0
+    fail_on_disk_spill_bytes_above: 0
+    max_executor_runtime_growth_pct: 15.0
+
+  balanced_or_low_signal:
+    max_executor_runtime_growth_pct: 30.0
+    max_shuffle_written_growth_pct: 40.0
+    max_num_tasks_growth_pct: 50.0
