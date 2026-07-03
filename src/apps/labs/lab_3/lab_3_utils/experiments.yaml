@@ -1,0 +1,101 @@
+experiments:
+  lab3-overhead-none:
+    app_name: workshop-lab3-overhead-none
+    workload:
+      mode: none
+      success_marker: LAB3_OBSERVABILITY_OVERHEAD_NONE_OK
+      shuffle_partitions: 384
+      benchmark_buckets: 2048
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 384
+        spark.sql.adaptive.enabled: false
+        spark.sql.autoBroadcastJoinThreshold: -1
+    observability:
+      enabled: false
+      persist: false
+    artifacts:
+      locations:
+        workload_output_base: ${LAB3_WORKLOAD_OUTPUT_BASE:-s3a://lakehouse/gold/lab3/observability_overhead/workload}
+        metadata_output_path: ${LAB3_METADATA_OUTPUT_PATH:-s3a://observability/lab3/overhead_runs}
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB3_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB3_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB3_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB3_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
+
+  lab3-overhead-stage:
+    app_name: workshop-lab3-overhead-stage
+    workload:
+      mode: stage
+      success_marker: LAB3_OBSERVABILITY_OVERHEAD_STAGE_OK
+      shuffle_partitions: 384
+      benchmark_buckets: 2048
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 384
+        spark.sql.adaptive.enabled: false
+        spark.sql.autoBroadcastJoinThreshold: -1
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      locations:
+        workload_output_base: ${LAB3_WORKLOAD_OUTPUT_BASE:-s3a://lakehouse/gold/lab3/observability_overhead/workload}
+        metadata_output_path: ${LAB3_METADATA_OUTPUT_PATH:-s3a://observability/lab3/overhead_runs}
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB3_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB3_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB3_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB3_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
+
+  lab3-overhead-task:
+    app_name: workshop-lab3-overhead-task
+    workload:
+      mode: task
+      success_marker: LAB3_OBSERVABILITY_OVERHEAD_TASK_OK
+      shuffle_partitions: 384
+      benchmark_buckets: 2048
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 384
+        spark.sql.adaptive.enabled: false
+        spark.sql.autoBroadcastJoinThreshold: -1
+    observability:
+      enabled: true
+      collector: task
+      persist: false
+    artifacts:
+      locations:
+        workload_output_base: ${LAB3_WORKLOAD_OUTPUT_BASE:-s3a://lakehouse/gold/lab3/observability_overhead/workload}
+        metadata_output_path: ${LAB3_METADATA_OUTPUT_PATH:-s3a://observability/lab3/overhead_runs}
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB3_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB3_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB3_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB3_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
