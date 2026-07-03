@@ -1,0 +1,61 @@
+contract:
+  version: "1.0.0"
+
+required_columns:
+  - run_id
+  - app_name
+  - lab_id
+  - workload_name
+  - workload_variant
+  - collector_name
+  - metric_scope
+  - contract_version
+  - created_at
+  - num_stages
+  - num_tasks
+  - executor_run_time_ms
+
+schema_rules:
+  require_columns: true
+
+semantic_rules:
+  num_stages_gt_zero: true
+  num_tasks_gt_zero: true
+  created_at_not_null: true
+  non_negative_metrics:
+    - executor_run_time_ms
+    - shuffle_bytes_written
+    - shuffle_bytes_read
+    - jvm_gc_time_ms
+    - memory_bytes_spilled
+    - disk_bytes_spilled
+    - input_bytes
+
+correlation_rules:
+  required_identity_columns:
+    - run_id
+    - app_name
+    - lab_id
+    - workload_name
+    - workload_variant
+    - collector_name
+    - metric_scope
+    - created_at
+  expected_values:
+    collector_name: sparkmeasure_stage_metrics
+    metric_scope: stage
+  uniqueness_key:
+    - run_id
+    - workload_name
+    - workload_variant
+    - metric_scope
+
+severity:
+  missing_required_column: ERROR
+  null_identity_column: ERROR
+  invalid_expected_value: ERROR
+  duplicate_uniqueness_key: ERROR
+  non_negative_metric_violation: ERROR
+  zero_stage_or_task: ERROR
+  null_created_at: ERROR
+
