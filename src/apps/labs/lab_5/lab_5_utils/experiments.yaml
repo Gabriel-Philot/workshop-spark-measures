@@ -1,0 +1,57 @@
+experiments:
+  lab5-stage-runtime-budget-guardrail:
+    app_name: workshop-lab5-stage-runtime-budget-guardrail
+    workload:
+      workload_name: retail_runtime_budget_guardrail
+      baseline_variant: approved_baseline
+      candidate_variant: candidate_pr_regression
+      success_marker: LAB5_STAGE_RUNTIME_BUDGET_GUARDRAIL_OK
+      baseline_keyed_partitions: 48
+      candidate_round_robin_partitions: 192
+      candidate_keyed_partitions: 192
+      candidate_guardrail_buckets: 1024
+      revenue_tolerance: 0.01
+    spark:
+      config:
+        spark.sql.shuffle.partitions: 96
+        spark.sql.adaptive.enabled: false
+        spark.sql.autoBroadcastJoinThreshold: -1
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      inputs:
+        sales:
+          format: delta
+          path: ${LAB5_SALES_PATH:-s3a://lakehouse/bronze/retail/sales}
+        vendors:
+          format: delta
+          path: ${LAB5_VENDORS_PATH:-s3a://lakehouse/bronze/retail/vendors}
+        products:
+          format: delta
+          path: ${LAB5_PRODUCTS_PATH:-s3a://lakehouse/bronze/retail/products}
+        customers:
+          format: delta
+          path: ${LAB5_CUSTOMERS_PATH:-s3a://lakehouse/bronze/retail/customers}
+      outputs:
+        baseline_business_output:
+          format: delta
+          path: ${LAB5_BASELINE_OUTPUT_PATH:-s3a://lakehouse/gold/lab5/stage_runtime_budget/baseline}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+        candidate_business_output:
+          format: delta
+          path: ${LAB5_CANDIDATE_OUTPUT_PATH:-s3a://lakehouse/gold/lab5/stage_runtime_budget/candidate}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+        stage_runtime_budget_runs:
+          format: delta
+          path: ${LAB5_STAGE_RUNTIME_BUDGET_RUNS_PATH:-s3a://observability/lab5/stage_runtime_budget_runs}
+          mode: append
+        stage_runtime_budget_decisions:
+          format: delta
+          path: ${LAB5_STAGE_RUNTIME_BUDGET_DECISIONS_PATH:-s3a://observability/lab5/stage_runtime_budget_decisions}
+          mode: append
