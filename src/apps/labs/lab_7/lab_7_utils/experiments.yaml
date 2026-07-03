@@ -31,3 +31,38 @@ experiments:
           mode: append
           options:
             mergeSchema: true
+
+  lab7-daily-backfill-stage-metrics:
+    app_name: workshop-lab7-daily-backfill-stage-metrics
+    log_level: INFO
+    workload:
+      workload_name: temporal_daily_backfill
+      filter_strategy: early_partition_filter
+      success_marker: LAB7_DAILY_BACKFILL_STAGE_METRICS_OK
+    spark:
+      log_level: WARN
+      config:
+        spark.sql.shuffle.partitions: 64
+        spark.sql.adaptive.enabled: false
+    observability:
+      enabled: true
+      collector: stage
+      persist: false
+    artifacts:
+      inputs:
+        source_events_temporal:
+          format: delta
+          path: ${LAB7_TEMPORAL_SOURCE_PATH:-s3a://lakehouse/bronze/lab7/source_events_temporal}
+      outputs:
+        daily_activity_dashboard:
+          format: delta
+          path: ${LAB7_DAILY_DASHBOARD_OUTPUT_PATH:-s3a://lakehouse/gold/lab7/daily_activity_dashboard/manual}
+          mode: overwrite
+          options:
+            overwriteSchema: true
+        daily_backfill_stage_metrics:
+          format: delta
+          path: ${LAB7_DAILY_BACKFILL_STAGE_METRICS_PATH:-s3a://observability/lab7/daily_backfill_stage_metrics}
+          mode: append
+          options:
+            mergeSchema: true

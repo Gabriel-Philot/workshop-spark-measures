@@ -156,6 +156,58 @@ LAB7_TEMPORAL_SOURCE_VALIDATION_OK
 LAB7_TEMPORAL_SOURCE_GENERATOR_OK
 ```
 
+## Part B: Daily backfill StageMetrics by date
+
+The daily backfill app processes one `processing_date` per Spark application.
+The runner submits all configured dates one by one, so each date appears as a
+separate Spark application in History Server.
+
+Default full batch:
+
+```bash
+bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
+```
+
+Calibration subset:
+
+```bash
+LAB7_PROCESSING_DATES=2026-01-01,2026-01-04 \
+bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
+```
+
+Business outputs are written per date:
+
+```text
+s3a://lakehouse/gold/lab7/daily_activity_dashboard/processing_date=<YYYY-MM-DD>/filter_strategy=early_partition_filter
+```
+
+StageMetrics rows are appended to:
+
+```text
+s3a://observability/lab7/daily_backfill_stage_metrics
+```
+
+Expected per-submit markers:
+
+```text
+LAB7_DAILY_BACKFILL_CONFIG_OK
+LAB7_DAILY_BACKFILL_RUN_OK
+LAB7_STAGE_METRICS_BY_DATE_WRITTEN_OK
+LAB7_BACKFILL_VOLUME_SPIKE_SIGNAL_OK
+LAB7_DAILY_BACKFILL_STAGE_METRICS_OK
+```
+
+Expected batch marker:
+
+```text
+LAB7_DAILY_BACKFILL_BATCH_COMPLETED
+```
+
+This lab intentionally stores the expected source volume next to the Spark
+metrics. The comparison is the teaching point: a date with `100x` rows should be
+easy to compare against executor runtime, records read, shuffle, tasks, spill,
+and GC time.
+
 ## Classroom takeaway
 
 Before analyzing a temporal backfill, create a source where the expected daily

@@ -83,4 +83,4 @@ Stage-level collection has lower overhead and is sufficient for the first worksh
 - `src/apps/labs/lab_4`: stage-level workload fingerprinting using sparkMeasure aggregate metrics to classify workloads as shuffle-heavy, memory-pressure-heavy, I/O-heavy, GC-heavy, or low-signal.
 - `src/apps/labs/lab_5`: stage-level runtime budget guardrail that compares baseline and candidate workloads and produces PASS, FAIL, or WARNING_LOW_SIGNAL decisions from sparkMeasure aggregate metrics.
 - `src/apps/labs/lab_6`: stage metrics contract gate that validates Spark observability metrics as an operational data product before they feed automation.
-- `src/apps/labs/lab_7`: temporal backfill observability, starting with a deterministic bronze source generator for daily volume spikes.
+- `src/apps/labs/lab_7`: temporal backfill observability with a deterministic bronze source and per-date StageMetrics for daily volume spikes.
