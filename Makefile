@@ -9,7 +9,7 @@ COMPOSE := docker compose --env-file $(ENV_FILE) -f $(COMPOSE_FILE)
 include .env.example
 -include .env
 
-.PHONY: bootstrap build validate compose compose-three-workers dry-test generate services test tests down clean-data removeimage
+.PHONY: bootstrap build validate compose compose-three-workers dry-test generate generate-lab7 generate-all lab7-dashboard-build lab7-dashboard services test tests down clean-data removeimage
 
 SPARK_PYTHONPATH := /opt/spark/src:/opt/spark/generator/src
 GENERATOR_CONFIG ?= /opt/spark/generator/configs/retail_sales_skew.yaml
@@ -18,6 +18,10 @@ GENERATOR_RUN_ID ?=
 GENERATOR_VALIDATE ?= 1
 GENERATOR_VALIDATE_ARGS := $(if $(filter 0 false no,$(GENERATOR_VALIDATE)),--skip-validation,)
 GENERATOR_RUN_ID_ARGS := $(if $(GENERATOR_RUN_ID),--run-id $(GENERATOR_RUN_ID),)
+LAB7_GENERATE_MODE ?= full
+LAB7_APPEND_DATE ?=
+LAB7_APPEND_VOLUME_MULTIPLIER ?= 1
+LAB7_REPLACE_SOURCE ?= false
 
 SPARK_SUBMIT := $(COMPOSE) exec -T spark-master env PYTHONPATH=$(SPARK_PYTHONPATH) /opt/spark/bin/spark-submit \
 	--master spark://spark-master:7077 \
@@ -52,6 +56,11 @@ build:
 		-f build/images/spark-history/Dockerfile \
 		-t $(SPARK_HISTORY_IMAGE) \
 		build/images/spark-history
+	@docker build \
+		--build-arg LAB7_DASHBOARD_BASE_IMAGE=$(LAB7_DASHBOARD_BASE_IMAGE) \
+		-f build/images/lab7-dashboard/Dockerfile \
+		-t $(LAB7_DASHBOARD_IMAGE) \
+		build/images/lab7-dashboard
 
 validate:
 	@build/scripts/validate.sh
@@ -77,6 +86,37 @@ generate: compose
 		$(GENERATOR_RUN_ID_ARGS) \
 		$(GENERATOR_VALIDATE_ARGS) \
 		2>&1 | tee build/var/generate-$(SCALE).log
+
+generate-all: generate
+	@LAB7_GENERATE_MODE=$(LAB7_GENERATE_MODE) \
+		LAB7_APPEND_DATE=$(LAB7_APPEND_DATE) \
+		LAB7_APPEND_VOLUME_MULTIPLIER=$(LAB7_APPEND_VOLUME_MULTIPLIER) \
+		LAB7_REPLACE_SOURCE=$(LAB7_REPLACE_SOURCE) \
+		bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh \
+		2>&1 | tee build/var/generate-lab7.log
+
+generate-lab7: compose
+	@mkdir -p build/var
+	@LAB7_GENERATE_MODE=$(LAB7_GENERATE_MODE) \
+		LAB7_APPEND_DATE=$(LAB7_APPEND_DATE) \
+		LAB7_APPEND_VOLUME_MULTIPLIER=$(LAB7_APPEND_VOLUME_MULTIPLIER) \
+		LAB7_REPLACE_SOURCE=$(LAB7_REPLACE_SOURCE) \
+		bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh \
+		2>&1 | tee build/var/generate-lab7.log
+
+lab7-dashboard-build:
+	@build/scripts/validate-bootstrap.sh
+	@build/scripts/prepare-image-contexts.sh >/dev/null
+	@docker build \
+		--build-arg LAB7_DASHBOARD_BASE_IMAGE=$(LAB7_DASHBOARD_BASE_IMAGE) \
+		-f build/images/lab7-dashboard/Dockerfile \
+		-t $(LAB7_DASHBOARD_IMAGE) \
+		build/images/lab7-dashboard
+
+lab7-dashboard: compose
+	@$(MAKE) lab7-dashboard-build
+	@$(COMPOSE) --profile lab7-dashboard up -d lab7-dashboard
+	@echo "Lab 7 dashboard: http://127.0.0.1:$(LAB7_DASHBOARD_PORT)"
 
 services:
 	@build/scripts/services.sh
@@ -105,4 +145,4 @@ clean-data:
 	@mkdir -p build/var/minio-data
 
 removeimage:
-	@docker rmi $(SPARK_RUNTIME_IMAGE) $(SPARK_HISTORY_IMAGE) $(MINIO_IMAGE) $(MINIO_MC_IMAGE) || true
+	@docker rmi $(SPARK_RUNTIME_IMAGE) $(SPARK_HISTORY_IMAGE) $(MINIO_IMAGE) $(MINIO_MC_IMAGE) $(LAB7_DASHBOARD_IMAGE) || true

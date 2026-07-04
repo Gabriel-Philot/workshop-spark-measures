@@ -30,11 +30,18 @@ Spark Workers
 Spark History
   URL: http://127.0.0.1:${SPARK_HISTORY_UI_PORT}
 
+Lab 7 Dashboard
+  URL: http://127.0.0.1:${LAB7_DASHBOARD_PORT}
+  Start: make lab7-dashboard
+  Input: s3://${MINIO_OBSERVABILITY_BUCKET}/lab7/daily_backfill_stage_metrics
+
 Dry-test Delta table
   s3a://${MINIO_OBSERVABILITY_BUCKET}/spark-measure/stage/latest
 
 Useful commands
-  make dry-test    Run and validate the instrumented workload.
-  make down        Stop services without deleting data.
-  make clean-data  Remove all local MinIO data.
+  make dry-test        Run and validate the instrumented workload.
+  make generate-lab7   Generate or validate the Lab 7 temporal source.
+  make lab7-dashboard  Start the optional Lab 7 Streamlit dashboard.
+  make down            Stop services without deleting data.
+  make clean-data      Remove all local MinIO data.
 INFO

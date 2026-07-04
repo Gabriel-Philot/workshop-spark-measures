@@ -43,14 +43,18 @@ MANIFEST="$JARS_DIR/.bootstrap-manifest"
 REQ_FILE="$ROOT_DIR/build/images/spark/requirements.txt"
 WHEELS_DIR="$ROOT_DIR/build/cache/python-wheels"
 WHEELS_MANIFEST="$WHEELS_DIR/.requirements.sha256"
+DASHBOARD_REQ_FILE="$ROOT_DIR/build/images/lab7-dashboard/requirements.txt"
+DASHBOARD_WHEELS_DIR="$ROOT_DIR/build/cache/lab7-dashboard-wheels"
+DASHBOARD_WHEELS_MANIFEST="$DASHBOARD_WHEELS_DIR/.requirements.sha256"
 SPEC="spark=${SPARK_VERSION};delta=${DELTA_VERSION};hadoop-aws=${HADOOP_AWS_VERSION};sparkmeasure=${SPARKMEASURE_VERSION}"
 
-mkdir -p "$JARS_DIR" "$WHEELS_DIR" build/var/minio-data
+mkdir -p "$JARS_DIR" "$WHEELS_DIR" "$DASHBOARD_WHEELS_DIR" build/var/minio-data
 
 echo "Pulling pinned base images..."
 docker pull "$SPARK_BASE_IMAGE"
 docker pull "$MINIO_BASE_IMAGE"
 docker pull "$MINIO_MC_BASE_IMAGE"
+docker pull "$LAB7_DASHBOARD_BASE_IMAGE"
 
 bootstrap_current=false
 if [[ -f "$MANIFEST" ]] && [[ "$(head -n 1 "$MANIFEST")" == "spec:$SPEC" ]]; then
@@ -125,6 +129,26 @@ else
     "$SPARK_BASE_IMAGE" \
     -lc 'set -euo pipefail; python3 -m pip download --dest /python-wheels -r /requirements.txt; chown -R "$HOST_UID:$HOST_GID" /python-wheels'
   printf '%s\n' "$requirements_hash" > "$WHEELS_MANIFEST"
+fi
+
+dashboard_requirements_hash="$(sha256sum "$DASHBOARD_REQ_FILE" | awk '{print $1}')"
+if [[ -f "$DASHBOARD_WHEELS_MANIFEST" && "$(cat "$DASHBOARD_WHEELS_MANIFEST")" == "$dashboard_requirements_hash" ]] \
+  && find "$DASHBOARD_WHEELS_DIR" -maxdepth 1 -type f -name '*.whl' | grep -q .; then
+  echo "Lab 7 dashboard Python wheel cache is current"
+else
+  echo "Downloading pinned Lab 7 dashboard Python wheels..."
+  rm -rf "$DASHBOARD_WHEELS_DIR"
+  mkdir -p "$DASHBOARD_WHEELS_DIR"
+  docker run --rm \
+    --user root \
+    --entrypoint /bin/bash \
+    -e HOST_UID="$(id -u)" \
+    -e HOST_GID="$(id -g)" \
+    -v "$DASHBOARD_REQ_FILE:/requirements.txt:ro" \
+    -v "$DASHBOARD_WHEELS_DIR:/python-wheels" \
+    "$LAB7_DASHBOARD_BASE_IMAGE" \
+    -lc 'set -euo pipefail; python -m pip download --dest /python-wheels -r /requirements.txt; chown -R "$HOST_UID:$HOST_GID" /python-wheels'
+  printf '%s\n' "$dashboard_requirements_hash" > "$DASHBOARD_WHEELS_MANIFEST"
 fi
 
 build/scripts/validate-bootstrap.sh

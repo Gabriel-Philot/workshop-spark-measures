@@ -1,0 +1,37 @@
+source:
+  name: source_events_temporal
+  seed: 77
+
+date_range:
+  start: "2026-01-01"
+  end: "2026-01-14"
+
+base_rows_per_day: 10000
+
+spike_days:
+  "2026-01-04": 100
+  "2026-01-07": 10
+  "2026-01-11": 100
+
+generation:
+  target_rows_per_partition: 250000
+  max_partitions_per_day: 16
+
+dimensions:
+  accounts: 10000
+  customers: 50000
+  vendors: 500
+  products: 5000
+  regions:
+    - BR_SP
+    - BR_RJ
+    - BR_MG
+    - BR_PR
+  channels:
+    - APP
+    - WEB
+    - API
+  event_types:
+    - ORDER_CREATED
+    - ORDER_PAID
+    - ORDER_CANCELLED
