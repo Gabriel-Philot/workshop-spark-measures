@@ -239,9 +239,10 @@ http://127.0.0.1:28501
 The dashboard shows:
 
 - a `run_id` selector, defaulting to the latest Lab 7B batch;
-- expected source rows by business date;
-- `records_read` by date;
-- `shuffle_bytes_written` by date;
+- a shuffle timeline using `shuffle_bytes_written`, `shuffle_bytes_read`, and
+  expected source rows as context;
+- a memory-pressure view using `memory_bytes_spilled`, `disk_bytes_spilled`,
+  and `jvm_gc_time_ms / executor_run_time_ms`;
 - expected rows versus executor runtime;
 - expected rows versus shuffle;
 - normalized runtime, shuffle, and task metrics per million source rows;

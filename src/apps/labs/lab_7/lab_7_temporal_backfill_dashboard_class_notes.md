@@ -41,6 +41,11 @@ defaults to the latest `run_id` and exposes a sidebar selector.
 Do not mix different `run_id` values when explaining date-by-date behavior.
 Each chart should represent one coherent backfill batch.
 
+For dashboard refinement, always validate with the complete 14-date backfill.
+The two-date smoke run is useful for fast checks, but it hides the temporal
+shape of the lesson and can make chart ordering, legends, and spike placement
+look misleading.
+
 ### 1. The business volume plan
 
 Start with `source_rows_for_date` and `spike_label`.
@@ -58,9 +63,10 @@ its job.
 
 ### 3. Shuffle bytes written
 
-`shuffle_bytes_written` is the strongest signal in this local lab. The business
-output cardinality is small, and the local Spark application startup cost is
-large, so runtime will not scale linearly with input volume.
+`shuffle_bytes_written` and `shuffle_bytes_read` are the strongest signals in
+this local lab. The first dashboard chart puts both shuffle counters next to the
+expected source volume so students can see whether the spike date changed the
+execution profile.
 
 The teaching point is:
 
@@ -68,7 +74,21 @@ The teaching point is:
 The spike day becomes visible in execution counters, especially shuffle.
 ```
 
-### 4. Runtime
+### 4. Memory pressure
+
+The memory pressure chart uses:
+
+```text
+memory_bytes_spilled
+disk_bytes_spilled
+jvm_gc_time_ms / executor_run_time_ms
+```
+
+Zero spill is not a missing chart. It is a useful low-pressure signal for this
+workload. If a later calibration creates spills, the same chart will show memory
+or disk pressure by date.
+
+### 5. Runtime
 
 `executor_run_time_ms` is still useful, but it must be interpreted carefully.
 This lab intentionally runs one Spark submit per date. That mirrors scheduled
@@ -76,12 +96,6 @@ backfills but adds fixed startup/stop cost around each run.
 
 Do not promise students that runtime will grow exactly `100x` when data grows
 `100x` in this local setup.
-
-### 5. Normalized metrics
-
-The dashboard includes metrics per million source rows. These make comparisons
-fairer across dates and expose whether a large date is proportionally expensive
-or simply larger.
 
 ## Why DuckDB here
 
@@ -100,6 +114,7 @@ context, they become an operational view:
 Which dates were large?
 Which Spark counters moved?
 Did shuffle grow with source volume?
+Was there any memory or disk spill?
 Is runtime a strong signal or dominated by local fixed cost?
 ```
 
