@@ -1,4 +1,4 @@
-"""# Lab 7A: temporal source generator
+"""# Lab 7: temporal source generator
 
 Creates the Lab 7 temporal bronze source used by the later daily backfill
 observability lessons. The generator is intentionally scoped to Lab 7 paths and
@@ -9,7 +9,7 @@ does not rewrite the retail bronze tables used by previous labs.
 Run the Lab 7-only generator:
 
 ```bash
-bash src/apps/labs/lab_7/run_temporal_source_generator.sh
+bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh
 ```
 
 Append one new day:
@@ -18,7 +18,7 @@ Append one new day:
 LAB7_GENERATE_MODE=append_day \
 LAB7_APPEND_DATE=2026-01-15 \
 LAB7_APPEND_VOLUME_MULTIPLIER=100 \
-bash src/apps/labs/lab_7/run_temporal_source_generator.sh
+bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh
 ```
 
 ## Required configuration

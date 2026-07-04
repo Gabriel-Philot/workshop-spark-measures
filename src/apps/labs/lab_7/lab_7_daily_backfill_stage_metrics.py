@@ -1,4 +1,4 @@
-"""# Lab 7B: daily backfill StageMetrics by date
+"""# Lab 7: daily backfill StageMetrics by date
 
 Processes one temporal source `processing_date`, writes a daily dashboard
 business output, captures sparkMeasure StageMetrics, and persists one metrics
@@ -9,14 +9,14 @@ row keyed by the business date.
 Run the default 14-date classroom batch:
 
 ```bash
-bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
+bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
 ```
 
 Run a calibration subset:
 
 ```bash
 LAB7_PROCESSING_DATES=2026-01-01,2026-01-04 \
-bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
+bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
 ```
 
 ## Required configuration

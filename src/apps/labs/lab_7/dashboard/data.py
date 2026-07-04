@@ -1,4 +1,4 @@
-"""DuckDB data access for the Lab 7C dashboard."""
+"""DuckDB data access for the Lab 7 dashboard."""
 
 from __future__ import annotations
 
@@ -34,15 +34,15 @@ CREATE OR REPLACE SECRET lab7_minio (
 
 
 def build_delta_scan_sql(metrics_uri: str) -> str:
-    """Build the Delta scan SQL for the Lab 7B StageMetrics table."""
+    """Build the Delta scan SQL for the Lab 7 StageMetrics table."""
 
     if not metrics_uri.startswith("s3://"):
-        raise ValueError(f"Lab 7C expects an s3:// metrics URI, got: {metrics_uri}")
+        raise ValueError(f"Lab 7 expects an s3:// metrics URI, got: {metrics_uri}")
     return f"SELECT * FROM delta_scan({sql_literal(metrics_uri)})"
 
 
 def build_metrics_query(metrics_uri: str) -> str:
-    """Build the dashboard query over the persisted Lab 7B metrics table."""
+    """Build the dashboard query over the persisted Lab 7 metrics table."""
 
     scan = build_delta_scan_sql(metrics_uri)
     return f"""
@@ -103,7 +103,7 @@ def configure_duckdb_connection(connection: Any, config: DashboardConfig) -> Non
 
 
 def load_metrics_dataframe(config: DashboardConfig) -> Any:
-    """Read Lab 7B metrics into a pandas DataFrame through DuckDB."""
+    """Read Lab 7 metrics into a pandas DataFrame through DuckDB."""
 
     import duckdb
 

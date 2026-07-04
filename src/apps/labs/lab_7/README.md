@@ -86,14 +86,46 @@ The table is partitioned by:
 event_date
 ```
 
-## Generation modes
+## Public classroom flow
+
+If this is the first run after removing Docker images, rebuild the local images:
+
+```bash
+make build
+```
+
+Run the complete Lab 7 workload from the repository root:
+
+```bash
+bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
+```
+
+The runner:
+
+1. starts or validates the local stack with `make compose`;
+2. creates or validates the isolated Lab 7 temporal source;
+3. runs the daily backfill for every configured `processing_date`;
+4. writes one StageMetrics row per date;
+5. prints the dashboard command to run next.
+
+For a short calibration run:
+
+```bash
+LAB7_PROCESSING_DATES=2026-01-01,2026-01-04 \
+bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
+```
+
+Use the full 14-date run for visual dashboard validation. The two-date run is
+useful for smoke tests, but it is not enough to validate temporal chart order.
+
+## Temporal source generation modes
 
 `full` mode creates the configured historical range. It appends only missing
 dates by default, so rerunning the command does not duplicate dates that already
 exist and pass validation.
 
 ```bash
-bash src/apps/labs/lab_7/run_temporal_source_generator.sh
+bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh
 ```
 
 `append_day` mode adds one new date partition:
@@ -102,20 +134,20 @@ bash src/apps/labs/lab_7/run_temporal_source_generator.sh
 LAB7_GENERATE_MODE=append_day \
 LAB7_APPEND_DATE=2026-01-15 \
 LAB7_APPEND_VOLUME_MULTIPLIER=100 \
-bash src/apps/labs/lab_7/run_temporal_source_generator.sh
+bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh
 ```
 
 For local calibration only, this scoped reset is available:
 
 ```bash
 LAB7_REPLACE_SOURCE=true \
-bash src/apps/labs/lab_7/run_temporal_source_generator.sh
+bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
 ```
 
 That reset deletes only the Lab 7 source path, not retail data and not Lab 0-6
 outputs.
 
-## Public generation flow
+## Public generation flow for shared workshop data
 
 Retail-only generation remains unchanged:
 
@@ -144,7 +176,7 @@ make generate-lab7
 its visible volume from the isolated temporal source, not by forcing the shared
 retail tables to be larger.
 
-## Expected markers
+## Source expected markers
 
 The runner validates these markers:
 
@@ -155,24 +187,11 @@ LAB7_TEMPORAL_SOURCE_VALIDATION_OK
 LAB7_TEMPORAL_SOURCE_GENERATOR_OK
 ```
 
-## Part B: Daily backfill StageMetrics by date
+## Daily backfill StageMetrics by date
 
 The daily backfill app processes one `processing_date` per Spark application.
 The runner submits all configured dates one by one, so each date appears as a
 separate Spark application in History Server.
-
-Default full batch:
-
-```bash
-bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
-```
-
-Calibration subset:
-
-```bash
-LAB7_PROCESSING_DATES=2026-01-01,2026-01-04 \
-bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
-```
 
 Business outputs are written per date:
 
@@ -207,9 +226,9 @@ metrics. The comparison is the teaching point: a date with `100x` rows should be
 easy to compare against executor runtime, records read, shuffle, tasks, spill,
 and GC time.
 
-## Part C: Temporal backfill observability dashboard
+## Temporal backfill observability dashboard
 
-The dashboard is a read-only presentation layer over the Lab 7B metrics table.
+The dashboard is a read-only presentation layer over the Lab 7 metrics table.
 It does not run Spark.
 
 It uses:
@@ -224,7 +243,7 @@ Input:
 s3://observability/lab7/daily_backfill_stage_metrics
 ```
 
-Start it after Lab 7B has produced metrics:
+Start it after the public Lab 7 runner has produced metrics:
 
 ```bash
 make lab7-dashboard
@@ -238,7 +257,7 @@ http://127.0.0.1:28501
 
 The dashboard shows:
 
-- a `run_id` selector, defaulting to the latest Lab 7B batch;
+- a `run_id` selector, defaulting to the latest Lab 7 batch;
 - a shuffle timeline using `shuffle_bytes_written`, `shuffle_bytes_read`, and
   expected source rows as context;
 - a memory-pressure view using `memory_bytes_spilled`, `disk_bytes_spilled`,
@@ -252,15 +271,28 @@ This is intentionally not a generic BI layer. It is a small classroom view that
 helps students connect temporal volume spikes to stage-level Spark execution
 counters.
 
-The Lab 7B metrics table is append-only. If you rerun the backfill, select one
+The Lab 7 metrics table is append-only. If you rerun the backfill, select one
 batch `run_id` in the dashboard sidebar before explaining the charts.
 
 If the dashboard is empty, run:
 
 ```bash
-make generate-lab7
-bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
+bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
 make lab7-dashboard
+```
+
+## Classroom docs
+
+Classroom commands:
+
+```text
+src/apps/labs/lab_7/docs/lab_7_class_commands.md
+```
+
+Class notes:
+
+```text
+src/apps/labs/lab_7/docs/lab_7_class_notes.md
 ```
 
 ## Classroom takeaway

@@ -1,4 +1,4 @@
-"""Configuration helpers for the Lab 7C Streamlit dashboard.
+"""Configuration helpers for the Lab 7 Streamlit dashboard.
 
 This module intentionally has no Streamlit or DuckDB dependency so it can be
 unit-tested with the repository's normal lightweight test environment.
@@ -18,7 +18,7 @@ DEFAULT_REGION = "us-east-1"
 
 @dataclass(frozen=True)
 class DashboardConfig:
-    """Runtime settings required to query Lab 7B metrics from MinIO."""
+    """Runtime settings required to query Lab 7 metrics from MinIO."""
 
     metrics_uri: str
     minio_endpoint: str

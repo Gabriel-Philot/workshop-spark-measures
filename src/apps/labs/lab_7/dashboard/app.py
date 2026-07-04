@@ -1,4 +1,4 @@
-"""Lab 7C Streamlit dashboard for temporal backfill StageMetrics."""
+"""Lab 7 Streamlit dashboard for temporal backfill StageMetrics."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ except ImportError:  # pragma: no cover - Streamlit script path
 
 
 st.set_page_config(
-    page_title="Lab 7C - Temporal Backfill Observability",
+    page_title="Lab 7 - Temporal Backfill Observability",
     page_icon="📈",
     layout="wide",
 )
@@ -116,12 +116,10 @@ def latest_run_id(data: pd.DataFrame) -> str:
 
 
 def render_empty_state(error: Exception) -> None:
-    st.error("Lab 7B metrics are not available yet.")
+    st.error("Lab 7 metrics are not available yet.")
     st.code(
         """
-make compose
-make generate-lab7
-bash src/apps/labs/lab_7/run_daily_backfill_stage_metrics.sh
+bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
 make lab7-dashboard
 """.strip(),
         language="bash",
@@ -202,7 +200,7 @@ def render_dashboard(data: pd.DataFrame) -> None:
         hide_index=True,
     )
 
-    st.markdown("**Shuffle timeline with source-volume context**")
+    st.subheader("Shuffle timeline with source-volume context")
     shuffle_fig = make_subplots(specs=[[{"secondary_y": True}]])
     shuffle_customdata = signal[
         ["source_rows_for_date", "records_read", "shuffle_bytes_written", "shuffle_bytes_read", "spike_label"]
@@ -268,7 +266,7 @@ def render_dashboard(data: pd.DataFrame) -> None:
     shuffle_fig.update_yaxes(title_text="source rows M", rangemode="tozero", secondary_y=True)
     st.plotly_chart(apply_dark_chart_theme(shuffle_fig), use_container_width=True)
 
-    st.markdown("**Memory pressure: spills and GC ratio**")
+    st.subheader("Memory pressure: spills and GC ratio")
     memory_max = max(
         0.05,
         float(signal[["memory_spill_mb", "disk_spill_mb"]].max().max()),
@@ -344,20 +342,9 @@ def render_dashboard(data: pd.DataFrame) -> None:
         secondary_y=False,
     )
     memory_fig.update_yaxes(title_text="GC ratio %", rangemode="tozero", secondary_y=True)
-    if signal[["memory_bytes_spilled", "disk_bytes_spilled"]].max().max() == 0:
-        memory_fig.add_annotation(
-            text="No memory or disk spill detected in this selected run",
-            xref="paper",
-            yref="paper",
-            x=0.5,
-            y=0.88,
-            showarrow=False,
-            font={"color": CHART_FONT, "size": 14},
-            bgcolor="rgba(15, 23, 42, 0.78)",
-            bordercolor="rgba(148, 163, 184, 0.55)",
-            borderwidth=1,
-        )
     st.plotly_chart(apply_dark_chart_theme(memory_fig), use_container_width=True)
+    if signal[["memory_bytes_spilled", "disk_bytes_spilled"]].max().max() == 0:
+        st.caption("No memory or disk spill detected in this selected run.")
     st.caption(
         "Shuffle uses StageMetrics shuffle counters. Memory pressure uses memory/disk spill counters plus "
         "JVM GC time divided by executor runtime. Zero spill is a valid low-pressure signal in this lab."
@@ -569,8 +556,8 @@ Read the dashboard from left to right:
 
 config = load_dashboard_config()
 
-st.title("Lab 7C - Temporal Backfill Observability")
-st.caption("A read-only Streamlit view over Lab 7B sparkMeasure StageMetrics persisted as Delta.")
+st.title("Lab 7 - Temporal Backfill Observability")
+st.caption("A read-only Streamlit view over Lab 7 sparkMeasure StageMetrics persisted as Delta.")
 
 with st.sidebar:
     st.header("Input")
@@ -588,7 +575,7 @@ try:
         config.region,
     )
     if raw.empty:
-        raise RuntimeError("Lab 7B metrics Delta table is empty.")
+        raise RuntimeError("Lab 7 metrics Delta table is empty.")
     prepared = prepare_metrics(raw)
     run_ids = sorted(prepared["run_id"].dropna().unique().tolist())
     default_run_id = latest_run_id(prepared)
@@ -597,7 +584,7 @@ try:
             "Batch run_id",
             run_ids,
             index=run_ids.index(default_run_id),
-            help="Lab 7B appends metrics. Select one batch to avoid mixing reruns.",
+            help="Lab 7 appends metrics. Select one batch to avoid mixing reruns.",
         )
     selected = prepared[prepared["run_id"] == selected_run_id]
     st.caption(f"Showing batch run_id: `{selected_run_id}`")

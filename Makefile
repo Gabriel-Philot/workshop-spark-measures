@@ -92,7 +92,7 @@ generate-all: generate
 		LAB7_APPEND_DATE=$(LAB7_APPEND_DATE) \
 		LAB7_APPEND_VOLUME_MULTIPLIER=$(LAB7_APPEND_VOLUME_MULTIPLIER) \
 		LAB7_REPLACE_SOURCE=$(LAB7_REPLACE_SOURCE) \
-		bash src/apps/labs/lab_7/run_temporal_source_generator.sh \
+		bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh \
 		2>&1 | tee build/var/generate-lab7.log
 
 generate-lab7: compose
@@ -101,7 +101,7 @@ generate-lab7: compose
 		LAB7_APPEND_DATE=$(LAB7_APPEND_DATE) \
 		LAB7_APPEND_VOLUME_MULTIPLIER=$(LAB7_APPEND_VOLUME_MULTIPLIER) \
 		LAB7_REPLACE_SOURCE=$(LAB7_REPLACE_SOURCE) \
-		bash src/apps/labs/lab_7/run_temporal_source_generator.sh \
+		bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh \
 		2>&1 | tee build/var/generate-lab7.log
 
 lab7-dashboard-build:
