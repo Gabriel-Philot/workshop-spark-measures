@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="420" viewBox="0 0 1500 420" role="img" aria-label="Driver, executors e eventos de runtime no Spark">
+  <defs>
+    <filter id="glow" x="-25%" y="-35%" width="150%" height="170%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151d22"/>
+      <stop offset="1" stop-color="#080c10"/>
+    </linearGradient>
+    <marker id="arrowOrange" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#ff7a18" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrowCyan" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#3bb8c5" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="420" rx="18" fill="#070b0f"/>
+  <g opacity=".34">
+    <path d="M0 84 H1500 M0 168 H1500 M0 252 H1500 M0 336 H1500" stroke="#1d3036"/>
+    <path d="M120 0 V420 M300 0 V420 M480 0 V420 M660 0 V420 M840 0 V420 M1020 0 V420 M1200 0 V420 M1380 0 V420" stroke="#172329"/>
+  </g>
+
+  <g transform="translate(60 72)">
+    <rect width="340" height="256" rx="18" fill="url(#panel)" stroke="#ff7a18" stroke-width="1.8"/>
+    <text x="24" y="42" fill="#ff7a18" font-family="Consolas, monospace" font-size="18" font-weight="800">Driver JVM</text>
+    <g font-family="Inter, Arial" font-size="15" font-weight="800">
+      <rect x="24" y="72" width="292" height="38" rx="8" fill="#0c1216" stroke="#2b3942"/>
+      <text x="42" y="96" fill="#e9f2f8">SparkContext</text>
+      <rect x="24" y="124" width="292" height="38" rx="8" fill="#0c1216" stroke="#2b3942"/>
+      <text x="42" y="148" fill="#e9f2f8">DAGScheduler / TaskScheduler</text>
+      <rect x="24" y="176" width="292" height="38" rx="8" fill="#0c1216" stroke="#3bb8c5"/>
+      <text x="42" y="200" fill="#3bb8c5">ListenerBus + Web UI</text>
+    </g>
+  </g>
+
+  <g transform="translate(590 54)">
+    <rect width="360" height="292" rx="20" fill="url(#panel)" stroke="#3bb8c5" stroke-width="1.8"/>
+    <text x="24" y="44" fill="#3bb8c5" font-family="Consolas, monospace" font-size="18" font-weight="800">Executor JVM</text>
+    <g transform="translate(34 80)">
+      <rect width="292" height="68" rx="12" fill="#0c1216" stroke="#2b3942"/>
+      <text x="18" y="30" fill="#e9f2f8" font-family="Inter, Arial" font-size="15" font-weight="800">Task threads</text>
+      <circle cx="184" cy="34" r="13" fill="none" stroke="#3bb8c5" stroke-width="4" filter="url(#glow)"/>
+      <circle cx="226" cy="34" r="13" fill="none" stroke="#3bb8c5" stroke-width="4" filter="url(#glow)"/>
+      <circle cx="268" cy="34" r="13" fill="none" stroke="#ff7a18" stroke-width="4" filter="url(#glow)"/>
+    </g>
+    <g transform="translate(34 170)" font-family="Consolas, monospace" font-size="13" font-weight="800">
+      <rect width="292" height="78" rx="12" fill="#0c1216" stroke="#7ddc9f"/>
+      <text x="18" y="28" fill="#7ddc9f">TaskMetrics</text>
+      <text x="18" y="54" fill="#d6e0e8">runTime · cpuTime · gcTime</text>
+      <text x="18" y="72" fill="#ffb06d">shuffle · spill · bytesRead</text>
+    </g>
+  </g>
+
+  <g transform="translate(1110 72)">
+    <rect width="330" height="256" rx="18" fill="url(#panel)" stroke="#7ddc9f" stroke-width="1.8"/>
+    <text x="24" y="42" fill="#7ddc9f" font-family="Consolas, monospace" font-size="18" font-weight="800">Eventos no Driver</text>
+    <g font-family="Consolas, monospace" font-size="14" font-weight="800">
+      <text x="26" y="84" fill="#ff7a18">TaskEnd</text>
+      <text x="26" y="118" fill="#3bb8c5">StageCompleted</text>
+      <text x="26" y="152" fill="#7ddc9f">JobEnd</text>
+      <path d="M24 174 H302" stroke="#2b3942"/>
+      <text x="26" y="206" fill="#d6e0e8">UI / History / REST API</text>
+    </g>
+  </g>
+
+  <path d="M420 142 C484 102, 520 102, 568 132" fill="none" stroke="#ff7a18" stroke-width="5" marker-end="url(#arrowOrange)" filter="url(#glow)"/>
+  <text x="444" y="92" fill="#ffb06d" font-family="Consolas, monospace" font-size="15" font-weight="800">launch tasks</text>
+  <path d="M568 272 C502 320, 468 314, 420 278" fill="none" stroke="#3bb8c5" stroke-width="5" marker-end="url(#arrowCyan)" filter="url(#glow)"/>
+  <text x="424" y="342" fill="#99e7f1" font-family="Consolas, monospace" font-size="15" font-weight="800">status updates</text>
+
+  <path d="M970 150 C1030 108, 1058 108, 1088 134" fill="none" stroke="#3bb8c5" stroke-width="5" marker-end="url(#arrowCyan)" filter="url(#glow)"/>
+  <text x="990" y="92" fill="#99e7f1" font-family="Consolas, monospace" font-size="15" font-weight="800">metrics + events</text>
+  <path d="M970 272 C1030 312, 1058 312, 1088 284" fill="none" stroke="#ff7a18" stroke-width="5" marker-end="url(#arrowOrange)" filter="url(#glow)"/>
+  <text x="992" y="344" fill="#ffb06d" font-family="Consolas, monospace" font-size="15" font-weight="800">task result path</text>
+</svg>

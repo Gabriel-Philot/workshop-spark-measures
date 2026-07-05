@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="420" viewBox="0 0 1500 420" role="img" aria-label="StageMetrics agrega eventos por stage">
+  <defs>
+    <filter id="glow" x="-25%" y="-35%" width="150%" height="170%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151d22"/>
+      <stop offset="1" stop-color="#080c10"/>
+    </linearGradient>
+    <marker id="arrowOrange" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#ff7a18" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrowCyan" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#3bb8c5" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="420" rx="18" fill="#070b0f"/>
+  <g opacity=".34">
+    <path d="M0 84 H1500 M0 168 H1500 M0 252 H1500 M0 336 H1500" stroke="#1d3036"/>
+    <path d="M120 0 V420 M300 0 V420 M480 0 V420 M660 0 V420 M840 0 V420 M1020 0 V420 M1200 0 V420 M1380 0 V420" stroke="#172329"/>
+  </g>
+
+  <g transform="translate(64 62)">
+    <rect width="355" height="280" rx="18" fill="url(#panel)" stroke="#3bb8c5" stroke-width="1.7"/>
+    <text x="24" y="44" fill="#3bb8c5" font-family="Consolas, monospace" font-size="18" font-weight="800">eventos Spark</text>
+    <g font-family="Consolas, monospace" font-size="14" font-weight="800">
+      <text x="30" y="92" fill="#ff7a18">StageSubmitted(0)</text>
+      <text x="30" y="128" fill="#7ddc9f">TaskEnd ... TaskEnd</text>
+      <text x="30" y="164" fill="#3bb8c5">StageCompleted(0)</text>
+      <text x="30" y="214" fill="#ff7a18">StageSubmitted(1)</text>
+      <text x="30" y="250" fill="#3bb8c5">StageCompleted(1)</text>
+    </g>
+  </g>
+
+  <path d="M446 202 H560" stroke="#ff7a18" stroke-width="5" marker-end="url(#arrowOrange)" filter="url(#glow)"/>
+  <text x="458" y="176" fill="#ffb06d" font-family="Consolas, monospace" font-size="14" font-weight="800">stage boundary</text>
+
+  <g transform="translate(585 48)">
+    <rect width="330" height="308" rx="20" fill="url(#panel)" stroke="#ff7a18" stroke-width="2"/>
+    <text x="28" y="48" fill="#ff7a18" font-family="Inter, Arial" font-size="28" font-weight="900">StageMetrics</text>
+    <text x="30" y="80" fill="#d8e2ea" font-family="Inter, Arial" font-size="15" font-weight="700">agrega counters por stage</text>
+    <g transform="translate(30 112)" font-family="Consolas, monospace" font-size="13" font-weight="800">
+      <rect width="270" height="142" rx="12" fill="#0c1216" stroke="#2b3942"/>
+      <text x="18" y="30" fill="#7ddc9f">numTasks</text>
+      <text x="18" y="58" fill="#3bb8c5">stageDuration</text>
+      <text x="18" y="86" fill="#ff7a18">executorRunTime</text>
+      <text x="18" y="114" fill="#ff7a18">shuffle / spill</text>
+    </g>
+    <rect x="30" y="272" width="270" height="24" rx="12" fill="rgba(125,220,159,.10)" stroke="#7ddc9f"/>
+    <text x="84" y="289" fill="#b9f4cf" font-family="Consolas, monospace" font-size="12" font-weight="800">O(stages), nao O(tasks)</text>
+  </g>
+
+  <path d="M940 202 H1055" stroke="#3bb8c5" stroke-width="5" marker-end="url(#arrowCyan)" filter="url(#glow)"/>
+  <text x="960" y="176" fill="#aaf1f8" font-family="Consolas, monospace" font-size="14" font-weight="800">baseline report</text>
+
+  <g transform="translate(1080 62)">
+    <rect width="360" height="280" rx="18" fill="url(#panel)" stroke="#7ddc9f" stroke-width="1.7"/>
+    <text x="24" y="44" fill="#7ddc9f" font-family="Consolas, monospace" font-size="18" font-weight="800">visão operacional</text>
+    <g font-family="Consolas, monospace" font-size="13" font-weight="800">
+      <text x="28" y="88" fill="#8fa0ad">stage</text><text x="94" y="88" fill="#8fa0ad">tasks</text><text x="168" y="88" fill="#8fa0ad">run</text><text x="236" y="88" fill="#8fa0ad">shuffle</text>
+      <path d="M28 104 H326" stroke="#2b3942"/>
+      <text x="28" y="136" fill="#3bb8c5">0</text><text x="94" y="136" fill="#e9f2f8">120</text><text x="168" y="136" fill="#e9f2f8">42s</text><text x="236" y="136" fill="#ff7a18">8.1GB</text>
+      <text x="28" y="176" fill="#3bb8c5">1</text><text x="94" y="176" fill="#e9f2f8">120</text><text x="168" y="176" fill="#e9f2f8">18s</text><text x="236" y="176" fill="#7ddc9f">1.4GB</text>
+      <text x="28" y="216" fill="#3bb8c5">2</text><text x="94" y="216" fill="#e9f2f8">20</text><text x="168" y="216" fill="#e9f2f8">9s</text><text x="236" y="216" fill="#7ddc9f">0</text>
+    </g>
+  </g>
+
+  <g transform="translate(182 372)" font-family="Inter, Arial" font-size="15" font-weight="800">
+    <rect width="1136" height="32" rx="16" fill="#0c1216" stroke="#2b3942"/>
+    <text x="28" y="22" fill="#ffd0a5">primeiro passe:</text>
+    <text x="150" y="22" fill="#d8e2ea">achar o stage caro antes de abrir a lupa no nível de task</text>
+  </g>
+</svg>

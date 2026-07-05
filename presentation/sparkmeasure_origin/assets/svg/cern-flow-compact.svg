@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 150" role="img" aria-label="Fluxo visual sem texto: colisoes, detectores, sinais eletronicos, receptores com filtros e dados">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="line" x1="0" x2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="150" rx="24" fill="#050b17"/>
+  <g filter="url(#glow)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(125 75)">
+      <circle r="5" fill="#22d3ee" stroke="none"/>
+      <path d="M0 0 L-46 -30 M0 0 L-56 8 M0 0 L-8 -50 M0 0 L50 -34 M0 0 L54 14 M0 0 L12 50" stroke="#22d3ee" stroke-width="4"/>
+      <path d="M0 0 L-34 -13 M0 0 L38 -18 M0 0 L-7 38" stroke="#f97316" stroke-width="3.5"/>
+      <circle cx="-46" cy="-30" r="6" fill="#22d3ee" stroke="none"/>
+      <circle cx="-56" cy="8" r="6" fill="#22d3ee" stroke="none"/>
+      <circle cx="50" cy="-34" r="6" fill="#22d3ee" stroke="none"/>
+      <circle cx="54" cy="14" r="6" fill="#22d3ee" stroke="none"/>
+    </g>
+    <path d="M220 75 H324" stroke="url(#line)" stroke-width="4"/>
+    <path d="M311 63 L328 75 L311 87" stroke="#22d3ee" stroke-width="4"/>
+    <g transform="translate(420 75)">
+      <ellipse cx="0" cy="0" rx="63" ry="34" stroke="#22d3ee" stroke-width="5"/>
+      <ellipse cx="-20" cy="0" rx="39" ry="34" stroke="#22d3ee" stroke-width="2.5" opacity=".75"/>
+      <ellipse cx="20" cy="0" rx="39" ry="34" stroke="#22d3ee" stroke-width="2.5" opacity=".75"/>
+      <path d="M0 -32 V32" stroke="#22d3ee" stroke-width="4"/>
+    </g>
+    <path d="M508 75 H612" stroke="url(#line)" stroke-width="4"/>
+    <path d="M599 63 L616 75 L599 87" stroke="#22d3ee" stroke-width="4"/>
+    <g transform="translate(708 75)" stroke="#22d3ee" stroke-width="6">
+      <path d="M-62 -25 C-32 -46 -10 -6 24 -23 S54 -34 72 -18"/>
+      <path d="M-62 0 C-32 -21 -10 19 24 3 S54 -8 72 7"/>
+      <path d="M-62 27 C-32 6 -10 46 24 30 S54 19 72 34"/>
+    </g>
+    <path d="M810 75 H898" stroke="url(#line)" stroke-width="4"/>
+    <path d="M885 63 L902 75 L885 87" stroke="#22d3ee" stroke-width="4"/>
+    <g transform="translate(988 75)">
+      <path d="M-70 -34 C-48 -54 -14 -54 8 -34" stroke="#22d3ee" stroke-width="5"/>
+      <path d="M-50 -22 C-36 -34 -14 -34 0 -22" stroke="#22d3ee" stroke-width="4" opacity=".78"/>
+      <circle cx="-31" cy="5" r="9" fill="#22d3ee" stroke="none"/>
+      <path d="M-31 14 V50" stroke="#22d3ee" stroke-width="4"/>
+      <path d="M18 -45 H95 L68 -4 V38 L43 52 V-4 Z" stroke="#f97316" stroke-width="5"/>
+      <circle cx="37" cy="-57" r="6" fill="#f97316" stroke="none"/>
+      <circle cx="78" cy="-57" r="6" fill="#f97316" stroke="none"/>
+      <circle cx="46" cy="62" r="5" fill="#f97316" stroke="none"/>
+      <circle cx="70" cy="62" r="5" fill="#f97316" stroke="none"/>
+    </g>
+    <path d="M1112 75 H1210" stroke="url(#line)" stroke-width="4"/>
+    <path d="M1197 63 L1214 75 L1197 87" stroke="#22d3ee" stroke-width="4"/>
+    <g transform="translate(1290 75)" stroke="#22d3ee" stroke-width="5">
+      <ellipse cx="0" cy="-30" rx="54" ry="16"/>
+      <path d="M-54 -30 V32 C-54 43 -28 54 0 54 C28 54 54 43 54 32 V-30"/>
+      <path d="M-54 2 C-54 13 -28 24 0 24 C28 24 54 13 54 2" opacity=".72"/>
+    </g>
+  </g>
+</svg>

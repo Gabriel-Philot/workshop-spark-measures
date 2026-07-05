@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="360" viewBox="0 0 1500 360" role="img" aria-label="Do physical plan para runtime metrics">
+  <defs>
+    <filter id="glowCyan" x="-20%" y="-30%" width="140%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowSpark" x="-20%" y="-30%" width="140%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151c22"/>
+      <stop offset="1" stop-color="#0a0e12"/>
+    </linearGradient>
+    <marker id="arrowCyan" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#3bb8c5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrowSpark" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#ff7a18" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="360" rx="18" fill="#080c10"/>
+  <g opacity=".42">
+    <path d="M0 74 H1500 M0 150 H1500 M0 226 H1500 M0 302 H1500" stroke="#1d3036" stroke-width="1"/>
+    <path d="M100 0 V360 M250 0 V360 M400 0 V360 M550 0 V360 M700 0 V360 M850 0 V360 M1000 0 V360 M1150 0 V360 M1300 0 V360 M1450 0 V360" stroke="#172329" stroke-width="1"/>
+  </g>
+
+  <g transform="translate(42 42)">
+    <rect width="330" height="276" rx="14" fill="url(#panel)" stroke="#3bb8c5" stroke-width="1.6"/>
+    <text x="22" y="38" fill="#3bb8c5" font-family="Consolas, monospace" font-size="18" font-weight="700">physical plan</text>
+    <text x="22" y="76" fill="#e9f2f8" font-family="Consolas, monospace" font-size="15">AdaptiveSparkPlan</text>
+    <text x="46" y="108" fill="#d3dde5" font-family="Consolas, monospace" font-size="14">HashAggregate</text>
+    <text x="46" y="140" fill="#ff7a18" font-family="Consolas, monospace" font-size="14">Exchange hashpartitioning</text>
+    <text x="46" y="172" fill="#d3dde5" font-family="Consolas, monospace" font-size="14">HashAggregate</text>
+    <text x="46" y="204" fill="#d3dde5" font-family="Consolas, monospace" font-size="14">FileScan parquet</text>
+    <path d="M30 92 H26 V220 H30 M36 96 H42 M36 128 H42 M36 160 H42 M36 192 H42" stroke="#64747f" stroke-width="2" fill="none"/>
+    <rect x="206" y="218" width="98" height="28" rx="14" fill="#111820" stroke="#ff7a18"/>
+    <text x="226" y="237" fill="#ffb06d" font-family="Consolas, monospace" font-size="12">intencao</text>
+  </g>
+
+  <path d="M406 180 C470 180, 486 122, 550 122" fill="none" stroke="#3bb8c5" stroke-width="5" filter="url(#glowCyan)" marker-end="url(#arrowCyan)"/>
+  <path d="M406 180 C470 180, 486 238, 550 238" fill="none" stroke="#ff7a18" stroke-width="4" filter="url(#glowSpark)" marker-end="url(#arrowSpark)"/>
+
+  <g transform="translate(562 60)">
+    <rect width="360" height="240" rx="120" fill="#0c1216" stroke="#2b3942" stroke-width="1.5"/>
+    <circle cx="112" cy="120" r="58" fill="none" stroke="#3bb8c5" stroke-width="5" filter="url(#glowCyan)"/>
+    <path d="M112 72 C136 104, 142 139, 112 168 C82 139, 88 104, 112 72Z" fill="none" stroke="#3bb8c5" stroke-width="4"/>
+    <path d="M206 82 H282 M206 120 H300 M206 158 H268" stroke="#ff7a18" stroke-width="7" stroke-linecap="round" filter="url(#glowSpark)"/>
+    <text x="180" y="214" text-anchor="middle" fill="#e9f2f8" font-family="Inter, Arial" font-size="18" font-weight="800">action() executa</text>
+    <text x="180" y="238" text-anchor="middle" fill="#ff7a18" font-family="Consolas, monospace" font-size="14" font-weight="700">show · count · write</text>
+  </g>
+
+  <path d="M952 180 C1014 180, 1032 98, 1100 98" fill="none" stroke="#3bb8c5" stroke-width="5" filter="url(#glowCyan)" marker-end="url(#arrowCyan)"/>
+  <path d="M952 180 C1014 180, 1032 262, 1100 262" fill="none" stroke="#ff7a18" stroke-width="4" filter="url(#glowSpark)" marker-end="url(#arrowSpark)"/>
+
+  <g transform="translate(1118 42)">
+    <rect width="340" height="276" rx="14" fill="url(#panel)" stroke="#ff7a18" stroke-width="1.6"/>
+    <text x="22" y="38" fill="#ff7a18" font-family="Consolas, monospace" font-size="18" font-weight="700">runtime metrics</text>
+    <g font-family="Consolas, monospace" font-size="13">
+      <text x="22" y="78" fill="#8fa0ad">stage</text><text x="88" y="78" fill="#8fa0ad">run</text><text x="156" y="78" fill="#8fa0ad">shuffle</text><text x="250" y="78" fill="#8fa0ad">spill</text>
+      <path d="M22 94 H310" stroke="#2b3942"/>
+      <text x="22" y="124" fill="#3bb8c5">03</text><text x="88" y="124" fill="#e9f2f8">91s</text><text x="156" y="124" fill="#ff7a18">12GB</text><text x="250" y="124" fill="#ff7a18">4GB</text>
+      <text x="22" y="166" fill="#3bb8c5">04</text><text x="88" y="166" fill="#e9f2f8">18s</text><text x="156" y="166" fill="#7ddc9f">800MB</text><text x="250" y="166" fill="#7ddc9f">0</text>
+      <text x="22" y="208" fill="#3bb8c5">05</text><text x="88" y="208" fill="#e9f2f8">64s</text><text x="156" y="208" fill="#ff7a18">9GB</text><text x="250" y="208" fill="#7ddc9f">0</text>
+    </g>
+    <rect x="22" y="228" width="158" height="28" rx="14" fill="#111820" stroke="#7ddc9f"/>
+    <text x="42" y="247" fill="#abf2c5" font-family="Consolas, monospace" font-size="12">comportamento</text>
+  </g>
+</svg>

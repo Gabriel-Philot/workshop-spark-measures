@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 360" role="img" aria-labelledby="title desc">
+  <title id="title">TaskMetrics distribution</title>
+  <desc id="desc">Distribution of Spark task durations with one highlighted straggler task carrying concentrated shuffle and spill.</desc>
+  <defs>
+    <filter id="glow-cyan" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-orange" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#111820"/><stop offset="1" stop-color="#070b0f"/></linearGradient>
+    <linearGradient id="lane" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#081015"/><stop offset=".55" stop-color="#0d171d"/><stop offset="1" stop-color="#090d11"/></linearGradient>
+  </defs>
+
+  <rect x="1" y="1" width="1318" height="358" rx="24" fill="url(#panel)" stroke="#1c6c78" stroke-width="2"/>
+  <g opacity=".24" stroke="#23323b" stroke-width="1">
+    <path d="M80 70h1160M80 135h1160M80 200h1160M80 265h1160"/>
+    <path d="M170 42v280M330 42v280M490 42v280M650 42v280M810 42v280M970 42v280M1130 42v280"/>
+  </g>
+
+  <text x="58" y="52" fill="#f5f8fa" font-family="Consolas, monospace" font-size="18" font-weight="700" letter-spacing="3">STAGE 0 / TASK DISTRIBUTION</text>
+  <text x="58" y="82" fill="#91a3b1" font-family="Inter, Arial, sans-serif" font-size="16">cada barra e uma task; altura = duration, laranja = sinal anomalo</text>
+
+  <rect x="58" y="108" width="1204" height="184" rx="18" fill="url(#lane)" stroke="#22313a"/>
+  <line x1="88" y1="252" x2="1230" y2="252" stroke="#3b4a53" stroke-width="2"/>
+
+  <g filter="url(#glow-cyan)" fill="#25d6e8">
+    <rect x="104" y="220" width="22" height="32" rx="5"/><rect x="146" y="216" width="22" height="36" rx="5"/><rect x="188" y="223" width="22" height="29" rx="5"/><rect x="230" y="218" width="22" height="34" rx="5"/><rect x="272" y="214" width="22" height="38" rx="5"/><rect x="314" y="219" width="22" height="33" rx="5"/><rect x="356" y="221" width="22" height="31" rx="5"/><rect x="398" y="217" width="22" height="35" rx="5"/><rect x="440" y="215" width="22" height="37" rx="5"/><rect x="482" y="222" width="22" height="30" rx="5"/><rect x="524" y="218" width="22" height="34" rx="5"/><rect x="566" y="216" width="22" height="36" rx="5"/><rect x="608" y="222" width="22" height="30" rx="5"/><rect x="650" y="218" width="22" height="34" rx="5"/>
+  </g>
+
+  <g filter="url(#glow-orange)">
+    <rect x="716" y="124" width="34" height="128" rx="7" fill="#ff7a18"/>
+    <path d="M733 102l20 24h-40z" fill="#ff7a18"/>
+    <text x="775" y="148" fill="#ff7a18" font-family="Inter, Arial, sans-serif" font-size="23" font-weight="900">task 803</text>
+    <text x="775" y="177" fill="#ffd0a5" font-family="Consolas, monospace" font-size="16">93.4s wall</text>
+    <text x="775" y="202" fill="#ffd0a5" font-family="Consolas, monospace" font-size="16">4.8GB shuffle</text>
+    <text x="775" y="227" fill="#ffd0a5" font-family="Consolas, monospace" font-size="16">1.9GB spill</text>
+  </g>
+
+  <g filter="url(#glow-cyan)" fill="#25d6e8">
+    <rect x="930" y="221" width="22" height="31" rx="5"/><rect x="972" y="219" width="22" height="33" rx="5"/><rect x="1014" y="217" width="22" height="35" rx="5"/><rect x="1056" y="223" width="22" height="29" rx="5"/><rect x="1098" y="216" width="22" height="36" rx="5"/><rect x="1140" y="220" width="22" height="32" rx="5"/><rect x="1182" y="218" width="22" height="34" rx="5"/>
+  </g>
+
+  <path d="M98 311h220" stroke="#25d6e8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="98" cy="311" r="7" fill="#25d6e8"/>
+  <text x="334" y="317" fill="#cbd6df" font-family="Inter, Arial, sans-serif" font-size="16">tasks normais: runtime parecido, pouco shuffle, sem spill</text>
+
+  <path d="M840 311h160" stroke="#ff7a18" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="840" cy="311" r="7" fill="#ff7a18"/>
+  <text x="1016" y="317" fill="#ffd0a5" font-family="Inter, Arial, sans-serif" font-size="16">straggler: escondido no agregado</text>
+</svg>

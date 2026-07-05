@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-label="DAG Spark com gargalos e métricas">
+  <defs>
+    <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="wire" x1="0" x2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".55" stop-color="#38bdf8"/><stop offset="1" stop-color="#f97316"/></linearGradient>
+  </defs>
+  <rect width="1200" height="360" rx="28" fill="#06111f" opacity=".96"/>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif" fill="#e5f7ff" font-weight="800" font-size="24" text-anchor="middle">
+    <text x="130" y="62">Entrada</text><text x="315" y="62">Stage 1</text><text x="520" y="62">Stage 2</text><text x="725" y="62">Stage 3</text><text x="930" y="62">Stage 4</text><text x="1085" y="62">Saída</text>
+  </g>
+  <g filter="url(#glow)">
+    <circle cx="130" cy="184" r="26" fill="none" stroke="#22d3ee" stroke-width="4"/>
+    <circle cx="1085" cy="184" r="26" fill="none" stroke="#22d3ee" stroke-width="4"/>
+    <g stroke="url(#wire)" stroke-width="2" opacity=".75" fill="none">
+      <path d="M160 184C210 110 250 110 285 114"/><path d="M160 184C210 184 245 184 285 184"/><path d="M160 184C210 260 250 260 285 254"/>
+      <path d="M345 114C410 114 440 114 490 114"/><path d="M345 114C410 148 440 168 490 184"/><path d="M345 114C410 210 440 232 490 254"/>
+      <path d="M345 184C410 122 440 122 490 114"/><path d="M345 184C410 184 440 184 490 184"/><path d="M345 184C410 242 440 242 490 254"/>
+      <path d="M345 254C410 142 440 142 490 114"/><path d="M345 254C410 200 440 200 490 184"/><path d="M345 254C410 254 440 254 490 254"/>
+      <path d="M550 114C615 114 645 114 695 114"/><path d="M550 184C615 184 645 184 695 184"/><path d="M550 254C615 254 645 254 695 254"/>
+      <path d="M755 114C820 114 850 114 900 114"/><path d="M755 114C820 148 850 168 900 184"/><path d="M755 184C820 184 850 184 900 184"/><path d="M755 254C820 224 850 205 900 184"/><path d="M755 254C820 254 850 254 900 254"/>
+      <path d="M960 114C1010 120 1035 145 1058 184"/><path d="M960 184H1058"/><path d="M960 254C1010 248 1035 220 1058 184"/>
+    </g>
+    <g fill="#071827" stroke="#22d3ee" stroke-width="3">
+      <rect x="285" y="92" width="60" height="44" rx="8"/><rect x="285" y="162" width="60" height="44" rx="8"/><rect x="285" y="232" width="60" height="44" rx="8"/>
+      <rect x="490" y="92" width="60" height="44" rx="8"/><rect x="490" y="162" width="60" height="44" rx="8"/><rect x="490" y="232" width="60" height="44" rx="8"/>
+      <rect x="695" y="92" width="60" height="44" rx="8" stroke="#f97316"/><rect x="695" y="162" width="60" height="44" rx="8"/><rect x="695" y="232" width="60" height="44" rx="8"/>
+      <rect x="900" y="92" width="60" height="44" rx="8"/><rect x="900" y="162" width="60" height="44" rx="8" stroke="#f97316"/><rect x="900" y="232" width="60" height="44" rx="8"/>
+    </g>
+    <g transform="translate(680 292)" fill="none" stroke="#f97316" stroke-width="4"><path d="M32 0L64 58H0z"/><path d="M32 18v20"/><path d="M32 48v4"/></g>
+    <g transform="translate(890 292)" fill="none" stroke="#f97316" stroke-width="4"><path d="M32 0L64 58H0z"/><path d="M32 18v20"/><path d="M32 48v4"/></g>
+  </g>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="22" fill="#f97316" font-weight="700"><text x="48" y="323">Gargalos potenciais: shuffle, I/O, skew, GC, tasks lentas</text></g>
+</svg>

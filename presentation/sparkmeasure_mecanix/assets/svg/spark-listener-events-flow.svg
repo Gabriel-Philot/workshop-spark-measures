@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="420" viewBox="0 0 1500 420" role="img" aria-label="Fluxo de eventos Spark no driver">
+  <defs>
+    <filter id="softGlow" x="-30%" y="-40%" width="160%" height="180%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="nodeFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151d22"/>
+      <stop offset="1" stop-color="#090d10"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#ff7a18" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrowC" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#3bb8c5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="420" rx="18" fill="#070b0f"/>
+  <g opacity=".38">
+    <path d="M0 84 H1500 M0 168 H1500 M0 252 H1500 M0 336 H1500" stroke="#1d3036"/>
+    <path d="M120 0 V420 M300 0 V420 M480 0 V420 M660 0 V420 M840 0 V420 M1020 0 V420 M1200 0 V420 M1380 0 V420" stroke="#172329"/>
+  </g>
+
+  <g font-family="Inter, Arial" font-weight="800">
+    <g transform="translate(60 78)">
+      <rect width="210" height="110" rx="14" fill="url(#nodeFill)" stroke="#7ddc9f" stroke-width="1.5"/>
+      <text x="24" y="44" fill="#7ddc9f" font-size="18">action</text>
+      <text x="24" y="74" fill="#e9f2f8" font-size="15" font-family="Consolas, monospace">count()</text>
+    </g>
+    <g transform="translate(360 62)">
+      <rect width="250" height="142" rx="16" fill="url(#nodeFill)" stroke="#ff7a18" stroke-width="1.7"/>
+      <text x="24" y="42" fill="#ff7a18" font-size="18">DAGScheduler</text>
+      <text x="24" y="72" fill="#d3dde5" font-size="14">cria jobs, stages</text>
+      <text x="24" y="98" fill="#d3dde5" font-size="14">e task sets</text>
+    </g>
+    <g transform="translate(700 52)">
+      <rect width="260" height="162" rx="18" fill="url(#nodeFill)" stroke="#3bb8c5" stroke-width="1.8"/>
+      <circle cx="130" cy="84" r="45" fill="none" stroke="#3bb8c5" stroke-width="4" filter="url(#softGlow)"/>
+      <path d="M108 84 H152 M130 62 V106" stroke="#ff7a18" stroke-width="5" stroke-linecap="round" filter="url(#softGlow)"/>
+      <text x="64" y="144" fill="#e9f2f8" font-size="18">ListenerBus</text>
+    </g>
+    <g transform="translate(1070 62)">
+      <rect width="360" height="142" rx="16" fill="url(#nodeFill)" stroke="#7ddc9f" stroke-width="1.5"/>
+      <text x="24" y="42" fill="#7ddc9f" font-size="18">SparkListeners</text>
+      <text x="24" y="72" fill="#d3dde5" font-size="14">UI, event log</text>
+      <text x="24" y="98" fill="#d3dde5" font-size="14">e listeners customizados</text>
+    </g>
+  </g>
+
+  <path d="M280 132 H338" stroke="#ff7a18" stroke-width="5" marker-end="url(#arrow)" filter="url(#softGlow)"/>
+  <path d="M620 132 H678" stroke="#3bb8c5" stroke-width="5" marker-end="url(#arrowC)" filter="url(#softGlow)"/>
+  <path d="M972 132 H1048" stroke="#3bb8c5" stroke-width="5" marker-end="url(#arrowC)" filter="url(#softGlow)"/>
+
+  <g transform="translate(106 278)" font-family="Consolas, monospace" font-size="14" font-weight="700">
+    <rect width="1288" height="92" rx="14" fill="#0c1216" stroke="#2b3942"/>
+    <text x="28" y="38" fill="#8fa0ad">event stream:</text>
+    <text x="180" y="38" fill="#ff7a18">JobStart</text>
+    <text x="318" y="38" fill="#3bb8c5">StageSubmitted</text>
+    <text x="510" y="38" fill="#7ddc9f">TaskStart</text>
+    <text x="650" y="38" fill="#ff7a18">TaskEnd</text>
+    <text x="790" y="38" fill="#3bb8c5">StageCompleted</text>
+    <text x="1010" y="38" fill="#7ddc9f">JobEnd</text>
+    <path d="M172 60 H1122" stroke="#263944" stroke-width="2"/>
+    <path d="M238 60 H1090" stroke="#ff7a18" stroke-width="4" stroke-dasharray="9 14" opacity=".72"/>
+    <text x="28" y="72" fill="#d3dde5" font-family="Inter, Arial" font-size="15">eventos carregam StageInfo, TaskInfo, TaskMetrics e timestamps para consumidores nativos</text>
+  </g>
+</svg>

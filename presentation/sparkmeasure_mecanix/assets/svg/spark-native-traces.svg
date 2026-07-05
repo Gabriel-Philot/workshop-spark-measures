@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" role="img" aria-labelledby="title desc">
+  <title id="title">Fluxo de rastros nativos do Spark</title>
+  <desc id="desc">Codigo Spark passa por Catalyst, plano fisico, DAGScheduler, jobs, stages, tasks, metricas e eventos consumidos por UI, EventLog, History Server e REST API.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101820"/>
+      <stop offset="1" stop-color="#070b0f"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" x2="1">
+      <stop offset="0" stop-color="#ff6f00"/>
+      <stop offset="1" stop-color="#ffb020"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0" x2="1">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#7ddc9f"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M2 2 L9 6 L2 10" fill="none" stroke="#3bb8c5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrowSpark" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+      <path d="M2 2 L9 6 L2 10" fill="none" stroke="#ff7a18" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1280" height="420" rx="22" fill="url(#bg)"/>
+  <g opacity=".16">
+    <path d="M0 70H1280M0 140H1280M0 210H1280M0 280H1280M0 350H1280" stroke="#9aa7b2"/>
+    <path d="M80 0V420M240 0V420M400 0V420M560 0V420M720 0V420M880 0V420M1040 0V420M1200 0V420" stroke="#9aa7b2"/>
+  </g>
+
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <text x="42" y="48" fill="#f0f4f8" font-size="25" font-weight="900">o runtime Spark já produz uma trilha</text>
+    <text x="42" y="75" fill="#9aa7b2" font-size="14">plano, scheduler, tasks, métricas e eventos aparecem antes de qualquer ferramenta externa</text>
+  </g>
+
+  <g font-family="Inter, Segoe UI, Arial, sans-serif" font-weight="800" font-size="15">
+    <g transform="translate(44 126)">
+      <rect width="130" height="64" rx="12" fill="#0b1117" stroke="#ff7a18"/>
+      <text x="65" y="28" text-anchor="middle" fill="#ffb020">Código / SQL</text>
+      <text x="65" y="48" text-anchor="middle" fill="#b9c5cf" font-size="11">DataFrame</text>
+    </g>
+    <g transform="translate(214 126)">
+      <rect width="130" height="64" rx="12" fill="#0b1117" stroke="#3bb8c5"/>
+      <text x="65" y="28" text-anchor="middle" fill="#f0f4f8">Catalyst</text>
+      <text x="65" y="48" text-anchor="middle" fill="#b9c5cf" font-size="11">QueryExecution</text>
+    </g>
+    <g transform="translate(384 126)">
+      <rect width="130" height="64" rx="12" fill="#0b1117" stroke="#3bb8c5"/>
+      <text x="65" y="27" text-anchor="middle" fill="#f0f4f8">Physical Plan</text>
+      <text x="65" y="48" text-anchor="middle" fill="#b9c5cf" font-size="11">Exchange / Join</text>
+    </g>
+    <g transform="translate(554 126)">
+      <rect width="130" height="64" rx="12" fill="#0b1117" stroke="#ff7a18"/>
+      <text x="65" y="28" text-anchor="middle" fill="#ffb020">DAGScheduler</text>
+      <text x="65" y="48" text-anchor="middle" fill="#b9c5cf" font-size="11">shuffle borders</text>
+    </g>
+    <g transform="translate(724 126)">
+      <rect width="130" height="64" rx="12" fill="#0b1117" stroke="#3bb8c5"/>
+      <text x="65" y="28" text-anchor="middle" fill="#f0f4f8">Jobs / Stages</text>
+      <text x="65" y="48" text-anchor="middle" fill="#b9c5cf" font-size="11">StageInfo</text>
+    </g>
+    <g transform="translate(894 126)">
+      <rect width="130" height="64" rx="12" fill="#0b1117" stroke="#3bb8c5"/>
+      <text x="65" y="28" text-anchor="middle" fill="#f0f4f8">Tasks</text>
+      <text x="65" y="48" text-anchor="middle" fill="#b9c5cf" font-size="11">TaskMetrics</text>
+    </g>
+    <g transform="translate(1064 126)">
+      <rect width="164" height="64" rx="12" fill="#0b1117" stroke="#ff7a18"/>
+      <text x="82" y="28" text-anchor="middle" fill="#ffb020">ListenerEvents</text>
+      <text x="82" y="48" text-anchor="middle" fill="#b9c5cf" font-size="11">TaskEnd / StageCompleted</text>
+    </g>
+  </g>
+
+  <g stroke-width="2.6" fill="none" filter="url(#soft)">
+    <path d="M178 158H208" stroke="#3bb8c5" marker-end="url(#arrow)"/>
+    <path d="M348 158H378" stroke="#3bb8c5" marker-end="url(#arrow)"/>
+    <path d="M518 158H548" stroke="#ff7a18" marker-end="url(#arrowSpark)"/>
+    <path d="M688 158H718" stroke="#3bb8c5" marker-end="url(#arrow)"/>
+    <path d="M858 158H888" stroke="#3bb8c5" marker-end="url(#arrow)"/>
+    <path d="M1028 158H1058" stroke="#ff7a18" marker-end="url(#arrowSpark)"/>
+  </g>
+
+  <g transform="translate(130 266)" font-family="Inter, Segoe UI, Arial, sans-serif">
+    <path d="M520 -54V0" stroke="#ff7a18" stroke-width="2.4" stroke-dasharray="5 8" marker-end="url(#arrowSpark)"/>
+    <rect x="0" y="0" width="1020" height="88" rx="16" fill="#0a1015" stroke="#263640"/>
+    <text x="28" y="32" fill="#7ddc9f" font-size="15" font-weight="900">consumidores nativos dessa trilha</text>
+    <g font-size="15" font-weight="800">
+      <rect x="28" y="48" width="128" height="24" rx="12" fill="#101a20" stroke="#3bb8c5"/>
+      <text x="92" y="65" text-anchor="middle" fill="#dff7fb">Spark UI</text>
+      <rect x="184" y="48" width="128" height="24" rx="12" fill="#101a20" stroke="#ff7a18"/>
+      <text x="248" y="65" text-anchor="middle" fill="#ffd0a5">EventLog</text>
+      <rect x="340" y="48" width="156" height="24" rx="12" fill="#101a20" stroke="#3bb8c5"/>
+      <text x="418" y="65" text-anchor="middle" fill="#dff7fb">History Server</text>
+      <rect x="524" y="48" width="118" height="24" rx="12" fill="#101a20" stroke="#7ddc9f"/>
+      <text x="583" y="65" text-anchor="middle" fill="#dffbe9">REST API</text>
+      <rect x="670" y="48" width="156" height="24" rx="12" fill="#101a20" stroke="#7ddc9f"/>
+      <text x="748" y="65" text-anchor="middle" fill="#dffbe9">Metrics System</text>
+      <rect x="854" y="48" width="132" height="24" rx="12" fill="#101a20" stroke="#ff7a18"/>
+      <text x="920" y="65" text-anchor="middle" fill="#ffd0a5">sparkMeasure</text>
+    </g>
+  </g>
+</svg>

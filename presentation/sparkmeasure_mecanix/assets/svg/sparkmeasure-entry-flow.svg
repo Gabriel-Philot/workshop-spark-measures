@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="430" viewBox="0 0 1500 430" role="img" aria-label="Onde o sparkMeasure entra no fluxo de eventos Spark">
+  <defs>
+    <filter id="glow" x="-25%" y="-35%" width="150%" height="170%">
+      <feGaussianBlur stdDeviation="3.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#151d22"/>
+      <stop offset="1" stop-color="#080c10"/>
+    </linearGradient>
+    <marker id="arrowOrange" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#ff7a18" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrowCyan" markerWidth="14" markerHeight="14" refX="10" refY="7" orient="auto">
+      <path d="M1,1 L12,7 L1,13" fill="none" stroke="#3bb8c5" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="430" rx="18" fill="#070b0f"/>
+  <g opacity=".34">
+    <path d="M0 86 H1500 M0 172 H1500 M0 258 H1500 M0 344 H1500" stroke="#1d3036"/>
+    <path d="M120 0 V430 M300 0 V430 M480 0 V430 M660 0 V430 M840 0 V430 M1020 0 V430 M1200 0 V430 M1380 0 V430" stroke="#172329"/>
+  </g>
+
+  <g transform="translate(54 72)">
+    <rect width="305" height="248" rx="18" fill="url(#panel)" stroke="#3bb8c5" stroke-width="1.7"/>
+    <text x="24" y="42" fill="#3bb8c5" font-family="Consolas, monospace" font-size="18" font-weight="800">Spark driver</text>
+    <rect x="24" y="72" width="257" height="42" rx="9" fill="#0c1216" stroke="#2b3942"/>
+    <text x="42" y="99" fill="#e9f2f8" font-family="Inter, Arial" font-size="15" font-weight="800">ListenerBus</text>
+    <rect x="24" y="134" width="257" height="42" rx="9" fill="#0c1216" stroke="#2b3942"/>
+    <text x="42" y="161" fill="#e9f2f8" font-family="Inter, Arial" font-size="15" font-weight="800">TaskEnd / StageCompleted</text>
+    <rect x="24" y="196" width="257" height="32" rx="16" fill="rgba(59,184,197,.12)" stroke="#3bb8c5"/>
+    <text x="54" y="217" fill="#aaf1f8" font-family="Consolas, monospace" font-size="13" font-weight="800">event stream</text>
+  </g>
+
+  <path d="M382 190 H512" stroke="#ff7a18" stroke-width="5" marker-end="url(#arrowOrange)" filter="url(#glow)"/>
+  <text x="392" y="164" fill="#ffb06d" font-family="Consolas, monospace" font-size="14" font-weight="800">addSparkListener</text>
+
+  <g transform="translate(535 50)">
+    <rect width="430" height="292" rx="22" fill="url(#panel)" stroke="#ff7a18" stroke-width="2"/>
+    <text x="30" y="48" fill="#ff7a18" font-family="Inter, Arial" font-size="28" font-weight="900">sparkMeasure</text>
+    <text x="30" y="78" fill="#d8e2ea" font-family="Inter, Arial" font-size="15" font-weight="700">listeners especializados para métricas Spark</text>
+    <g transform="translate(30 112)" font-family="Inter, Arial" font-weight="800">
+      <rect width="168" height="52" rx="10" fill="#0c1216" stroke="#3bb8c5"/>
+      <text x="18" y="32" fill="#e9f2f8" font-size="15">StageMetrics</text>
+      <rect x="202" width="168" height="52" rx="10" fill="#0c1216" stroke="#ff7a18"/>
+      <text x="220" y="32" fill="#e9f2f8" font-size="15">TaskMetrics</text>
+      <rect y="76" width="370" height="52" rx="10" fill="#0c1216" stroke="#7ddc9f"/>
+      <text x="18" y="108" fill="#e9f2f8" font-size="15">Flight Recorder / sinks</text>
+    </g>
+    <path d="M40 250 H390" stroke="#2b3942"/>
+    <text x="42" y="272" fill="#99e7b8" font-family="Consolas, monospace" font-size="13" font-weight="800">callbacks -> flatten -> aggregate</text>
+  </g>
+
+  <path d="M990 190 H1128" stroke="#3bb8c5" stroke-width="5" marker-end="url(#arrowCyan)" filter="url(#glow)"/>
+  <text x="1010" y="164" fill="#aaf1f8" font-family="Consolas, monospace" font-size="14" font-weight="800">driver-local evidence</text>
+
+  <g transform="translate(1150 72)">
+    <rect width="300" height="248" rx="18" fill="url(#panel)" stroke="#7ddc9f" stroke-width="1.7"/>
+    <text x="24" y="42" fill="#7ddc9f" font-family="Consolas, monospace" font-size="18" font-weight="800">Saídas</text>
+    <g font-family="Inter, Arial" font-size="15" font-weight="800">
+      <text x="28" y="86" fill="#e9f2f8">print_report()</text>
+      <text x="28" y="122" fill="#e9f2f8">Map / dict</text>
+      <text x="28" y="158" fill="#e9f2f8">Spark DataFrame</text>
+      <text x="28" y="194" fill="#e9f2f8">file, Kafka, Prometheus...</text>
+    </g>
+  </g>
+
+  <g transform="translate(104 365)" font-family="Consolas, monospace" font-size="14" font-weight="800">
+    <rect width="1292" height="42" rx="12" fill="#0c1216" stroke="#2b3942"/>
+    <text x="26" y="27" fill="#8fa0ad">ideia:</text>
+    <text x="96" y="27" fill="#e9f2f8">o Spark continua executando; o sparkMeasure observa os eventos e organiza a evidência</text>
+  </g>
+</svg>

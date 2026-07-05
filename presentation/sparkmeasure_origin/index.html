@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sparkMeasure — da escala extrema do CERN à observabilidade prática em Spark</title>
+  <meta name="description" content="Apresentação one-page sobre a origem do sparkMeasure: CERN, escala extrema dos dados, gargalos em Spark e observabilidade para causa-raiz." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+  <aside class="side-nav" aria-label="Navegação da apresentação">
+    <a href="#top" class="nav-dot active" data-target="top"><span>Abertura</span></a>
+    <a href="#slide-1" class="nav-dot" data-target="slide-1"><span>1. CERN</span></a>
+    <a href="#slide-2" class="nav-dot" data-target="slide-2"><span>2. Gargalo</span></a>
+    <a href="#slide-3" class="nav-dot" data-target="slide-3"><span>3. sparkMeasure</span></a>
+    <a href="#closing" class="nav-dot" data-target="closing"><span>Fechamento</span></a>
+  </aside>
+
+  <main id="top">
+    <section class="hero section-observed" data-section="top">
+      <div class="orbital-bg" aria-hidden="true"></div>
+      <div class="hero__content">
+        <h1>De onde surgiu o sparkMeasure</h1>
+      </div>
+      <div class="hero__visual" aria-hidden="true">
+        <video class="hero__video" src="assets/video/sparkmeasure-origin-intro.mp4" autoplay muted loop playsinline preload="metadata"></video>
+      </div>
+      <div class="hero__metrics" aria-label="Métricas principais da apresentação">
+        <div><strong>1 PB/s</strong><span>dados nos detectores</span></div>
+        <div><strong>&lt; 0,001%</strong><span>sobrevive ao trigger</span></div>
+        <div><strong>~3 PB/dia</strong><span>gravados em disco em 2024</span></div>
+        <div><strong>2M+</strong><span>tasks/dia no WLCG</span></div>
+      </div>
+    </section>
+
+    <section class="chapter chapter-cern section-observed" id="slide-1" data-section="slide-1">
+      <header class="chapter__header">
+        <p class="chapter__number">Slide 1</p>
+        <h2>Antes do sparkMeasure: CERN, colisões de partículas e a escala extrema dos dados</h2>
+      </header>
+      <div class="visual-card cern-spark-asset">
+        <img src="assets/generated/cern_spark.png" alt="Visual do CERN e Spark usado como asset principal do slide" />
+      </div>
+
+      <div class="cards four-cards">
+        <article class="info-card cyan">
+          <div class="card-index">1</div>
+          <h3>CERN e física de partículas</h3>
+          <p>O CERN investiga a estrutura fundamental da matéria usando aceleradores e detectores gigantescos. No LHC, partículas quase à velocidade da luz colidem, e os detectores registram os sinais gerados.</p>
+        </article>
+
+        <article class="info-card orange">
+          <div class="card-index">2</div>
+          <h3>Colisões viram eventos digitais</h3>
+          <p>Cada colisão relevante é reconstruída como um evento digital. Em escala de LHC, sinais eletrônicos precisam ser filtrados, processados e transformados em dados analisáveis.</p>
+        </article>
+
+        <article class="info-card cyan">
+          <div class="card-index">3</div>
+          <h3>A brutalidade da escala</h3>
+          <p>A escala é extrema: cerca de <strong>1 PB/s</strong> passa pelos detectores, mas menos de <strong>0,001%</strong> sobrevive ao trigger. Mesmo assim, o CERN ainda lida com petabytes por dia.</p>
+        </article>
+
+        <article class="info-card orange">
+          <div class="card-index">4</div>
+          <h3>Computação distribuída global</h3>
+          <p>Esse volume não cabe em um único datacenter. O WLCG distribui processamento e armazenamento por sites ao redor do mundo, sustentando milhões de tasks diárias.</p>
+        </article>
+      </div>
+
+
+      <div class="visual-card cern-pipeline-card">
+        <img src="assets/svg/cern-flow-compact.svg" alt="Fluxo visual sem texto: colisoes, detectores, sinais eletronicos, receptores com filtros e dados" />
+      </div>
+      <div class="key-message">
+        <span class="target-icon" aria-hidden="true"></span>
+        <p>O sparkMeasure nasce em um ambiente em que medir performance é uma necessidade estrutural, não um luxo.</p>
+      </div>
+
+      <details class="speaker-notes" open>
+        <summary>Speaker notes / fala do apresentador</summary>
+        <div>
+          <p>“Antes de falar do sparkMeasure, eu quero mostrar o tipo de mundo onde esse problema nasceu. O CERN não é apenas um laboratório famoso; ele é uma das maiores fábricas de dados científicos do planeta. O objetivo deles é entender a estrutura fundamental da matéria. Para isso, eles fazem partículas colidirem em altíssima energia e observam o resultado dessas colisões com detectores gigantes.</p>
+          <p>Cada colisão gera sinais eletrônicos que precisam ser reconstruídos digitalmente como eventos. O ponto importante aqui para nós, engenheiros de dados, é a escala: estamos falando de até 1 bilhão de colisões por segundo, algo na ordem de 1 PB por segundo antes dos filtros. Como não dá para guardar tudo, eles usam triggers para selecionar apenas uma fração minúscula do que vale a pena manter.</p>
+          <p>Mesmo assim, sobra dado suficiente para qualquer empresa comum parecer pequena: historicamente algo como 1 PB por dia processado no Run 2, e hoje algo perto de 3 PB por dia gravado em disco. E isso ainda é distribuído globalmente por uma malha computacional gigante, o WLCG. Então o pano de fundo do sparkMeasure é esse: dados massivos, processamento distribuído e necessidade real de entender performance.”</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="chapter chapter-bottleneck section-observed" id="slide-2" data-section="slide-2">
+      <header class="chapter__header">
+        <p class="chapter__number">Slide 2</p>
+        <h2>Do volume ao gargalo: por que observar Spark virou necessidade de engenharia</h2>
+        <p>Em ambientes distribuídos, o desafio não é apenas processar, mas entender por que a execução se comporta como se comporta</p>
+      </header>
+
+      <div class="visual-card spark-lucas-asset">
+        <img src="assets/generated/spark_lucas_invest_cern.png" alt="Visual de investigação Spark e CERN para o slide de gargalos" />
+      </div>
+
+      <div class="cards four-cards">
+        <article class="info-card cyan">
+          <div class="card-index">1</div>
+          <h3>Do volume à eficiência</h3>
+          <p>Em plataformas distribuídas, rodar o processamento não basta: é preciso transformar volume em análise útil com eficiência, repetibilidade e previsibilidade.</p>
+        </article>
+
+        <article class="info-card orange">
+          <div class="card-index">2</div>
+          <h3>Quem é Luca Canali</h3>
+          <p>Engenheiro de dados no CERN IT, Luca trabalha com serviços Spark e Hadoop desde 2016 e participou de iniciativas como o CMS Big Data Project.</p>
+        </article>
+
+        <article class="info-card cyan">
+          <div class="card-index">3</div>
+          <h3>Performance já era investigação</h3>
+          <p>Antes do sparkMeasure, Luca já analisava Spark com execution details, flame graphs e Linux perf counters, olhando para dentro da execução.</p>
+        </article>
+
+        <article class="info-card orange">
+          <div class="card-index">4</div>
+          <h3>O problema central de observabilidade</h3>
+          <p>Spark tinha instrumentação, mas os dados ficavam espalhados. Elapsed time sozinho não explicava causa-raiz, gargalos ou uso real de recursos.</p>
+        </article>
+      </div>
+
+      <div class="visual-card bottleneck-gargalos">
+        <img src="assets/svg/spark-dag.svg" alt="DAG Spark com stages, gargalos potenciais e fluxo distribuido" />
+      </div>
+      <div class="key-message">
+        <span class="target-icon" aria-hidden="true"></span>
+        <p>O problema não era “medir tempo”; era tornar a execução do Spark observável o suficiente para troubleshooting e causa-raiz.</p>
+      </div>
+
+      <details class="speaker-notes" open>
+        <summary>Speaker notes / fala do apresentador</summary>
+        <div>
+          <p>“Depois que a gente entende a escala do CERN, fica mais fácil entender o problema. Em ambientes distribuídos, o job terminar em 20 minutos ou 2 horas é só o sintoma final. A pergunta importante é: por quê? Onde o tempo foi gasto? Em CPU? Em shuffle? Em serialização? Em tasks lentas? Em skew? Em I/O?</p>
+          <p>É nesse ponto que entra o Luca Canali. Ele está no CERN IT, trabalha com Spark e Hadoop desde 2016 e vinha estudando performance Spark já nos primeiros anos de adoção. Em 2016, ele já investigava Spark 2.0 com flame graphs e perf counters, ou seja: olhando para dentro da execução, não só para o cronômetro.</p>
+          <p>Em 2017, ele verbaliza algo muito familiar para qualquer engenheiro de dados: o Spark até tem instrumentação, mas os dados estão espalhados, nem sempre são fáceis de coletar, e elapsed time sozinho não responde a causa-raiz. É justamente nessa dor que o sparkMeasure começa a fazer sentido.”</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="chapter chapter-origin section-observed" id="slide-3" data-section="slide-3">
+      <header class="chapter__header">
+        <p class="chapter__number">Slide 3</p>
+        <h2>sparkMeasure: de métricas Spark a diagnóstico operacional</h2>
+        <p>No contexto do CERN, o sparkMeasure leva a lógica de SRE e observabilidade para workloads Spark</p>
+      </header>
+
+      <div class="visual-card origin-main-asset">
+        <img src="assets/generated/sparkmeasure_origin_tooling.png" alt="Visual de origem e evolução do sparkMeasure" />
+      </div>
+
+      <div class="cards four-cards">
+        <article class="info-card cyan">
+          <div class="card-index">1</div>
+          <h3>Março de 2017: a dor vira ferramenta</h3>
+          <p>Luca Canali publica a ideia central: medir jobs Spark por dentro, coletando métricas de execução em vez de olhar apenas para o tempo total.</p>
+        </article>
+
+        <article class="info-card orange">
+          <div class="card-index">2</div>
+          <h3>Medir mais do que tempo</h3>
+          <p>A ferramenta organiza evidências como CPU, I/O, shuffle, GC, skew e tasks lentas para transformar lentidão em diagnóstico técnico.</p>
+        </article>
+
+        <article class="info-card cyan">
+          <div class="card-index">3</div>
+          <h3>Em 2018: uso real no CERN</h3>
+          <p>O sparkMeasure deixa de ser apenas experimento: ganha listeners, relatórios mais simples e vira apoio prático para troubleshooting em workloads Spark reais.</p>
+        </article>
+
+        <article class="info-card orange">
+          <div class="card-index">4</div>
+          <h3>Hoje: biblioteca e Flight Recorder</h3>
+          <p>A ferramenta evolui para biblioteca, uso programático e modo Flight Recorder, registrando métricas para análise posterior sem depender só da observação manual.</p>
+        </article>
+      </div>
+
+      <div class="origin-metrics-grid" aria-label="Métricas Spark para causa-raiz">
+        <div class="metric-mini cyan"><strong>CPU</strong><svg class="metric-svg" viewBox="0 0 120 48" aria-hidden="true"><path d="M6 39H28V24H50V34H72V10H114"/></svg></div>
+        <div class="metric-mini cyan"><strong>I/O</strong><svg class="metric-svg" viewBox="0 0 120 48" aria-hidden="true"><ellipse cx="60" cy="17" rx="42" ry="11"/><path d="M18 17v18c0 7 19 12 42 12s42-5 42-12V17"/><path d="M18 35c0 7 19 12 42 12s42-5 42-12"/></svg></div>
+        <div class="metric-mini orange"><strong>Shuffle</strong><svg class="metric-svg" viewBox="0 0 120 48" aria-hidden="true"><path d="M8 14h64c19 0 25 20 42 20"/><path d="M8 34h64c19 0 25-20 42-20"/><path d="M101 7l13 7-13 7"/><path d="M101 27l13 7-13 7"/></svg></div>
+        <div class="metric-mini cyan"><strong>GC</strong><svg class="metric-svg" viewBox="0 0 120 48" aria-hidden="true"><path d="M12 36C28 12 52 12 74 27s34 4 40-17"/><circle cx="12" cy="36" r="5"/><circle cx="114" cy="10" r="5"/></svg></div>
+        <div class="metric-mini orange"><strong>Skew</strong><svg class="metric-svg" viewBox="0 0 120 48" aria-hidden="true"><path d="M8 40h18V30h18V20h18V10h18v30h32"/></svg></div>
+        <div class="metric-mini cyan"><strong>Tasks</strong><svg class="metric-svg" viewBox="0 0 120 48" aria-hidden="true"><rect x="14" y="16" width="16" height="16"/><rect x="40" y="16" width="16" height="16"/><rect x="66" y="16" width="16" height="16" class="accent"/><rect x="92" y="16" width="16" height="16"/></svg></div>
+        <div class="metric-mini cyan"><strong>Rede</strong><svg class="metric-svg" viewBox="0 0 120 48" aria-hidden="true"><path d="M10 36C28 16 48 18 68 27s34 2 44-18"/><circle cx="10" cy="36" r="5"/><circle cx="112" cy="9" r="5"/></svg></div>
+        <div class="metric-mini orange"><strong>Falhas</strong><svg class="metric-svg failure" viewBox="0 0 120 48" aria-hidden="true"><path class="triangle" d="M60 6l42 38H18z"/><path class="bang" d="M60 18v13"/><circle class="dot" cx="60" cy="38" r="2.5"/></svg></div>
+      </div>
+
+      <div class="tool-modes">
+        <div><strong>Interativo</strong><span>análise exploratória em sessão Spark</span></div>
+        <div><strong>Instrumentação de código</strong><span>coleta integrada à execução</span></div>
+        <div><strong>Batch</strong><span>uso em workloads e jobs</span></div>
+        <div><strong>Flight Recorder</strong><span>gravação automática de métricas</span></div>
+      </div>
+      <div class="key-message">
+        <span class="target-icon" aria-hidden="true"></span>
+        <p>O sparkMeasure nasceu para fechar a lacuna entre a instrumentação nativa do Spark e a análise prática de performance.</p>
+      </div>
+
+      <details class="speaker-notes" open>
+        <summary>Speaker notes / fala do apresentador</summary>
+        <div>
+          <p>“Então o sparkMeasure nasce como resposta muito direta a uma dor prática. Em 2017, o Luca publica um texto que praticamente funda a narrativa da ferramenta: precisamos ir além do elapsed time, precisamos coletar métricas de workload, e precisamos de um meio mais simples de transformar a instrumentação nativa do Spark em algo útil para análise.</p>
+          <p>O sparkMeasure entra exatamente aí: ele encapsula a coleta, organiza os dados, facilita a análise e usa Spark listeners como base. Em 2018, o Luca já fala dele como ferramenta de troubleshooting e diz explicitamente que o pessoal do serviço de Spark e Hadoop do CERN achou a ferramenta útil. Ou seja: ela não nasce como um experimento distante da prática; ela nasce de uso real, em um ambiente que tem carga, escala e responsabilidade.</p>
+          <p>Para o aluno, essa é a mensagem principal: sparkMeasure é uma lente de observabilidade. Ele ajuda a transformar ‘meu job está lento’ em algo mais engenheirável: ‘meu job está lento por causa de X, Y e Z, e eu consigo medir isso’.”</p>
+        </div>
+      </details>
+    </section>
+
+    <section class="closing section-observed" id="closing" data-section="closing">
+      <div class="closing__inner">
+        <p class="eyebrow">Síntese</p>
+        <h2>De dados extremos à engenharia observável</h2>
+        <p>No contexto do CERN, observar Spark não é sofisticação: é engenharia básica para transformar execução distribuída em evidência mensurável.</p>
+        <div class="closing-flow" aria-label="Fluxo final da narrativa">
+          <span>Colisões</span><i></i><span>Dados extremos</span><i></i><span>Workloads Spark</span><i></i><span>Métricas</span><i></i><span>Causa-raiz</span><i></i><span>sparkMeasure</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

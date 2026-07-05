@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Como o sparkMeasure funciona por dentro</title>
+  <meta name="description" content="Apresentação teórica sobre como o sparkMeasure se conecta ao runtime do Spark usando eventos, listeners e métricas." />
+  <link rel="stylesheet" href="theory.css" />
+</head>
+<body>
+  <main class="deck-shell">
+    <section class="theory-slide" id="theory-1" aria-labelledby="theory-title">
+      <div class="slide-index">
+        <span>teoria / 01</span>
+        <span>runtime Spark -> listener -> evidência</span>
+      </div>
+
+      <div class="workbench-grid">
+        <header class="title-panel">
+          <p class="section-label">abrindo a caixa</p>
+          <h1 id="theory-title">Como o <span>sparkMeasure</span> funciona por dentro</h1>
+        </header>
+
+        <section class="terminal-panel" aria-label="Exemplo de execução Spark">
+          <div class="panel-bar"><span></span><span></span><span></span></div>
+          <pre><code>from sparkmeasure import StageMetrics
+
+stagemetrics = StageMetrics(spark)
+stagemetrics.begin()
+
+spark.sql("""
+  SELECT vendor_id, count(*)
+  FROM orders
+  GROUP BY vendor_id
+""").show()
+
+stagemetrics.end()
+stagemetrics.print_report()</code></pre>
+        </section>
+
+        <section class="event-trace" aria-label="Fluxo interno do Spark para o sparkMeasure">
+          <div class="trace-title">
+            <strong>o caminho real</strong>
+            <span>sem polling, sem interceptar linha a linha</span>
+          </div>
+          <ol>
+            <li><b>Spark SQL</b><span>ação dispara execução</span></li>
+            <li><b>Scheduler</b><span>jobs, stages e tasks</span></li>
+            <li><b>ListenerBus</b><span>eventos publicados</span></li>
+            <li><b>sparkMeasure</b><span>listener especializado</span></li>
+            <li><b>Diagnóstico</b><span>report, DataFrame, sink</span></li>
+          </ol>
+        </section>
+
+        <aside class="asset-bay" aria-label="Espaço reservado para asset futuro">
+          <div class="bay-frame bay-frame--video">
+            <video class="asset-video" src="assets/video/theory_spark_runtime.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
+        </aside>
+
+        <section class="log-panel" aria-label="Tabela de eventos Spark">
+          <table>
+            <thead>
+              <tr><th>evento</th><th>sinal capturado</th><th>uso na leitura</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>SQLExecutionStart</td><td>executionId</td><td>amarra consulta à execução</td></tr>
+              <tr><td>StageCompleted</td><td>StageInfo</td><td>duracao, tasks, acumuladores</td></tr>
+              <tr><td>TaskEnd</td><td>TaskInfo + TaskMetrics</td><td>CPU, shuffle, GC, spill</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="principle-strip" aria-label="Princípios do sparkMeasure">
+          <div><strong>não é profiler externo</strong><span>escuta eventos publicados pelo próprio Spark</span></div>
+          <div><strong>não é só JMX</strong><span>trabalha no nível job/stage/task</span></div>
+          <div><strong>não reescreve o job</strong><span>organiza sinais nativos em evidência</span></div>
+        </section>
+
+        <section class="takeaway">
+          <span></span>
+          <p>Se o Spark já emite sinais, o sparkMeasure entra como o tradutor que transforma execução distribuída em diagnóstico operacional.</p>
+        </section>
+      </div>
+    </section>
+
+    <section class="theory-slide slide-traces" id="theory-2" aria-labelledby="theory-2-title">
+      <div class="slide-index">
+        <span>teoria / 02</span>
+        <span>Spark-native traces</span>
+      </div>
+
+      <div class="trace-grid">
+        <header class="trace-title-panel">
+          <p class="section-label">recap técnico</p>
+          <h1 id="theory-2-title">Antes de medir, o Spark já deixa rastros</h1>
+        </header>
+
+        <section class="trace-code-panel" aria-label="Terminal com rastros nativos do Spark">
+          <div class="panel-bar"><span></span><span></span><span></span></div>
+          <pre><code>Spark UI available at http://driver:4040
+
+spark.eventLog.enabled = true
+spark.eventLog.dir     = hdfs:///spark-logs
+
+listener event stream:
+JobStart -> StageSubmitted -> TaskStart
+TaskEnd  -> StageCompleted -> JobEnd
+
+History Server replays the same event log later.</code></pre>
+        </section>
+
+        <section class="phase-panel" aria-label="Três rastros nativos que o Spark já deixa">
+          <div class="phase-line"><strong>1</strong><span><b>Rastro de planejamento</b> QueryExecution preserva parsed, analyzed, optimized e physical plan.</span></div>
+          <div class="phase-line"><strong>2</strong><span><b>Rastro de execução</b> Scheduler publica jobs, stages, tasks e fronteiras de shuffle.</span></div>
+          <div class="phase-line"><strong>3</strong><span><b>Rastro persistido</b> UI mostra ao vivo, EventLog grava e History Server reabre depois.</span></div>
+        </section>
+
+        <section class="native-flow-panel" aria-label="Fluxo de rastros nativos do Spark">
+          <img src="assets/svg/spark-native-traces.svg" alt="Código Spark passa por Catalyst, plano físico, scheduler, jobs, stages, tasks, métricas e eventos consumidos por UI, EventLog e sparkMeasure" />
+        </section>
+
+        <section class="trace-asset-panel" aria-label="Asset visual sobre rastros nativos do runtime Spark">
+          <img src="assets/generated/spark_runtime_traces_theory.png" alt="Visual técnico sem texto mostrando execução distribuída do Spark gerando rastros e sinais de runtime" />
+        </section>
+
+        <section class="signal-table" aria-label="Inventário de sinais que o Spark já produz">
+          <table>
+            <thead>
+              <tr><th>camada</th><th>o que revela</th><th>sinal que aparece</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Catalyst / QueryExecution</td><td>intenção de execução</td><td>logical plan, optimized plan, physical plan</td></tr>
+              <tr><td>DAGScheduler</td><td>quebra do trabalho distribuído</td><td>jobs, stages, fronteiras de shuffle</td></tr>
+              <tr><td>Executors / Tasks</td><td>custo real por unidade paralela</td><td>TaskInfo, TaskMetrics, acumuladores</td></tr>
+              <tr><td>SparkListenerEvents</td><td>linha do tempo observável</td><td>JobStart, StageCompleted, TaskEnd</td></tr>
+              <tr><td>UI / EventLog / History</td><td>materialização visual e histórica</td><td>Web UI, event log, replay posterior</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </section>
+    <section class="theory-slide slide-plan" id="theory-3" aria-labelledby="theory-3-title">
+      <div class="slide-index">
+        <span>teoria / 03</span>
+        <span>physical plan != runtime metrics</span>
+      </div>
+
+      <div class="plan-grid">
+        <header class="plan-title-panel">
+          <p class="section-label">plano vs execucao</p>
+          <h1 id="theory-3-title">Plano mostra intenção. <span>Métrica mostra comportamento.</span></h1>
+          <p>O <b>physical plan</b> é a melhor hipótese executável do Spark. A execução real ainda pode revelar custo, pressão e anomalias que só aparecem no runtime.</p>
+        </header>
+
+        <section class="plan-code-panel" aria-label="Exemplo de physical plan do Spark">
+          <div class="panel-bar"><span></span><span></span><span></span></div>
+          <div class="plan-tabs" aria-label="Camadas de planejamento"><span>logical</span><span>optimized</span><strong>physical plan</strong></div>
+          <pre><code>== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[vendor_id#12], functions=[count(1)])
+   +- Exchange hashpartitioning(vendor_id#12, 200)
+      +- HashAggregate(keys=[vendor_id#12])
+         +- FileScan parquet orders
+
+# O plano mostra operadores e estrategia.
+# Ainda nao mostra custo real, spill, GC ou skew.</code></pre>
+        </section>
+
+        <section class="runtime-bridge-panel" aria-label="A action transforma plano em execucao real">
+          <div class="runtime-core">
+            <span>action()</span>
+            <strong>show · count · write</strong>
+          </div>
+          <ul>
+            <li><b>Scheduler</b><span>quebra em jobs, stages e tasks</span></li>
+            <li><b>AQE</b><span>pode ajustar estrategia em runtime</span></li>
+            <li><b>Executors</b><span>materializam custo real por task</span></li>
+          </ul>
+        </section>
+
+        <section class="runtime-metrics-panel" aria-label="Tabela de metricas observadas em runtime">
+          <table>
+            <thead>
+              <tr><th>stage</th><th>tasks</th><th>runtime</th><th>cpu</th><th>shuffle</th><th>spill</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>03</td><td>420</td><td>91s</td><td>38s</td><td>12GB</td><td>4GB</td></tr>
+              <tr><td>04</td><td>420</td><td>18s</td><td>16s</td><td>800MB</td><td>0</td></tr>
+              <tr><td>05</td><td>420</td><td>64s</td><td>22s</td><td>9GB</td><td>0</td></tr>
+            </tbody>
+          </table>
+          <p class="native-metrics-note">Spark registra esses sinais, mas eles aparecem espalhados entre UI, History Server, REST API e event log. Aqui estão consolidados para leitura.</p>
+          <div class="metric-symptoms" aria-label="Sinais comuns observados em runtime"><span>stragglers</span><span>shuffle concentrado</span><span>spill</span><span>CPU time vs wall time</span></div>
+        </section>
+
+        <section class="plan-asset-panel" aria-label="Asset visual comparando physical plan e metricas de runtime">
+          <img src="assets/svg/physical-plan-runtime-metrics.svg" alt="Physical plan vira execucao real e gera metricas de runtime" />
+        </section>
+
+        <section class="plan-gap-panel" aria-label="Lacuna entre plano e metrica">
+          <div><strong>EXPLAIN responde</strong><span>o que o Spark pretende executar</span></div>
+          <div><strong>metricas respondem</strong><span>quanto custou executar</span></div>
+          <div><strong>sinais ficam espalhados</strong><span>UI, History Server, REST API e event log</span></div>
+        </section>
+      </div>
+    </section>
+    <section class="theory-slide slide-events" id="theory-4" aria-labelledby="theory-4-title">
+      <div class="slide-index">
+        <span>teoria / 04</span>
+        <span>SparkListenerEvent -> callbacks</span>
+      </div>
+
+      <div class="events-grid">
+        <header class="events-title-panel">
+          <p class="section-label">runtime em eventos</p>
+          <h1 id="theory-4-title">Como o Spark transforma execução em eventos</h1>
+          <p>A execução Spark é coordenada pelo <b>driver</b>, enquanto o custo real nasce nas <b>tasks</b> rodando em executors/JVMs. Processos internos do scheduler publicam eventos no driver; listeners inscritos recebem callbacks e enxergam o runtime sem executar as tasks.</p>
+        </header>
+
+        <section class="listener-code-panel runtime-path-panel" aria-label="Comunicação entre driver, executors e eventos Spark">
+          <div class="panel-bar"><span></span><span></span><span></span></div>
+          <div class="runtime-path-grid">
+            <div>
+              <strong>1. Driver agenda</strong>
+              <span>SparkContext, DAGScheduler e TaskScheduler quebram a ação em jobs, stages e tasks.</span>
+            </div>
+            <div>
+              <strong>2. Executor roda na JVM</strong>
+              <span>Tasks executam em threads; o runtime acompanha tempo, CPU, GC, shuffle, spill e bytes.</span>
+            </div>
+            <div>
+              <strong>3. Sinais voltam ao driver</strong>
+              <span>Status updates chegam ao driver; o ListenerBus distribui callbacks para UI, event log e listeners registrados.</span>
+            </div>
+          </div>
+          <pre><code>driver
+  -> launch tasks
+  -> executor JVM
+
+executor JVM
+  -> task status + TaskMetrics
+  -> driver
+
+ListenerBus
+  -> Spark UI / EventLog
+  -> custom listeners</code></pre>
+        </section>
+
+        <section class="event-flow-panel" aria-label="Fluxo de eventos Spark no driver">
+          <img src="assets/svg/spark-driver-executor-runtime.svg" alt="Driver agenda tasks em executors JVM, que devolvem status updates, métricas e eventos para o driver" />
+          <p class="event-flow-caption">O driver mantém a operação em curso: agenda tasks, recebe heartbeats/status com métricas e, em falhas, o scheduler pode reexecutar tasks ou stages até os limites configurados.</p>
+        </section>
+
+        <section class="callback-panel" aria-label="Callbacks comuns de SparkListener">
+          <div><strong>scheduler</strong><span>decide jobs, stages e fronteiras de shuffle</span></div>
+          <div><strong>executors</strong><span>rodam tasks na JVM e reportam progresso</span></div>
+          <div><strong>ListenerBus</strong><span>fan-out de eventos para listeners registrados</span></div>
+          <div><strong>callbacks</strong><span>onTaskEnd, onStageCompleted e eventos afins</span></div>
+        </section>
+
+        <section class="event-payload-table" aria-label="Eventos Spark e sinais carregados">
+          <table>
+            <thead>
+              <tr><th>evento</th><th>payload principal</th><th>o que ajuda a responder</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>JobStart / JobEnd</td><td>jobId, stageIds, properties</td><td>qual ação abriu e fechou o trabalho</td></tr>
+              <tr><td>StageSubmitted</td><td>StageInfo</td><td>fronteira de shuffle, número de tasks e tentativa</td></tr>
+              <tr><td>TaskEnd</td><td>TaskInfo + TaskMetrics</td><td>runtime, CPU, shuffle, spill, GC e falhas por task</td></tr>
+              <tr><td>StageCompleted</td><td>StageInfo + acumuladores</td><td>resumo final do stage observado</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="events-takeaway" aria-label="Resumo do slide">
+          <span></span>
+          <p>Listeners não são outro motor de execução: eles observam a linha do tempo que o próprio Spark publica no driver, conectando scheduler, executors, JVM e métricas de runtime.</p>
+        </section>
+      </div>
+    </section>
+    <section class="theory-slide slide-sm-entry" id="theory-5" aria-labelledby="theory-5-title">
+      <div class="slide-index">
+        <span>teoria / 05</span>
+        <span>sparkMeasure entra como listener especializado</span>
+      </div>
+
+      <div class="sm-entry-grid">
+        <header class="sm-entry-title-panel">
+          <p class="section-label">o gancho</p>
+          <h1 id="theory-5-title">Onde o <span>sparkMeasure</span> entra no Spark</h1>
+          <p>Ele não substitui scheduler, executor nem UI. Ele se registra no caminho de eventos do driver e transforma callbacks de runtime em evidência consultável.</p>
+        </header>
+
+        <section class="sm-api-panel sm-internal-panel" aria-label="Cadeia interna do sparkMeasure">
+          <div class="panel-bar"><span></span><span></span><span></span></div>
+          <pre><code>SparkContext
+  -> addSparkListener(...)
+  -> StageInfoRecorderListener
+     TaskInfoRecorderListener
+  -> callbacks
+  -> ListBuffer no driver
+  -> report / Map / DataFrame / sink</code></pre>
+          <div class="sm-mode-strip" aria-label="Modos de instrumentação do sparkMeasure">
+            <div><strong>modo instrumentado</strong><span>begin / end / runAndMeasure</span></div>
+            <div><strong>modo Flight Recorder</strong><span>listener via configuração</span></div>
+          </div>
+        </section>
+
+        <section class="sm-position-panel" aria-label="Como o sparkMeasure se posiciona dentro do Spark">
+          <div><strong>1. registra listener</strong><span>usa o mecanismo nativo do SparkContext para receber eventos</span></div>
+          <div><strong>2. escuta callbacks</strong><span>stage/task events carregam StageInfo, TaskInfo e TaskMetrics</span></div>
+          <div><strong>3. agrega no driver</strong><span>organiza counters e tempos em visão de stage ou task</span></div>
+          <div><strong>4. expõe evidência</strong><span>report, estrutura programática, DataFrame ou sink externo</span></div>
+        </section>
+
+        <section class="sm-flow-panel" aria-label="Fluxo de entrada do sparkMeasure no Spark">
+          <img src="assets/svg/sparkmeasure-entry-flow.svg" alt="sparkMeasure se registra como listener especializado no driver Spark e organiza eventos em relatórios, mapas, DataFrames e sinks" />
+        </section>
+
+        <section class="sm-modes-panel" aria-label="Modos de uso do sparkMeasure">
+          <div><strong>StageMetrics</strong><span>barato para baseline, regressão e leitura inicial por stage</span></div>
+          <div><strong>TaskMetrics</strong><span>granular para stragglers, skew, shuffle concentrado e executor problemático</span></div>
+          <div><strong>Flight Recorder</strong><span>coleta contínua para arquivos, Kafka, Prometheus ou sink customizado</span></div>
+        </section>
+
+        <section class="sm-output-table" aria-label="Do evento Spark para a saída do sparkMeasure">
+          <table>
+            <thead>
+              <tr><th>entrada nativa</th><th>camada sparkMeasure</th><th>saída prática</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>StageCompleted</td><td>StageMetrics</td><td>tempo, tasks, shuffle, spill e acumuladores por stage</td></tr>
+              <tr><td>TaskEnd</td><td>TaskMetrics</td><td>runtime, CPU, GC, I/O e shuffle por task</td></tr>
+              <tr><td>event stream</td><td>Flight Recorder</td><td>métricas persistidas para análise posterior</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="sm-entry-takeaway" aria-label="Resumo do slide">
+          <span></span>
+          <p>O salto não é criar telemetria do zero: é transformar sinais nativos do Spark em uma superfície de diagnóstico que o engenheiro consegue comparar e reutilizar.</p>
+        </section>
+      </div>
+    </section>
+    <section class="theory-slide slide-stage-metrics" id="theory-6" aria-labelledby="theory-6-title">
+      <div class="slide-index">
+        <span>teoria / 06</span>
+        <span>StageMetrics = baseline por stage</span>
+      </div>
+
+      <div class="stage-grid">
+        <header class="stage-title-panel">
+          <p class="section-label">primeiro passe</p>
+          <h1 id="theory-6-title"><span>StageMetrics</span>: visão operacional barata</h1>
+          <p>Antes de investigar cada task, vale descobrir qual stage concentrou custo. StageMetrics agrega eventos em nível de stage e entrega uma leitura rápida de baseline, regressão e gargalo inicial.</p>
+        </header>
+
+        <section class="stage-code-panel" aria-label="Uso de StageMetrics">
+          <div class="panel-bar"><span></span><span></span><span></span></div>
+          <pre><code>from sparkmeasure import StageMetrics
+
+stage_metrics = StageMetrics(spark)
+stage_metrics.begin()
+
+orders.groupBy("vendor_id") \
+  .count() \
+  .write.mode("overwrite") \
+  .parquet(path)
+
+stage_metrics.end()
+stage_metrics.print_report()
+
+metrics = stage_metrics.aggregate_stage_metrics()
+# {'numStages': 3, 'numTasks': 260, ...}</code></pre>
+        </section>
+
+        <section class="stage-output-panel" aria-label="Resumo operacional por stage">
+          <table>
+            <thead>
+              <tr><th>stage</th><th>tasks</th><th>duration</th><th>run time</th><th>CPU</th><th>GC</th><th>shuffle read</th><th>spill</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>0</td><td>120</td><td>42s</td><td>178s</td><td>131s</td><td>5.8s</td><td>8.1GB</td><td>0</td></tr>
+              <tr><td>1</td><td>120</td><td>18s</td><td>94s</td><td>81s</td><td>1.2s</td><td>1.4GB</td><td>0</td></tr>
+              <tr><td>2</td><td>20</td><td>9s</td><td>22s</td><td>20s</td><td>0.3s</td><td>0</td><td>0</td></tr>
+            </tbody>
+          </table>
+          <p>Leitura: stage 0 domina shuffle e tempo agregado. duration = tempo de parede do stage; run time, CPU e GC = somas das tasks.</p>
+        </section>
+
+        <section class="stage-flow-panel" aria-label="Fluxo de agregação do StageMetrics">
+          <img src="assets/svg/stage-metrics-aggregation.svg" alt="StageMetrics agrega eventos Spark por stage e cria uma visão operacional de baseline" />
+        </section>
+
+        <section class="stage-use-panel" aria-label="Quando usar StageMetrics">
+          <div><strong>bom para</strong><span>baseline, comparação entre commits, tuning inicial e CI/CD de performance</span></div>
+          <div><strong>baixo volume</strong><span>uma linha por stage; custo proporcional a stages, nao a tasks</span></div>
+          <div><strong>limite</strong><span>não mostra distribuição interna das tasks; stragglers pedem TaskMetrics</span></div>
+        </section>
+
+        <section class="stage-takeaway" aria-label="Resumo do StageMetrics">
+          <span></span>
+          <p>StageMetrics é a lupa de primeira ordem: barato o bastante para usar sempre, detalhado o bastante para apontar onde abrir a investigação.</p>
+        </section>
+      </div>
+    </section>
+    <section class="theory-slide slide-task-metrics" id="theory-7" aria-labelledby="theory-7-title">
+      <div class="slide-index">
+        <span>teoria / 07</span>
+        <span>TaskMetrics = investigação por task</span>
+      </div>
+
+      <div class="task-grid">
+        <header class="task-title-panel">
+          <p class="section-label">segunda lupa</p>
+          <h1 id="theory-7-title"><span>TaskMetrics</span>: quando o problema mora dentro do stage</h1>
+          <p>Quando um stage fica caro, a pergunta muda: foi o stage inteiro ou uma pequena parte dele? TaskMetrics abre a execução task por task e mostra distribuição, executor, CPU, GC, shuffle e spill.</p>
+        </header>
+
+        <section class="task-table-panel" aria-label="Métricas por task">
+          <table>
+            <thead>
+              <tr><th>task</th><th>executor</th><th>duration</th><th>CPU</th><th>GC</th><th>shuffle</th><th>spill</th><th>sinal</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>801</td><td>exec-2</td><td>7.8s</td><td>6.9s</td><td>0.1s</td><td>44MB</td><td>0</td><td>normal</td></tr>
+              <tr><td>802</td><td>exec-5</td><td>8.1s</td><td>7.0s</td><td>0.1s</td><td>48MB</td><td>0</td><td>normal</td></tr>
+              <tr class="task-hot-row"><td>803</td><td>exec-3</td><td>93.4s</td><td>28.5s</td><td>9.2s</td><td>4.8GB</td><td>1.9GB</td><td>straggler</td></tr>
+              <tr><td>804</td><td>exec-1</td><td>7.5s</td><td>6.8s</td><td>0.1s</td><td>41MB</td><td>0</td><td>normal</td></tr>
+            </tbody>
+          </table>
+          <p>Leitura: a média do stage esconde a causa. Uma task concentrou shuffle, spill e espera; CPU menor que wall time sugere tempo fora de computação útil.</p>
+        </section>
+
+        <section class="task-question-panel" aria-label="Perguntas que TaskMetrics responde">
+          <div><strong>stragglers</strong><span>alguma task ficou muito mais lenta que o restante?</span></div>
+          <div><strong>shuffle concentrado</strong><span>poucas tasks leram ou escreveram a maior parte dos dados?</span></div>
+          <div><strong>spill / GC / executor</strong><span>o problema aparece em partições, hosts ou executors específicos?</span></div>
+          <div><strong>custo</strong><span>uma linha por task: poderoso, mas proporcional ao número de tasks</span></div>
+        </section>
+
+        <section class="task-flow-panel" aria-label="Distribuição das tasks no TaskMetrics">
+          <img src="assets/svg/task-metrics-distribution.svg" alt="TaskMetrics mostra distribuição de tasks e destaca uma task straggler com shuffle e spill concentrados" />
+        </section>
+
+        <section class="task-compare-panel" aria-label="Comparação entre StageMetrics e TaskMetrics">
+          <div><strong>StageMetrics</strong><span>onde o workload ficou caro?</span></div>
+          <div><strong>TaskMetrics</strong><span>qual task está causando a assimetria?</span></div>
+          <div><strong>regra prática</strong><span>comece agregado; desça para task quando houver suspeita concreta.</span></div>
+        </section>
+
+        <section class="task-takeaway" aria-label="Resumo do TaskMetrics">
+          <span></span>
+          <p>TaskMetrics é a investigação cirúrgica: abre o stage para encontrar stragglers, skew, shuffle concentrado e spill que a visão agregada não consegue provar sozinha.</p>
+        </section>
+      </div>
+    </section>
+    <section class="theory-slide slide-overhead" id="theory-8" aria-labelledby="theory-8-title">
+      <div class="slide-index">
+        <span>teoria / 08</span>
+        <span>overhead / limites / granularidade</span>
+      </div>
+
+      <div class="overhead-grid">
+        <header class="overhead-title-panel">
+          <p class="section-label">custo de coleta</p>
+          <h1 id="theory-8-title"><span>Overhead</span>: StageM vs TaskM</h1>
+          <p>sparkMeasure reaproveita eventos nativos do Spark, mas ainda executa callbacks, cria estruturas no driver e pode escrever em sinks. A decisão técnica principal é a granularidade.</p>
+        </header>
+
+        <section class="overhead-complexity-panel" aria-label="Complexidade por granularidade">
+          <div class="complexity-card stage-side">
+            <span>StageMetrics</span>
+            <strong>StageM</strong>
+            <code>8 stages -> ~8 StageVals</code>
+            <p>baixo volume; adequado para baseline, regressão e comparação recorrente.</p>
+          </div>
+          <div class="complexity-card task-side">
+            <span>TaskMetrics</span>
+            <strong>TaskM</strong>
+            <code>8 x 20k tasks -> ~160k TaskVals</code>
+            <p>alta granularidade; usar quando existe suspeita concreta.</p>
+          </div>
+        </section>
+
+        <section class="overhead-flow-panel" aria-label="Onde o custo aparece">
+          <img src="assets/svg/sparkmeasure-overhead-budget.svg" alt="Caminho de overhead do sparkMeasure: eventos, listener, buffer no driver e sink externo" />
+        </section>
+
+        <section class="overhead-limit-table" aria-label="Limites técnicos do sparkMeasure">
+          <table>
+            <thead>
+              <tr><th>ponto</th><th>risco técnico</th><th>mitigação prática</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>AsyncEventQueue</td><td>listener lento atrasa drenagem de eventos</td><td>evitar processamento pesado no callback</td></tr>
+              <tr><td>driver memory</td><td>TaskVals demais pressionam heap do driver</td><td>preferir StageMetrics como default</td></tr>
+              <tr><td>begin/end</td><td>mede delta; ações Spark concorrentes podem contaminar a janela</td><td>isolar a ação medida</td></tr>
+              <tr><td>sink externo</td><td>serialização e I/O entram no caminho</td><td>amostrar, batchar ou usar stage-level</td></tr>
+              <tr><td>cobertura</td><td>EventLog/UI têm mais sinais do que o relatório achatado</td><td>voltar ao EventLog quando a pergunta exigir</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="overhead-rule-panel" aria-label="Regra operacional">
+          <div><strong>default</strong><span>StageMetrics em uso recorrente.</span></div>
+          <div><strong>investigação</strong><span>TaskMetrics para skew, straggler, spill ou executor suspeito.</span></div>
+          <div><strong>produção</strong><span>Flight Recorder com sink e retenção pensados pelo volume.</span></div>
+        </section>
+
+        <section class="overhead-takeaway" aria-label="Resumo de overhead">
+          <span></span>
+          <p>O custo não vem de medir linha a linha; vem de quantos eventos você decide transformar em dados persistidos no driver ou em sinks.</p>
+        </section>
+      </div>
+    </section>
+    <section class="theory-slide slide-operational" id="theory-9" aria-labelledby="theory-9-title">
+      <div class="slide-index">
+        <span>teoria / 09</span>
+        <span>baseline / diff / decisão</span>
+      </div>
+
+      <div class="operational-grid">
+        <header class="operational-title-panel">
+          <p class="section-label">ciclo de engenharia</p>
+          <h1 id="theory-9-title">Métricas por execução: <span>baseline, diff e decisão</span></h1>
+          <p>O relatório isolado explica uma execução. O histórico por run permite comparar commits, configs, volume de entrada e custo observado.</p>
+        </header>
+
+        <section class="run-record-panel" aria-label="Registro técnico de uma execução">
+          <div class="panel-bar"><span></span><span></span><span></span></div>
+          <pre><code>run_id: orders_daily_2026_07_05_0130
+commit: 8f41c2a
+spark_version: 3.5.x
+conf:
+  spark.sql.shuffle.partitions: 800
+  spark.sql.adaptive.enabled: true
+input:
+  rows: 1.8B
+  bytes: 2.4TB
+metrics:
+  numStages: 9
+  numTasks: 18420
+  executorRunTime: 11.2h
+  executorCpuTime: 6.7h
+  jvmGCTime: 18.4m
+  shuffleBytesWritten: 21.4TB
+  memoryBytesSpilled: 740GB</code></pre>
+        </section>
+<section class="diff-table-panel" aria-label="Comparação técnica entre execuções">
+          <table>
+            <thead>
+              <tr><th>sinal</th><th>baseline</th><th>run atual</th><th>diff</th><th>leitura</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>duration</td><td>42m</td><td>58m</td><td class="warn">+38%</td><td>regressão mensurável</td></tr>
+              <tr><td>shuffle write</td><td>12.2TB</td><td>21.4TB</td><td class="warn">+75%</td><td>join/partitioning mudou custo</td></tr>
+              <tr><td>jvmGCTime</td><td>4.8m</td><td>18.4m</td><td class="warn">+283%</td><td>pressão de memória apareceu</td></tr>
+              <tr><td>CPU/run ratio</td><td>0.71</td><td>0.40</td><td class="warn">-44%</td><td>mais espera em I/O/shuffle</td></tr>
+              <tr><td>spill</td><td>0</td><td>740GB</td><td class="warn">novo</td><td>tuning de memória ou plano físico</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="operational-baseline-panel" aria-label="Fluxo visual de baseline e comparação">
+          <img src="assets/svg/operational-baseline-diff.svg" alt="Fluxo de run record, baseline, diff e decisão operacional">
+        </section>
+        <section class="operational-practice-panel" aria-label="Como usar as métricas no ciclo operacional">
+          <div><strong>baseline</strong><span>fixar volume, config e versão para comparação justa.</span></div>
+          <div><strong>regressão</strong><span>marcar mudança quando diff passa limite definido.</span></div>
+          <div><strong>tuning</strong><span>agir sobre shuffle, spill, GC, CPU/run e stragglers.</span></div>
+          <div><strong>retenção</strong><span>guardar metadados suficientes para repetir a análise.</span></div>
+        </section>
+
+        <section class="operational-takeaway" aria-label="Resumo operacional">
+          <span></span>
+          <p>sparkMeasure fica mais forte quando a métrica deixa de ser print de notebook e vira linha de histórico: run, código, config, entrada e custo comparável.</p>
+        </section>
+      </div>
+    </section>
+    <section class="theory-slide slide-theory-close" id="theory-10" aria-labelledby="theory-10-title">
+      <div class="slide-index">
+        <span>teoria / 10</span>
+        <span>fechamento geral</span>
+      </div>
+
+      <div class="close-grid">
+        <header class="close-title-panel">
+          <p class="section-label">conclusão</p>
+          <h1 id="theory-10-title">sparkMeasure transforma execução em <span>evidência operacional</span></h1>
+          <p>O ponto não é medir por medir: é guardar sinais suficientes para comparar runs, explicar regressões e tomar decisão técnica com menos chute.</p>
+        </header>
+
+        <section class="close-asset-panel" aria-label="Asset final de diagnóstico para observabilidade">
+          <img class="close-asset" src="assets/generated/diagnosis_to_observability.png" alt="Transição visual de diagnóstico manual para observabilidade operacional">
+        </section>
+
+        <section class="close-points-panel" aria-label="Resumo da seção teórica">
+          <div><strong>Spark já emite sinais</strong><span>jobs, stages, tasks, eventos, métricas e event logs.</span></div>
+          <div><strong>sparkMeasure organiza</strong><span>listeners coletam e agregam o que vira relatório, Map, DataFrame ou sink.</span></div>
+          <div><strong>operação compara</strong><span>baseline, diff, regressão e tuning passam a ter rastro mensurável.</span></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="theory.js"></script>
+</body>
+</html>
+
+
