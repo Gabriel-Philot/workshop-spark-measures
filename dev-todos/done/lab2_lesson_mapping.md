@@ -56,7 +56,7 @@ For each lesson:
 - include one `.md` class-notes file explaining which vault question inspired
   the lesson and how the sparkMeasure metrics connect to that question;
 - keep the app script template-like, using the same style as:
-  - `src/apps/labs/lab_0/sparkmeasure_presentation.py`
+  - `src/apps/labs/lab_0/lab_0c_sparkmeasure_presentation.py`
   - `src/apps/labs/lab_1/global_sort_diagnosis.py`
   - `src/apps/labs/lab_1/random_task_outlier_diagnosis.py`
 - keep transformations in `lab_2_utils/transformations.py`;

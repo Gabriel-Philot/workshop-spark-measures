@@ -13,7 +13,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_0/sparkmeasure_presentation.py
+  /opt/spark/src/apps/labs/lab_0/lab_0c_sparkmeasure_presentation.py
 ```
 
 ## Required configuration

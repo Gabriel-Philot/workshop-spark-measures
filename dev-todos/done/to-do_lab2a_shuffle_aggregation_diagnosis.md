@@ -56,7 +56,7 @@ src/apps/labs/lab_2/
 ## Implementation requirements
 
 - Follow the same script shape used by:
-  - `src/apps/labs/lab_0/sparkmeasure_presentation.py`
+  - `src/apps/labs/lab_0/lab_0c_sparkmeasure_presentation.py`
   - `src/apps/labs/lab_1/global_sort_diagnosis.py`
   - `src/apps/labs/lab_1/random_task_outlier_diagnosis.py`
 - Keep the main app script short and classroom-readable.

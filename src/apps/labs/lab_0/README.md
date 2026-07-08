@@ -2,11 +2,28 @@
 
 Lab 0 is split into three scripts on purpose:
 
-- `source_inventory.py` checks whether the generated bronze sources are ready for the labs.
-- `sparkmeasure_native_api.py` shows sparkMeasure's natural Python API directly with `StageMetrics`.
-- `sparkmeasure_presentation.py` runs the same Silver enrichment twice: first native, then through the workshop contract with sparkMeasure enabled.
+- `lab_0a_source_inventory.py` checks whether the generated bronze sources are ready for the labs.
+- `lab_0b_sparkmeasure_native_api.py` shows sparkMeasure's natural Python API directly with `StageMetrics`.
+- `lab_0c_sparkmeasure_presentation.py` runs the same Silver enrichment twice: first native, then through the workshop contract with sparkMeasure enabled.
 
 This keeps source readiness, raw sparkMeasure usage, and our workshop abstraction separate.
+
+For the teaching rationale behind this split, see
+[`docs/contract_rationale.md`](docs/contract_rationale.md).
+
+## Run order
+
+Run the Lab 0 scripts in this order:
+
+| Step | Script | Purpose |
+| --- | --- | --- |
+| 0A | `lab_0a_source_inventory.py` | Validate generated source readiness before teaching sparkMeasure. |
+| 0B | `lab_0b_sparkmeasure_native_api.py` | Show the direct sparkMeasure `StageMetrics` API without the workshop wrapper. |
+| 0C | `lab_0c_sparkmeasure_presentation.py` | Compare native Spark output with the workshop contract using sparkMeasure. |
+
+Do not start with `lab_0c_sparkmeasure_presentation.py`. The inventory step gives the
+classroom context for what exists in bronze, and the native API step makes the
+workshop abstraction easier to justify.
 
 ## Prerequisites
 
@@ -14,7 +31,7 @@ Start the local stack and generate demo data before running this lab.
 
 ```bash
 make compose
-make generate SCALE=xs GENERATOR_RUN_ID=lab0-demo
+make generate SCALE=xs GENERATOR_RUN_ID=workshop-sparkMeasures-lab1-6
 ```
 
 Useful local UIs:
@@ -37,7 +54,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_0/source_inventory.py
+  /opt/spark/src/apps/labs/lab_0/lab_0a_source_inventory.py
 ```
 
 Expected terminal markers:
@@ -60,7 +77,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_0/sparkmeasure_native_api.py
+  /opt/spark/src/apps/labs/lab_0/lab_0b_sparkmeasure_native_api.py
 ```
 
 This script calls `StageMetrics(spark)`, `begin()`, executes a controlled `.show()` action over the Silver enrichment, then calls `end()`, `print_report()`, and `aggregate_stagemetrics()`.
@@ -84,7 +101,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_0/sparkmeasure_presentation.py
+  /opt/spark/src/apps/labs/lab_0/lab_0c_sparkmeasure_presentation.py
 ```
 
 The script reads comparison metadata from the local `lab_0_utils/experiments.yaml`:
@@ -110,6 +127,9 @@ observability:
 ```
 
 That is intentional. It avoids extra Delta write jobs for the metrics table, so the Spark History view stays focused on the workload being demonstrated.
+
+The detailed rationale for this contract shape is documented in
+[`docs/contract_rationale.md`](docs/contract_rationale.md).
 
 ## UI walkthrough
 

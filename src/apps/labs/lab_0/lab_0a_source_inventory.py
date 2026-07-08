@@ -13,7 +13,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_0/source_inventory.py
+  /opt/spark/src/apps/labs/lab_0/lab_0a_source_inventory.py
 ```
 
 ## Required configuration
@@ -33,6 +33,9 @@ from typing import Any
 
 from pyspark.sql import DataFrame, functions as F
 
+from apps.labs.lab_0.lab_0_utils.source_inventory_summary import (
+    render_inventory_summary,
+)
 from spark_workshop.artifacts import data_file_stats_for_dataframe
 from spark_workshop.jobs import SparkWorkshopJob
 from spark_workshop.utils import spark_job_description
@@ -50,6 +53,22 @@ class Lab0SourceInventory(SparkWorkshopJob):
     description = "Rows, physical bytes, file layout, FK readiness, and imbalance note"
     success_marker = "LAB0_SOURCE_INVENTORY_OK"
     source_tables = ("vendors", "products", "customers", "sales")
+
+    def run(self) -> int:
+        run = self.run_once(self.config_name, mode=None, log_section=True)
+        self.log_run_summary(run)
+        if isinstance(run.workload_result, dict):
+            self.logger.info(
+                render_inventory_summary(
+                    source_profiles=run.workload_result["source_profiles"],
+                    relationship_checks=run.workload_result["relationship_checks"],
+                    imbalance_note=run.workload_result["imbalance_note"],
+                )
+            )
+        if self.success_marker:
+            self.logger.info(self.success_marker)
+        self._run_mode = None
+        return 0
 
     def extract(self) -> dict[str, DataFrame]:
         return {name: self.read(name) for name in self.source_tables}
