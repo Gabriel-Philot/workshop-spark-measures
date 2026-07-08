@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img" aria-label="Timeline do nascimento do sparkMeasure">
+  <defs><filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><linearGradient id="line" x1="0" x2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".5" stop-color="#f97316"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+  <rect width="1200" height="280" rx="28" fill="#06111f" opacity=".96"/>
+  <path d="M90 142 C240 80 330 210 460 142 S680 84 820 142 S990 204 1110 142" fill="none" stroke="url(#line)" stroke-width="6" filter="url(#glow)" opacity=".9"/>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif" text-anchor="middle" filter="url(#glow)">
+    <g transform="translate(190 142)"><circle r="44" fill="#071827" stroke="#22d3ee" stroke-width="4"/><text y="-60" fill="#22d3ee" font-size="34" font-weight="900">2017</text><text y="70" fill="#e5f7ff" font-size="24" font-weight="800">post + simple tool</text></g>
+    <g transform="translate(510 142)"><circle r="44" fill="#071827" stroke="#f97316" stroke-width="4"/><text y="-60" fill="#f97316" font-size="34" font-weight="900">2017</text><text y="70" fill="#e5f7ff" font-size="24" font-weight="800">proof-of-concept</text></g>
+    <g transform="translate(825 142)"><circle r="44" fill="#071827" stroke="#f97316" stroke-width="4"/><text y="-60" fill="#f97316" font-size="34" font-weight="900">2018</text><text y="70" fill="#e5f7ff" font-size="24" font-weight="800">listeners + troubleshooting</text></g>
+    <g transform="translate(1070 142)"><circle r="44" fill="#071827" stroke="#22d3ee" stroke-width="4"/><text y="-60" fill="#22d3ee" font-size="34" font-weight="900">Hoje</text><text y="70" fill="#e5f7ff" font-size="24" font-weight="800">biblioteca + Flight Recorder</text></g>
+  </g>
+</svg>
