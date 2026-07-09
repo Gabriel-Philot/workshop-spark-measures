@@ -10,14 +10,16 @@ Assumes the Compose stack is running and the bronze `sales`, `vendors`, and
 `products` Delta tables exist at the configured input artifact paths.
 
 ```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+cd src/apps/labs/lab_1
+
+docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
   env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 \
   --deploy-mode client \
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py
+  /opt/spark/src/apps/labs/lab_1/lab_1b_random_task_outlier_diagnosis.py
 ```
 """
 

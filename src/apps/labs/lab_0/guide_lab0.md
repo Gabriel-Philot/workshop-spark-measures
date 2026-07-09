@@ -318,6 +318,14 @@ If students ask why the script is structured this way, use:
 docs/contract_rationale.md
 ```
 
+For the detailed Spark UI journey after Lab 0C, use:
+
+[`docs/spark_ui_to_sparkmeasure_walkthrough.md`](docs/spark_ui_to_sparkmeasure_walkthrough.md)
+
+Use that walkthrough when switching from terminal output to Spark History. It
+shows how to classify `SPARK_WORKLOAD | ...` rows versus `Delta: ...` rows,
+then how to reach the relevant stage and physical plan.
+
 ## 10. Review Spark History Server
 
 Open:
@@ -337,9 +345,21 @@ workshop-lab0-sparkmeasure-presentation-observed
 
 What to inspect:
 
-- `Jobs`: readable job descriptions with the `LAB0` prefix;
+- `Jobs`: readable job descriptions such as `SPARK_WORKLOAD | ...` and
+  `Delta: SPARK_WORKLOAD | ...`;
+- the main materialization/write job: the `SPARK_WORKLOAD | ...` row that
+  contains `save at NativeMethodAccessorImpl.java:0`; its detail page should
+  show an `Associated SQL Query` and a completed stage with both `Input` and
+  `Output`;
 - `Stages`: stage duration, task counts, shuffle columns;
 - `SQL / DataFrame`: physical execution details when available.
+
+Do not read that single Spark UI Job as the whole workload. In this lab it is
+the best anchor for the final write path. Delta snapshot/file filtering,
+broadcast preparation, async sub-executions, and commit/statistics work can
+appear as separate jobs under the same `SPARK_WORKLOAD` boundary. Use the
+`Associated SQL Query` to inspect the broader physical plan, and use
+sparkMeasure to compare the aggregate measured region.
 
 Classroom note:
 
@@ -347,6 +367,10 @@ Classroom note:
 History Server is still useful. sparkMeasure does not replace Spark UI; it
 summarizes useful evidence so the first diagnostic pass is faster.
 ```
+
+Detailed walkthrough:
+
+[`docs/spark_ui_to_sparkmeasure_walkthrough.md`](docs/spark_ui_to_sparkmeasure_walkthrough.md)
 
 ## 11. Review MinIO
 
