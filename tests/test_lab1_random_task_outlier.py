@@ -1,5 +1,5 @@
-from apps.labs.lab_1 import random_task_outlier_diagnosis
-from apps.labs.lab_1.random_task_outlier_diagnosis import CONFIG_PATH
+from apps.labs.lab_1 import lab_1b_random_task_outlier_diagnosis
+from apps.labs.lab_1.lab_1b_random_task_outlier_diagnosis import CONFIG_PATH
 from apps.labs.lab_1.lab_1_utils.random_task_outlier_runtime import (
     load_workload_settings,
     render_task_outlier_line,
@@ -7,10 +7,13 @@ from apps.labs.lab_1.lab_1_utils.random_task_outlier_runtime import (
 
 
 def test_random_task_outlier_default_config_is_stage_problematic():
-    assert random_task_outlier_diagnosis.CONFIG_NAME == "lab1-random-task-outlier-stage"
+    assert (
+        lab_1b_random_task_outlier_diagnosis.CONFIG_NAME
+        == "lab1-random-task-outlier-stage"
+    )
 
     settings = load_workload_settings(
-        random_task_outlier_diagnosis.CONFIG_NAME,
+        lab_1b_random_task_outlier_diagnosis.CONFIG_NAME,
         CONFIG_PATH,
     )
 

@@ -53,7 +53,7 @@ class SparkMeasureDiagnosticJob(SparkWorkshopJob):
     """Single-run workshop job with lab-local task diagnostics.
 
     It preserves the same app contract used by the template and
-    global_sort_diagnosis.py: subclasses implement extract, transform, load, and
+    lab_1a_global_sort_diagnosis.py: subclasses implement extract, transform, load, and
     validate_result. The only local variation is that task metrics can be
     inspected before the Spark session is stopped.
     """

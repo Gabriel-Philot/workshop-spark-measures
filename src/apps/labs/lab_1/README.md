@@ -6,6 +6,19 @@ is not to teach all possible fixes. The point is to show how sparkMeasure helps
 isolate the expensive stage faster than reading only native Spark logs and
 plans.
 
+Classroom runbook:
+
+```text
+guide_lab1.md
+```
+
+Supporting notes:
+
+```text
+docs/random_task_outlier_class_notes.md
+docs/task_metrics_native_api.md
+```
+
 ## Prerequisites
 
 Start the local stack and generate demo data first.
@@ -31,7 +44,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_1/global_sort_diagnosis.py
+  /opt/spark/src/apps/labs/lab_1/lab_1a_global_sort_diagnosis.py
 ```
 
 ## Required configuration
@@ -99,7 +112,7 @@ expensive fingerprint expression, which creates a task straggler.
 Task metrics are diagnostic-only here. They are printed and inspected during the
 run, but not persisted as Delta metrics artifacts.
 
-Use `CONFIG_NAME` in `random_task_outlier_diagnosis.py` as the classroom
+Use `CONFIG_NAME` in `lab_1b_random_task_outlier_diagnosis.py` as the classroom
 switch:
 
 ```python
@@ -118,7 +131,7 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
   --conf spark.driver.host=spark-master \
   --conf spark.eventLog.dir=s3a://observability/event-logs \
   --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_1/random_task_outlier_diagnosis.py
+  /opt/spark/src/apps/labs/lab_1/lab_1b_random_task_outlier_diagnosis.py
 ```
 
 The selected YAML config controls both the sparkMeasure collector and the
@@ -138,7 +151,8 @@ Expected task-level teaching marker:
 LAB1_TASK_OUTLIER rank=1 stageId=... taskIndex=... executorRunTime=...
 ```
 
-The live-code fix is already commented in `random_task_outlier_diagnosis.py`.
+The live-code fix is already commented in
+`lab_1b_random_task_outlier_diagnosis.py`.
 For repeatable validation without editing the transform call, switch
 `CONFIG_NAME` to `lab1-random-task-outlier-fixed-task`.
 
@@ -148,6 +162,7 @@ Expected markers:
 - `LAB1_RANDOM_TASK_OUTLIER_TASK_OK`
 - `LAB1_RANDOM_TASK_OUTLIER_FIXED_TASK_OK`
 
-See `task_metrics_native_api.md` for the native `TaskMetrics` API and the YAML
-equivalent used by this lab. Use `random_task_outlier_class_notes.md` for the
-instructor narrative and validated before/after interpretation.
+See `docs/task_metrics_native_api.md` for the native `TaskMetrics` API and the
+YAML equivalent used by this lab. Use
+`docs/random_task_outlier_class_notes.md` for the instructor narrative and
+validated before/after interpretation.
