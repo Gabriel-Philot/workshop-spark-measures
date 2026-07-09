@@ -61,7 +61,7 @@ class Lab0SparkMeasurePresentation(SparkWorkshopComparisonJob):
     def load(self, sales_enriched: DataFrame) -> str:
         with spark_job_description(
             self.context.spark,
-            f"LAB0 | presentation | mode={self._run_mode} | write_sales_enriched",
+            f"SPARK_WORKLOAD | LAB0 | presentation | mode={self._run_mode} | action=write_sales_enriched",
         ):
             self.write("sales_enriched", sales_enriched)
         return self.output_path("sales_enriched")

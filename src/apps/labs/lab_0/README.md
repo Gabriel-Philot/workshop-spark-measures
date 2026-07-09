@@ -11,6 +11,10 @@ This keeps source readiness, raw sparkMeasure usage, and our workshop abstractio
 For the teaching rationale behind this split, see
 [`docs/contract_rationale.md`](docs/contract_rationale.md).
 
+For the detailed Spark UI journey that connects `explain`, Spark History, and
+sparkMeasure output, see
+[`docs/spark_ui_to_sparkmeasure_walkthrough.md`](docs/spark_ui_to_sparkmeasure_walkthrough.md).
+
 ## Run order
 
 Run the Lab 0 scripts in this order:
@@ -145,10 +149,13 @@ Look for these applications:
 For each application:
 
 1. Open the application from the History Server list.
-2. Use the `Jobs` tab to compare readable job descriptions such as `LAB0 | source_profile | table=sales | count_rows` and `LAB0 | presentation | mode=observed | write_sales_enriched`.
+2. Use the `Jobs` tab to compare readable job descriptions such as `LAB0 | source_profile | table=sales | count_rows`, `SPARK_WORKLOAD | LAB0 | presentation | mode=observed | action=write_sales_enriched`, and `Delta: SPARK_WORKLOAD | ...`.
 3. Use the `Stages` tab to inspect stage duration, task counts, and shuffle columns.
 4. Use the `SQL / DataFrame` tab when available to inspect Spark SQL execution details.
 5. Use the terminal output from natural API and observed contract runs to compare direct sparkMeasure with the workshop wrapper.
+
+For the full click-by-click Lab 0C journey, use
+[`docs/spark_ui_to_sparkmeasure_walkthrough.md`](docs/spark_ui_to_sparkmeasure_walkthrough.md).
 
 ## MinIO walkthrough
 
