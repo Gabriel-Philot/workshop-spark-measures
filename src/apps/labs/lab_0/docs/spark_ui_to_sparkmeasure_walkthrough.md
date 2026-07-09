@@ -158,13 +158,43 @@ What this tab teaches:
 - job descriptions help separate workshop workload jobs from Delta internal
   maintenance jobs.
 
-Validated example from a recent observed Spark UI run:
+## 5. Jobs tab: identify the main materialization/write job
 
-```text
-Job 13 | 8 s | SPARK_WORKLOAD | LAB0 | presentation | mode=observed | action=write_sales_enriched
-Job 0  | 6 s | Delta: SPARK_WORKLOAD | LAB0 | ... | Compute snapshot for version: ...
-Job 1  | 5 s | Delta: SPARK_WORKLOAD | LAB0 | ... | Compute snapshot for version: ...
-```
+Do not identify the important job by its numeric ID. Job IDs change every run.
+
+For Lab 0C, the best UI anchor for the final business output is the
+materialization/write job. It is not the whole measured workload. The measured
+region can also include Delta snapshot work, file filtering, broadcast
+preparation, async SQL sub-executions, commit/statistics work, and the final
+write.
+
+Use the row that matches this combination:
+
+| Signal | What to look for |
+| --- | --- |
+| Prefix | Starts with `SPARK_WORKLOAD \| LAB0 \| presentation`. |
+| Not Delta | Does not start with `Delta:`. |
+| Action | Contains `action=write_sales_enriched`. |
+| Call site | Contains `save at NativeMethodAccessorImpl.java:0` or `DataFrameWriter.save`. |
+| Shape | Usually has the compact final write-stage shape, for example `10/10` tasks in this local run. |
+| Stage metrics | Its completed stage has both `Input` and `Output` populated. |
+| SQL link | Its Job detail page has an `Associated SQL Query` link. |
+
+This is the "main materialization/write job" for the classroom walkthrough.
+Its numeric ID changes between runs; the stable identifier is the combination
+of description, call site, stage shape, input/output evidence, and the
+`Associated SQL Query` link.
+
+Other rows can still start with `SPARK_WORKLOAD` because they were triggered
+inside the same workload boundary. For example:
+
+| Row shape | Interpretation |
+| --- | --- |
+| `SPARK_WORKLOAD ... save at NativeMethodAccessorImpl.java:0` | Main materialization/write job. Open this first to inspect the final output stage. |
+| `SPARK_WORKLOAD ... DatabricksLogging.scala` | Delta commit/logging/statistics work that inherited the workload label. Not the main materialization/write job. |
+| `SPARK_WORKLOAD ... CompletableFuture.java` | Async/sub-execution work inside the same boundary. Useful context, but not the final write anchor. |
+| `Delta: SPARK_WORKLOAD ... Filtering files for query` | Delta file filtering / scan preparation. |
+| `Delta: SPARK_WORKLOAD ... Compute snapshot for version` | Delta transaction log / snapshot work. |
 
 This is a useful classroom moment: one workload boundary can create multiple
 Spark jobs, and Delta can add its own jobs around the same boundary. The exact
@@ -175,7 +205,50 @@ Do not over-interpret the exact job IDs or durations. They depend on Delta
 state, whether the output path already existed, and local runtime details. Use
 the descriptions and relative evidence.
 
-## 5. Stages tab: find the dominant stages first
+## 6. Job detail: confirm the final materialization/write anchor
+
+Open the main materialization/write job identified above.
+
+The Job detail page should prove that you chose the correct row:
+
+- when `DAG Visualization` is expanded, the graph shows the final write path
+  rather than only metadata work;
+- the completed stage row has an `Input` value;
+- the completed stage row has an `Output` value;
+- the row links to an `Associated SQL Query`;
+- the stage has the same `SPARK_WORKLOAD ... save ...` description.
+
+Validated evidence from a recent run:
+
+```text
+Description: SPARK_WORKLOAD | LAB0 | presentation | mode=observed | action=write_sales_enriched
+Call site: save at NativeMethodAccessorImpl.java:0
+Completed stages: 1
+Tasks: 10/10
+Input: 249.7 KiB
+Output: 101.1 MiB
+Associated SQL Query: available as a clickable link
+```
+
+This is the right job for explaining the final materialization/write path. It
+is where students should start before opening stage details and the physical
+plan.
+
+Important nuance:
+
+```text
+One Spark UI Job is not the same thing as the whole measured workload.
+```
+
+If this job shows only one completed stage, that is expected for this local
+run. Spark is showing one physical Spark job: the final materialization/write
+path. Other work inside the same measured region can appear as separate jobs or
+SQL sub-executions, especially Delta snapshot/file filtering and broadcast
+preparation. To see the broader read/join/write plan, open the `Associated SQL
+Query` and inspect its plan details. To see the aggregate measured region, use
+the sparkMeasure output.
+
+## 7. Stages tab: find the dominant stages first
 
 Click `Stages`.
 
@@ -196,10 +269,10 @@ What to inspect:
 Validated stage examples from a recent observed run:
 
 ```text
-Stage 22 | 8 s   | 10/10 tasks | SPARK_WORKLOAD | write_sales_enriched
-Stage 0  | 6 s   | 2/2 tasks   | Delta internal | Compute snapshot for version: ...
-Stage 1  | 5 s   | 50/50 tasks | Delta internal | Compute snapshot for version: ...
-Stage 19 | 0.8 s | 50/50 tasks | Delta internal | Filtering files for query
+8 s   | 10/10 tasks | SPARK_WORKLOAD | save at NativeMethodAccessorImpl.java:0 | input and output populated
+6 s   | 2/2 tasks   | Delta internal | Compute snapshot for version: ...
+5 s   | 50/50 tasks | Delta internal | Compute snapshot for version: ...
+0.8 s | 50/50 tasks | Delta internal | Filtering files for query
 ```
 
 This is the correct diagnostic move: the first question is not "which tab do I
@@ -214,7 +287,7 @@ The observed run can have two different stories:
 
 That distinction is exactly why naming the workload boundary matters.
 
-## 6. Stage detail: inspect the highest-duration Delta/internal stage
+## 8. Stage detail: inspect the highest-duration Delta/internal stage
 
 Open a high-duration stage whose description starts with `Delta:`.
 
@@ -247,25 +320,14 @@ transformation. Before blaming our Spark transformation, we need to separate
 workload-boundary work from table-format work.
 ```
 
-## 7. Stage detail: inspect the main workload stage
+## 9. Stage detail: inspect the main materialization/write stage
 
-From the Jobs tab, click the main save job:
+From the main materialization/write job detail page, open its completed stage.
+Do not look for a fixed stage number; look for the stage associated with:
 
 ```text
+SPARK_WORKLOAD | LAB0 | presentation | mode=observed | action=write_sales_enriched
 save at NativeMethodAccessorImpl.java:0
-```
-
-In the validation run this was:
-
-```text
-native:   Job 16
-observed: Job 13
-```
-
-Then open the associated workload stage. In the latest validation run this was:
-
-```text
-observed: Stage 22
 ```
 
 What to inspect in the stage detail page:
@@ -293,8 +355,10 @@ GC Time percentiles: 4 ms, 38 ms, 44 ms, 57 ms, 90 ms
 
 Interpretation:
 
-- this is the main business write stage;
+- this is the final materialization/write stage for the business output;
 - it processed 5 million rows and wrote 101.1 MiB;
+- other jobs and SQL sub-executions can still be part of the measured workload
+  that fed this final stage;
 - there is no obvious GC pressure in this small local run;
 - the stage has only 10 tasks, so the per-task table is still easy to inspect;
 - sparkMeasure later compresses this type of evidence into aggregate counters
@@ -305,40 +369,38 @@ replace. The UI is still better for seeing task distribution, executor
 assignment, logs, and per-task outliers. sparkMeasure is better for quickly
 extracting aggregate evidence from the workload boundary.
 
-## 8. SQL / DataFrame tab: map the workload stage to the physical plan
+## 10. SQL / DataFrame tab: map the workload job to the physical plan
 
-Click `SQL / DataFrame`.
+From the main materialization/write Job detail page, click the `Associated SQL
+Query` link. This is more reliable than memorizing query IDs from a previous
+run.
 
-Open the top-level query first:
+The useful query page should have these signs:
 
-```text
-native:   Details for Query 9 in the validation run
-observed: Details for Query 17 in the validation run
-```
+| Signal | What it means |
+| --- | --- |
+| Description starts with `SPARK_WORKLOAD \| LAB0 ... action=write_sales_enriched` | Same named workload boundary. |
+| Succeeded Jobs includes the main materialization/write job you just opened | You are looking at the SQL execution connected to that final write path. |
+| `Plan Visualization` includes scan/join/write operators | This is not only a Delta metadata query. |
+| `Plan Details` contains `Scan parquet`, `BroadcastHashJoin`, `Project`, and output rows | This is the physical plan for the business transformation. |
 
-In the observed validation run, Query 17 is the top-level command:
+If you start from the `SQL / DataFrame` tab instead, avoid relying on a fixed
+query number. First open the top-level `SPARK_WORKLOAD` query, then use its
+sub-executions to find the one whose `Succeeded Jobs` contains the
+main materialization/write job.
+
+The top-level command may look like this:
 
 ```text
 Execute SaveIntoDataSourceCommand
-Sub Executions: 18 19 20 21 22 23 24 25 26 27 28 29 30
+Sub Executions: ...
 ```
 
-Then open the sub-execution linked to the main write job. In the validation run,
-this was:
+Do not stop there if it only shows the command wrapper. For this Delta write,
+the useful read/join/write plan is in the sub-execution linked back to the
+main materialization/write job.
 
-```text
-Query 20
-Parent Execution: 17
-Succeeded Jobs: 11 12 13
-```
-
-This is the more useful page for the physical plan behind the workload stage.
-
-Why not stop at Query 17? Because for this Delta write the top-level query is
-mostly the command wrapper. The useful read/join/write plan is in the
-sub-execution that links back to the workload jobs.
-
-Validated plan evidence from Query 20:
+Validated plan evidence from the materialization/write SQL query:
 
 ```text
 AdaptiveSparkPlan

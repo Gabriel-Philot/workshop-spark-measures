@@ -347,8 +347,19 @@ What to inspect:
 
 - `Jobs`: readable job descriptions such as `SPARK_WORKLOAD | ...` and
   `Delta: SPARK_WORKLOAD | ...`;
+- the main materialization/write job: the `SPARK_WORKLOAD | ...` row that
+  contains `save at NativeMethodAccessorImpl.java:0`; its detail page should
+  show an `Associated SQL Query` and a completed stage with both `Input` and
+  `Output`;
 - `Stages`: stage duration, task counts, shuffle columns;
 - `SQL / DataFrame`: physical execution details when available.
+
+Do not read that single Spark UI Job as the whole workload. In this lab it is
+the best anchor for the final write path. Delta snapshot/file filtering,
+broadcast preparation, async sub-executions, and commit/statistics work can
+appear as separate jobs under the same `SPARK_WORKLOAD` boundary. Use the
+`Associated SQL Query` to inspect the broader physical plan, and use
+sparkMeasure to compare the aggregate measured region.
 
 Classroom note:
 
