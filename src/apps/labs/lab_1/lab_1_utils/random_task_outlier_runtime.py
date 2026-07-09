@@ -18,7 +18,7 @@ from spark_workshop.jobs import SparkWorkshopJob
 from spark_workshop.metrics import normalize_metrics, validate_aggregate_metrics
 from spark_workshop.runtime import ExperimentContext, ExperimentRun
 from spark_workshop.session import SparkSessionSingleton
-from spark_workshop.utils import logger, spark_job_description
+from spark_workshop.utils import logger, spark_job_description, terminal_box
 
 
 VALID_WORKLOAD_VARIANTS = frozenset({"problematic", "fixed"})
@@ -242,8 +242,7 @@ def log_task_outliers(spark: Any, collector: Any) -> None:
             .collect()
         )
 
-    for rank, row in enumerate(rows, start=1):
-        logger.info(render_task_outlier_line(rank, row.asDict()))
+    logger.info(render_task_outlier_report([row.asDict() for row in rows]))
 
 
 def render_task_outlier_line(rank: int, row: Mapping[str, Any]) -> str:
@@ -262,3 +261,40 @@ def render_task_outlier_line(rank: int, row: Mapping[str, Any]) -> str:
         f"memoryBytesSpilled={row.get('memoryBytesSpilled', 0)} "
         f"diskBytesSpilled={row.get('diskBytesSpilled', 0)}"
     )
+
+
+def render_task_outlier_report(rows: list[Mapping[str, Any]]) -> str:
+    """Render the Lab 1B task-metric projection as one classroom-friendly box."""
+
+    lines = [
+        "LAB 1B TASK OUTLIER DIAGNOSTIC REPORT",
+        "SparkMeasure collector=TaskMetrics | source=create_taskmetrics_DF projection",
+        "",
+    ]
+    if not rows:
+        lines.extend(
+            [
+                "No task rows matched the diagnostic projection.",
+                "Check whether the workload wrote records or whether the filter is too strict.",
+            ]
+        )
+        return terminal_box(lines, width=112)
+
+    lines.extend(
+        [
+            f"Top {len(rows)} task outliers by executorRunTime",
+            "Read: high executorRunTime or duration identifies the long-tail task.",
+            "",
+        ]
+    )
+    lines.extend(
+        render_task_outlier_line(rank, row)
+        for rank, row in enumerate(rows, start=1)
+    )
+    lines.extend(
+        [
+            "",
+            "This box is not a second measurement. It is a compact view of the task metrics already collected by sparkMeasure.",
+        ]
+    )
+    return terminal_box(lines, width=112)

@@ -49,12 +49,17 @@ docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master 
 
 ## Required configuration
 
-This script reads comparison metadata from `lab_1_utils/experiments.yaml`:
+Use `CONFIG_NAME` in `lab_1a_global_sort_diagnosis.py` as the classroom
+switch:
 
-- `lab1-global-sort-diagnosis-native`
-- `lab1-global-sort-diagnosis-observed-stage`
+```python
+CONFIG_NAME = "lab1-global-sort-diagnosis-native"
+# CONFIG_NAME = "lab1-global-sort-diagnosis-observed-stage"
+```
 
-Both runs read the generated bronze retail Delta tables, build an enriched
+Run the same submit command after changing `CONFIG_NAME`.
+
+Both configs read the generated bronze retail Delta tables, build an enriched
 sales dataset, globally sort it by `sale_amount`, and write:
 
 ```text
@@ -81,12 +86,13 @@ focused on the ranking workload instead of extra Delta jobs for metrics writes.
    `workshop-lab1-global-sort-native`.
 3. Inspect the Jobs and Stages tabs. The job descriptions use the `LAB1`
    prefix, but native Spark still exposes a lot of detail.
-4. Run the observed section from the same submit. Open
+4. Change `CONFIG_NAME` to `lab1-global-sort-diagnosis-observed-stage`.
+5. Run the same submit again. Open
    `workshop-lab1-global-sort-observed-stage`.
-5. Compare the terminal line `SPARKMEASURE_METRICS` with the History Server
+6. Compare the terminal line `SPARKMEASURE_METRICS` with the History Server
    stages. Focus on `numStages`, `numTasks`, `executorRunTime`, and
    `shuffleBytesWritten`.
-6. Explain the diagnosis: a global `orderBy` is a wide operation and introduces
+7. Explain the diagnosis: a global `orderBy` is a wide operation and introduces
    shuffle/sort work. Stage-level metrics are enough to find this class of
    issue.
 

@@ -1,32 +1,40 @@
+import ast
 from pathlib import Path
 
-from spark_workshop.config import load_comparison_job_config, load_experiment_config
+from spark_workshop.config import load_experiment_config
 
 
-LAB1_CONFIG = (
-    Path(__file__).resolve().parents[1]
-    / "src"
-    / "apps"
-    / "labs"
-    / "lab_1"
-    / "lab_1_utils"
-    / "experiments.yaml"
-)
+LAB1_DIR = Path(__file__).resolve().parents[1] / "src" / "apps" / "labs" / "lab_1"
+LAB1_CONFIG = LAB1_DIR / "lab_1_utils" / "experiments.yaml"
 
 
-def test_lab1_comparison_config_uses_stage_observed_run():
-    config = load_comparison_job_config(
-        "lab1-global-sort-diagnosis",
-        config_path=LAB1_CONFIG,
-    )
+def test_lab1_global_sort_script_uses_config_name_switch():
+    source = (LAB1_DIR / "lab_1a_global_sort_diagnosis.py").read_text()
+    module = ast.parse(source)
+    assignments = {
+        node.targets[0].id: node.value.value
+        for node in module.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+        and isinstance(node.value, ast.Constant)
+    }
+    class_assignments = {
+        node.targets[0].id: node.value.id
+        for item in module.body
+        if isinstance(item, ast.ClassDef)
+        and item.name == "Lab1GlobalSortDiagnosis"
+        for node in item.body
+        if isinstance(node, ast.Assign)
+        and len(node.targets) == 1
+        and isinstance(node.targets[0], ast.Name)
+        and isinstance(node.value, ast.Name)
+    }
 
-    assert config.native_config == "lab1-global-sort-diagnosis-native"
-    assert config.observed_config == "lab1-global-sort-diagnosis-observed-stage"
-    assert config.native_success_marker == "LAB1_GLOBAL_SORT_NATIVE_OK"
-    assert config.observed_success_marker == "LAB1_GLOBAL_SORT_SPARKMEASURE_STAGE_OK"
-    assert config.success_marker == "LAB1_GLOBAL_SORT_DIAGNOSIS_OK"
-    assert config.explain_plan is True
-    assert config.explain_plan_modes == ("native",)
+    assert assignments["CONFIG_NAME"] == "lab1-global-sort-diagnosis-native"
+    assert assignments["CONFIG_NAME"] != "lab1-global-sort-diagnosis"
+    assert class_assignments["config_name"] == "CONFIG_NAME"
+    assert "SparkWorkshopComparisonJob" not in source
 
 
 def test_lab1_observed_config_uses_stage_metrics_without_persistence():

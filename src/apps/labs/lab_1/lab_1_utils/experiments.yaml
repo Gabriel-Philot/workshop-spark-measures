@@ -1,27 +1,3 @@
-comparison_jobs:
-  lab1-global-sort-diagnosis:
-    native:
-      config: lab1-global-sort-diagnosis-native
-      title: Lab 1 - Native global sort ranking
-      description: Spark explain and History Server before sparkMeasure
-      success_marker: LAB1_GLOBAL_SORT_NATIVE_OK
-    observed:
-      config: lab1-global-sort-diagnosis-observed-stage
-      title: Lab 1 - sparkMeasure stage diagnosis
-      description: Same global sort with stage metrics collected
-      success_marker: LAB1_GLOBAL_SORT_SPARKMEASURE_STAGE_OK
-    completion:
-      title: Lab 1 global sort diagnosis complete
-      description: Use stage metrics to isolate the ranking bottleneck
-      success_marker: LAB1_GLOBAL_SORT_DIAGNOSIS_OK
-    explain:
-      enabled: true
-      modes:
-        - native
-      title: Native Spark explain output
-      description: The plan exposes the global orderBy, but the signal is verbose
-      mode: formatted
-
 experiments:
   lab1-global-sort-diagnosis-native:
     app_name: workshop-lab1-global-sort-native
