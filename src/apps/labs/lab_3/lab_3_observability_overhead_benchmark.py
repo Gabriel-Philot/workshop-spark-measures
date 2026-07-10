@@ -4,22 +4,26 @@ Runs one benchmark repetition for the selected observability mode.
 
 ## Submit command
 
-Prefer the orchestrator for classroom runs:
+Run from `src/apps/labs/lab_3`. Prefer the orchestrator for classroom runs:
 
 ```bash
-LAB3_REPETITIONS=10 \
-LAB3_WARMUP_REPETITIONS=1 \
-bash src/apps/labs/lab_3/run_observability_overhead_benchmark.sh
+LAB3_REPETITIONS=1 \
+LAB3_WARMUP_REPETITIONS=0 \
+bash run_observability_overhead_benchmark.sh
 ```
 
-For a single manual run, change `LAB3_CONFIG_NAME` to one of:
+This is the short classroom demonstration. The optional ten-repetition
+benchmark uses one warmup to reduce cold-start bias. Its expected 43-44 minute
+duration is documented in `guide_lab3.md`.
+
+For a single manual run, set `LAB3_CONFIG_NAME` to one of:
 
 - `lab3-overhead-none`
 - `lab3-overhead-stage`
 - `lab3-overhead-task`
 
 ```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
   env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
     LAB3_CONFIG_NAME=lab3-overhead-stage \
     LAB3_MODE=stage \

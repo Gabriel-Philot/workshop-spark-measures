@@ -1,4 +1,12 @@
-# Lab 3 class notes: observability overhead benchmark post-mortem
+# Lab 3 post-mortem: observability overhead benchmark
+
+Classroom runbook:
+
+[Lab 3 classroom guide](../guide_lab3.md)
+
+This document preserves the benchmark design history and validated local
+results. Use the guide for commands and teaching order; use this post-mortem to
+explain why the benchmark needed iteration.
 
 ## Teaching question
 
@@ -257,6 +265,44 @@ In this local post-mortem, the final numbers are close. That is not a failure;
 it is the point of the lesson. A benchmark must be designed and interpreted with
 the same care as any other performance experiment.
 
+## Official sparkMeasure guidance
+
+The official sparkMeasure documentation gives a qualitative recommendation,
+not a universal percentage or fixed latency benchmark. Its FAQ states:
+
+> "Use stage metrics whenever possible as they are much more lightweight."
+
+It then reserves task-level collection for the cases that require its finer
+diagnostic detail:
+
+> "Collect metrics at task granularity if needed for skew, long tails, and
+> stragglers."
+
+Source: [sparkMeasure official README — Frequently Asked
+Questions](https://github.com/LucaCanali/sparkMeasure/blob/master/README.md#frequently-asked-questions).
+
+The implementation model explains the direction of that tradeoff. StageMetrics
+collects at stage completion, while TaskMetrics records task events. The
+official documentation also warns that collected data is buffered in driver
+memory, so workload shape and event volume affect the real cost. See the
+[official API and configuration
+reference](https://github.com/LucaCanali/sparkMeasure/blob/master/docs/Reference_SparkMeasure_API_and_Configs.md).
+
+An earlier CERN article by sparkMeasure's author listed the following item as
+future work:
+
+> "measure the overhead of the instrumentation using Spark listeners"
+
+Source: [CERN Database Group — On Measuring Apache Spark Workload Metrics for
+Performance Troubleshooting](https://db-blog.web.cern.ch/comment/35432).
+
+Therefore, the official sources support the expected ordering—StageMetrics is
+the lightweight first diagnostic layer and TaskMetrics is the detailed
+drill-down—but they do not supply an official `Stage = X%` versus `Task = Y%`
+benchmark. The `+1.58%` stage and `+1.93%` task results in this document are
+local Lab 3 evidence only. They must not be presented as universal sparkMeasure
+overhead.
+
 ## Report printing is a separate cost
 
 The benchmark suppresses native sparkMeasure report printing by default:
@@ -292,8 +338,9 @@ granularity and workload shape, and we can measure that tradeoff with a
 repeatable local harness.
 ```
 
-This is the foundation for a later analysis job that reads the metadata table
-and compares per-mode latency distributions.
+The persisted metadata remains available for future distribution analysis, but
+the current Lab 4 does not depend on this table. Lab 4 runs its own workload and
+uses StageMetrics to build an operational workload fingerprint.
 
 ## Recommended classroom narrative
 
