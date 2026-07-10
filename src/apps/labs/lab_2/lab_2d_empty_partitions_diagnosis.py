@@ -5,11 +5,11 @@ the workload partitioning knobs.
 
 ## Submit command
 
-Assumes the Compose stack is running and the bronze `sales` Delta table exists
-at the configured input artifact path.
+Run from `src/apps/labs/lab_2`. Assumes the Compose stack is running and the
+bronze `sales` Delta table exists at the configured input artifact path.
 
 ```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
   env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 \
   --deploy-mode client \

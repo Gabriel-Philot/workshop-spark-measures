@@ -6,11 +6,12 @@ workload partitioning knobs.
 
 ## Submit command
 
-Assumes the Compose stack is running and the bronze `sales` and `vendors` Delta
-tables exist at the configured input artifact paths.
+Run from `src/apps/labs/lab_2`. Assumes the Compose stack is running and the
+bronze `sales` and `vendors` Delta tables exist at the configured input artifact
+paths.
 
 ```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
+docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
   env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
   --master spark://spark-master:7077 \
   --deploy-mode client \
@@ -48,6 +49,8 @@ CONFIG_NAME = "lab2-shuffle-aggregation-baseline"
 
 # Useful alternative for the live demo:
 # CONFIG_NAME = "lab2-shuffle-aggregation-optimized"
+# CONFIG_NAME = "lab2-shuffle-aggregation-baseline"
+
 
 
 class Lab2ShuffleAggregationDiagnosis(SparkWorkshopJob):
