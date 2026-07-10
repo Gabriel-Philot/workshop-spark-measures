@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Classroom usage from src/apps/labs/lab_3:
+# LAB3_REPETITIONS=1 LAB3_WARMUP_REPETITIONS=0 \
+#   bash run_observability_overhead_benchmark.sh
+#
+# The runner resolves and enters the repository root before invoking Compose,
+# so its internal .env and build/docker-compose.yml paths remain root-relative.
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 

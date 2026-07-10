@@ -10,7 +10,8 @@ Assumes the Compose stack is running and the generated bronze retail Delta
 tables exist at the configured input artifact paths.
 
 ```bash
-bash src/apps/labs/lab_4/run_stage_workload_fingerprint.sh
+cd src/apps/labs/lab_4
+bash run_stage_workload_fingerprint.sh
 ```
 
 ## Required configuration
