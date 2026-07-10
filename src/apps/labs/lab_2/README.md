@@ -1,247 +1,40 @@
-# Lab 2: certification-style sparkMeasure diagnostics
+# Lab 2: professional sparkMeasure diagnostics
 
-Lab 2 connects certification-style Spark UI questions to local sparkMeasure
-workshop exercises. The goal is to make students practice numeric diagnosis:
-shuffle read/write, executor runtime, spill, GC, task count, and later
-task-level distribution.
+Lab 2 connects a selected set of Spark questions from Databricks Certified Data
+Engineer Professional practice exams to controlled sparkMeasure workloads.
+Students begin with stage-level shuffle, spill, and GC evidence, then use
+TaskMetrics to distinguish high-end skew from low-end empty partitions.
 
-## Prerequisites
+The practice questions provide a familiar professional context; the local labs
+turn their numeric clues into observable Spark workloads. They are study
+material, not official Databricks exam questions.
 
-Start the local stack and generate demo data first.
+## Classroom material
+
+- [Lab 2 classroom guide](guide_lab2.md): bootstrap, submit commands, teaching
+  sequence, expected evidence, and validated local results.
+- [Selected Databricks Data Engineer Professional questions](docs/exam_questions.md):
+  the instructor's selected practice-exam questions, alternatives, visible
+  answers, reasoning, and local workload mappings.
+
+## Lesson order
+
+| Exercise | Script | Collector | Focus |
+|---|---|---|---|
+| 2A | `lab_2a_shuffle_aggregation_diagnosis.py` | StageMetrics | shuffle-heavy aggregation |
+| 2B | `lab_2b_stage_metrics_interpretation_drill.py` | StageMetrics | shuffle, spill, and GC interpretation |
+| 2C | `lab_2c_task_duration_skew_diagnosis.py` | TaskMetrics | high-end max-versus-p75 skew |
+| 2D | `lab_2d_empty_partitions_diagnosis.py` | TaskMetrics | low-end min-versus-median partitions |
+
+## Prerequisite
+
+Labs 1-6 share the generated Bronze retail source family:
 
 ```bash
 make compose
-make generate SCALE=xs GENERATOR_RUN_ID=lab2-demo
+make generate SCALE=xs GENERATOR_RUN_ID=workshop-sparkMeasures-lab1-6
 ```
 
-Useful local UIs:
-
-- Spark Master UI: <http://127.0.0.1:28091>
-- Spark History Server: <http://127.0.0.1:28090>
-- MinIO Console: <http://127.0.0.1:29011>
-
-## Lab 2A: shuffle aggregation diagnosis
-
-The first Lab 2 exercise uses a common aggregation pattern: join sales with
-vendor metadata, aggregate by region/month, and inspect the shuffle cost with
-sparkMeasure StageMetrics.
-
-Use `CONFIG_NAME` in `lab_2a_shuffle_aggregation_diagnosis.py` as the classroom switch:
-
-```python
-CONFIG_NAME = "lab2-shuffle-aggregation-baseline"
-CONFIG_NAME = "lab2-shuffle-aggregation-optimized"
-```
-
-Run the same submit command after changing `CONFIG_NAME`:
-
-```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
-  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --deploy-mode client \
-  --conf spark.driver.host=spark-master \
-  --conf spark.eventLog.dir=s3a://observability/event-logs \
-  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_2/lab_2a_shuffle_aggregation_diagnosis.py
-```
-
-Both variants collect sparkMeasure StageMetrics and write a Gold Delta aggregate.
-The baseline intentionally adds an unnecessary round-robin repartition before the
-aggregation. The optimized variant narrows the data and repartitions by the
-grouping keys.
-
-Expected metrics to compare:
-
-- `shuffleBytesWritten`
-- `shuffleTotalBytesRead`
-- `executorRunTime`
-- `numStages`
-- `numTasks`
-- spill metrics when present
-
-Expected markers:
-
-- `LAB2_SHUFFLE_AGGREGATION_BASELINE_OK`
-- `LAB2_SHUFFLE_AGGREGATION_OPTIMIZED_OK`
-
-Latest validated local behavior on the current WSL stack with `SCALE=xs`:
-
-| Scale | Variant | Rows in `sales` | Stages | Tasks | Executor runtime | Shuffle written |
-|---|---:|---:|---:|---:|---:|---:|
-| `xs` | baseline | 5,000,000 | 14 | 1,296 | ~65s | ~69.1 MiB |
-| `xs` | optimized | 5,000,000 | 13 | 301 | ~43s | ~50.9 MiB |
-
-`SCALE=s` was used during stress testing and generated about 10.94 GiB for the
-`sales` table. Re-run `s` before using larger-scale numbers in class because the
-baseline was later adjusted to make the wide-row shuffle problem clearer.
-
-See `lab_2a_shuffle_aggregation_diagnosis_class_notes.md` for the instructor narrative
-and source-question summary.
-
-## Lab 2B: stage metrics interpretation drill
-
-The second Lab 2 exercise is a certification-style metric-reading drill. It
-connects two common Spark UI questions to sparkMeasure StageMetrics:
-
-- high GC time as a memory-pressure signal;
-- shuffle spill memory/disk as evidence that Spark spilled shuffle data.
-
-Use `CONFIG_NAME` in `lab_2b_stage_metrics_interpretation_drill.py` as the classroom
-switch:
-
-```python
-CONFIG_NAME = "lab2-stage-metrics-drill-pressure"
-CONFIG_NAME = "lab2-stage-metrics-drill-default"
-```
-
-Run the submit command:
-
-```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
-  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --deploy-mode client \
-  --conf spark.driver.host=spark-master \
-  --conf spark.eventLog.dir=s3a://observability/event-logs \
-  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_2/lab_2b_stage_metrics_interpretation_drill.py
-```
-
-The pressure variant carries wider payload columns through a round-robin
-shuffle before narrowing the data. The default variant computes the same Gold
-summary while narrowing payload width earlier and repartitioning by the
-business keys.
-
-Expected metrics to compare:
-
-- `shuffleBytesWritten`
-- `shuffleTotalBytesRead`
-- `memoryBytesSpilled`
-- `diskBytesSpilled`
-- `jvmGCTime`
-- `executorRunTime`
-- `numTasks`
-
-Expected markers:
-
-- `LAB2_STAGE_METRICS_DRILL_PRESSURE_OK`
-- `LAB2_STAGE_METRICS_DRILL_DEFAULT_OK`
-
-Latest validated local behavior on the current WSL stack with `SCALE=xs`:
-
-| Scale | Variant | Rows in `sales` | Stages | Tasks | Executor runtime | Shuffle written | Memory spilled | Disk spilled | GC ratio |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `xs` | default | 5,000,000 | 16 | 356 | ~59.3s | ~40.0 MiB | 0 B | 0 B | ~2.8% |
-| `xs` | pressure | 5,000,000 | 17 | 839 | ~94.2s | ~670.9 MiB | ~800.0 MiB | ~382.2 MiB | ~3.4% |
-
-Both variants write the same 50-row Gold summary, so the lesson compares
-execution symptoms rather than different business logic.
-
-See `lab_2b_stage_metrics_interpretation_drill_class_notes.md` for the source-question
-summary, expected answers, and instructor narrative.
-
-## Lab 2C: task duration skew diagnosis
-
-The third Lab 2 exercise moves from stage-level counters to task-level
-distribution. It mirrors a Spark UI Summary Metrics question where the maximum
-task duration and input size are much larger than the 75th percentile.
-
-The lab is intentionally task-only because the source question is about the
-distribution inside one completed stage. Use the task config in
-`lab_2c_task_duration_skew_diagnosis.py`:
-
-```python
-CONFIG_NAME = "lab2c-task-skew-task"
-```
-
-Run the submit command:
-
-```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
-  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --deploy-mode client \
-  --conf spark.driver.host=spark-master \
-  --conf spark.eventLog.dir=s3a://observability/event-logs \
-  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_2/lab_2c_task_duration_skew_diagnosis.py
-```
-
-The task config uses sparkMeasure TaskMetrics to print one boxed Summary
-Metrics-style diagnostic report for the selected stage:
-
-- `duration`
-- `executorRunTime`
-- `shuffleTotalBytesRead`
-- `shuffleRecordsRead`
-- read/write records when available
-
-Expected markers:
-
-- `LAB2C_TASK_SKEW_TASK_OK`
-
-Latest validated local behavior on the current WSL stack with `SCALE=xs`:
-
-| Scale | Config | Total tasks | Selected stage | Selected-stage tasks | Key signal |
-|---|---|---:|---:|---:|---|
-| `xs` | `lab2c-task-skew-task` | 299 | 12 | 27 | `shuffleTotalBytesRead` max/p75 ~46.85x |
-
-The task config also showed `duration` max/p75 ~8.96x on the selected stage.
-
-Validated local metrics are documented in
-`lab_2c_task_duration_skew_diagnosis_class_notes.md`.
-
-## Lab 2D: empty partitions diagnosis
-
-The fourth Lab 2 exercise keeps the task-level lens but changes the diagnostic
-question. Instead of high-end skew (`max >> p75`), it mirrors a Spark UI Summary
-Metrics question where one or a few tasks are tiny at the low end
-(`min << median`) while the high end remains tight (`max ~= p75`).
-
-The lab is intentionally task-only because the source question is about the
-distribution inside one completed stage. Use the task config in
-`lab_2d_empty_partitions_diagnosis.py`:
-
-```python
-CONFIG_NAME = "lab2d-empty-partitions-task"
-```
-
-Run the submit command:
-
-```bash
-docker compose --env-file .env -f build/docker-compose.yml exec -T spark-master \
-  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src /opt/spark/bin/spark-submit \
-  --master spark://spark-master:7077 \
-  --deploy-mode client \
-  --conf spark.driver.host=spark-master \
-  --conf spark.eventLog.dir=s3a://observability/event-logs \
-  --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-  /opt/spark/src/apps/labs/lab_2/lab_2d_empty_partitions_diagnosis.py
-```
-
-The task config uses sparkMeasure TaskMetrics to print one boxed Summary
-Metrics-style diagnostic report for the selected stage:
-
-- `duration`
-- `executorRunTime`
-- `shuffleRecordsRead`
-- `shuffleTotalBytesRead`
-- read/write records when available
-
-Expected marker:
-
-- `LAB2D_EMPTY_PARTITIONS_TASK_OK`
-
-Latest validated local behavior on the current WSL stack with `SCALE=xs`:
-
-| Scale | Config | Total tasks | Selected stage | Selected-stage tasks | Key signal |
-|---|---|---:|---:|---:|---|
-| `xs` | `lab2d-empty-partitions-task` | 244 | 9 | 27 | `shuffleRecordsRead` min=0, median=104,633, max/p75 ~1.67x |
-
-The task config also showed 4 empty tasks on the selected stage. Duration can be
-noisy on the local WSL stack, so this lab uses data-volume distribution as the
-primary diagnosis signal.
-
-Validated local metrics are documented in
-`lab_2d_empty_partitions_diagnosis_class_notes.md`.
+Do not regenerate data when the same MinIO volume from Labs 0 or 1 is still
+available. The classroom guide explains the correct sequence for a running,
+stopped, cleaned, or completely new environment.
