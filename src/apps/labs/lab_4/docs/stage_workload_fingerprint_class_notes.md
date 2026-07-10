@@ -1,29 +1,29 @@
 # Lab 4 class notes: stage-level workload fingerprint
 
+Classroom runbook:
+
+[Lab 4 classroom guide](../guide_lab4.md)
+
 ## Teaching question
 
 What does this Spark workload look like from a stage-level execution
 perspective?
 
 Lab 4 moves the workshop from reading raw counters to interpreting a workload
-profile. StageMetrics are still the diagnostic layer, but the lesson is no
-longer only about individual values such as `shuffleBytesWritten` or
+profile. StageMetrics are still the first diagnostic layer, but the lesson is
+no longer only about individual values such as `shuffleBytesWritten` or
 `jvmGCTime`.
 
-## Why this replaced the previous Lab 4 direction
+## Workshop connection
 
-The earlier Lab 4 idea analyzed Lab 3 benchmark overhead metadata. That was
-technically valid, but it repeated a lesson the workshop already established:
+The classroom progression is:
 
-```text
-StageMetrics is the lower-overhead default; TaskMetrics is more detailed and
-can cost more.
-```
+- Lab 3 measures the local cost of observability;
+- Lab 4 uses StageMetrics to describe what a workload is doing.
 
-The stronger classroom progression is:
-
-- Lab 3: measure the cost of observability.
-- Lab 4: use StageMetrics to describe what a workload is doing.
+The important change is from collection to interpretation. The same aggregate
+signals that describe runtime, shuffle, spill, GC, stages, and tasks can become
+a compact operational vocabulary for engineering discussions.
 
 ## StageMetrics as a first diagnostic layer
 
@@ -135,7 +135,8 @@ It does not:
 - inspect task-level distributions.
 
 If the fingerprint says the workload is suspicious but not conclusive, the next
-lesson can decide whether TaskMetrics or deeper Spark UI inspection is needed.
+diagnostic step can use the Spark UI or decide whether task-level evidence is
+actually needed.
 
 [^input-bytes]: `input_bytes` is the StageMetrics-reported `bytesRead` counter,
     not the physical Delta table size. In local validation, the generated
@@ -144,9 +145,7 @@ lesson can decide whether TaskMetrics or deeper Spark UI inspection is needed.
     workload. At the same time, StageMetrics reported more than `5.2M` records
     read and about `1.06 GB` of total shuffle bytes. The workload definitely
     read and processed data, but this counter should not be treated as physical
-    lake table size in this environment. Lab 4 handles that by keeping
-    `input_bytes` as reported, marking low denominators with
-    `INPUT_BYTES_LOW_CONFIDENCE_FOR_RATIO`, not using
-    `HIGH_SHUFFLE_AMPLIFICATION` unless `input_bytes` is above
-    `minimum_reliable_input_bytes`, and still using `HIGH_SHUFFLE_VOLUME` when
-    absolute shuffle bytes are clearly large.
+    lake table size in this environment. Lab 4 keeps `input_bytes` as reported,
+    marks low denominators with `INPUT_BYTES_LOW_CONFIDENCE_FOR_RATIO`, avoids
+    using `HIGH_SHUFFLE_AMPLIFICATION` below `minimum_reliable_input_bytes`, and
+    still uses `HIGH_SHUFFLE_VOLUME` when absolute shuffle bytes are large.
