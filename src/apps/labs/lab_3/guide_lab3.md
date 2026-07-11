@@ -1,76 +1,50 @@
-# Lab 3 guide: observability overhead benchmark post-mortem
+# Guia do Lab 3: post-mortem do benchmark de overhead de observabilidade
 
-This guide is the classroom runbook for Lab 3.
+Este guia organiza a execução em sala do Lab 3. O lab executa o mesmo workload
+nos modes `none`, `stage` e `task`, persiste as fronteiras de tempo e discute por
+que overhead de observabilidade exige warmup, repetições e interpretação
+cuidadosa.
 
-Goal:
+Evidência detalhada de desenvolvimento:
 
-```text
-prepare the shared retail sources
-  -> run the same workload without sparkMeasure
-  -> repeat with StageMetrics
-  -> repeat with TaskMetrics
-  -> persist timing evidence
-  -> explain why repeated local benchmarks need careful interpretation
-```
+[Post-mortem do benchmark de overhead de observabilidade](docs/observability_overhead_postmortem.md)
 
-Lab 3 asks an operational question that the diagnosis labs leave open:
+Use este guia para a sequência da aula e o post-mortem para consultar as duas
+calibrações completas e suas limitações.
 
-```text
-What does Spark observability cost?
-```
+## Enquadramento da aula
 
-The answer is not a universal number. The lesson is how to design and interpret
-a repeatable benchmark without claiming that one local result applies to every
-Spark cluster.
+- **Pergunta norteadora:** quanto custo observável os collectors adicionam e o
+  que é necessário para comparar esse custo com disciplina?
+- **Por que esta aula aparece agora:** os Labs 1 e 2 usaram StageMetrics e
+  TaskMetrics para diagnóstico; agora investigamos o custo de escolher cada
+  granularidade.
+- **Resultado de aprendizagem:** distinguir demonstração, benchmark, warmup,
+  fronteiras temporais e ruído do ambiente sem transformar um resultado local
+  em regra universal.
+- **Modo de condução:** demonstração curta ao vivo pelo instrutor; evidência
+  repetida pré-computada como núcleo da discussão; regeneração completa
+  opcional.
 
-Detailed development evidence:
+## 0. Pré-requisitos
 
-[Observability overhead benchmark post-mortem](docs/observability_overhead_postmortem.md)
-
-Use this guide for the classroom sequence and the post-mortem document for the
-two benchmark attempts and their complete interpretation.
-
-## 0. Start from the repository root
+Comece na raiz do repositório:
 
 ```bash
 cd workshop-spark-measures
 ```
 
-Expected:
+O Lab 3 reutiliza as fontes Bronze `sales`, `vendors`, `products` e `customers`.
+Se for a primeira execução do workshop, ou se imagens e dados do MinIO foram
+removidos, siga as seções 1 a 5 do [guia do Lab 0](../lab_0/guide_lab0.md).
 
-- `Makefile` exists;
-- `.env.example` exists;
-- `src/apps/labs/lab_3` exists.
-
-## 1. Prepare the local platform
-
-Lab 3 uses the same Bronze retail sources as Labs 1 and 2. If the stack and
-MinIO data are still available, continue to step 2 without regenerating data.
-
-If containers were stopped but images and data remain:
+Se os dados continuam disponíveis e apenas os containers foram interrompidos:
 
 ```bash
 make compose
 ```
 
-If `make clean-data` removed MinIO data:
-
-```bash
-make compose
-make generate SCALE=xs GENERATOR_RUN_ID=workshop-sparkMeasures-lab1-6
-```
-
-When starting from a clean machine or after images were removed:
-
-```bash
-make bootstrap
-make build
-make compose
-make dry-test
-make generate SCALE=xs GENERATOR_RUN_ID=workshop-sparkMeasures-lab1-6
-```
-
-The benchmark reads:
+As fontes esperadas são:
 
 ```text
 s3a://lakehouse/bronze/retail/sales
@@ -79,35 +53,18 @@ s3a://lakehouse/bronze/retail/products
 s3a://lakehouse/bronze/retail/customers
 ```
 
-Useful UIs:
+> **Nota do instrutor:** a prontidão do ambiente importa mais em um benchmark
+> do que em uma demonstração funcional. Worker indisponível, fonte ausente ou
+> download inicial de dependência altera o tempo observado e invalida a
+> comparação.
 
-```text
-Spark Master UI:      http://127.0.0.1:28091
-Spark History Server: http://127.0.0.1:28090
-MinIO Console:        http://127.0.0.1:29011
-```
-
-Teacher notes:
-
-```text
-Environment readiness matters more in a benchmark than in a simple functional
-demo. A failing worker, missing MinIO source, or first-time dependency download
-changes the measured runtime and invalidates the comparison.
-```
-
-## 2. Move to the Lab 3 folder
+## 1. Entre na pasta do Lab 3
 
 ```bash
 cd src/apps/labs/lab_3
 ```
 
-Optional sanity check:
-
-```bash
-ls
-```
-
-Expected classroom files:
+Arquivos principais:
 
 ```text
 lab_3_observability_overhead_benchmark.py
@@ -117,21 +74,18 @@ docs/
 lab_3_utils/
 ```
 
-The Python app executes one benchmark run. The shell runner orchestrates
-multiple sequential runs and changes only the observability mode and run
-identity.
+O app Python executa uma run. O runner shell orquestra runs sequenciais,
+alterando apenas o mode de observabilidade e a identidade da execução.
 
-## 3. Understand the controlled comparison
+## 2. Entenda a comparação controlada
 
-The runner compares three modes:
-
-| Mode | Collector | Purpose |
+| Mode | Collector | Papel no experimento |
 |---|---|---|
-| `none` | disabled | baseline workload runtime |
-| `stage` | StageMetrics | lower-granularity observability |
-| `task` | TaskMetrics | detailed task-event observability |
+| `none` | desabilitado | baseline do workload |
+| `stage` | StageMetrics | observabilidade agregada por stage |
+| `task` | TaskMetrics | observabilidade detalhada por task |
 
-All modes execute the same Spark business workload:
+Os três modes executam o mesmo código de negócio:
 
 ```text
 sales + vendors + products + customers
@@ -144,21 +98,22 @@ sales + vendors + products + customers
   -> unique Gold Delta output
 ```
 
-The final output contains 200 rows on the validated `SCALE=xs` run. The YAML
-disables AQE and broadcast joins so Spark does not remove the task pressure the
-benchmark is designed to measure.
+Na execução local validada com `SCALE=xs`, o resultado final possui 200 linhas.
+O YAML desabilita AQE e broadcast joins para que o Spark não elimine a pressão
+de tasks que o benchmark precisa produzir.
 
-Teacher notes:
+O runner usa o mesmo app e as mesmas configurações de workload nos três modes.
+O marker `LAB3_OVERHEAD_VALIDATION_OK` confirma escrita bem-sucedida e registra
+o `row_count`; ele não executa uma comparação completa de conteúdo entre os
+três datasets.
 
-```text
-The generated retail data contains vendor skew, but this lab is not a skew
-diagnosis. The workload must remain identical across none, stage, and task so
-the collector mode is the controlled variable.
-```
+> **Nota do instrutor:** as fontes contêm vendor skew, mas este lab não é um
+> diagnóstico de skew. A variável controlada é o collector; o workload deve
+> permanecer estável.
 
-## 4. Run the classroom demonstration
+## 3. Execute a demonstração curta
 
-Run one measured repetition without warmup:
+Execute uma repetição medida, sem warmup:
 
 ```bash
 LAB3_REPETITIONS=1 \
@@ -166,16 +121,16 @@ LAB3_WARMUP_REPETITIONS=0 \
 bash run_observability_overhead_benchmark.sh
 ```
 
-This produces three sequential `spark-submit` executions:
+O runner dispara três `spark-submit` sequenciais:
 
 ```text
 none -> stage -> task
 ```
 
-This sequence took about `3m53s` on the validated WSL/Docker environment. Local
-timing will vary.
+No ambiente WSL/Docker validado, essa demonstração levou aproximadamente
+`3m53s`. Esse número serve apenas para planejamento de aula; o tempo local varia.
 
-Expected orchestration markers:
+Markers da orquestração:
 
 ```text
 LAB3_BENCHMARK_STARTED
@@ -184,7 +139,7 @@ LAB3_SUBMIT_COMPLETED
 LAB3_BENCHMARK_COMPLETED
 ```
 
-Expected app markers across the three submits:
+Markers esperados nos três submits:
 
 ```text
 LAB3_OVERHEAD_VALIDATION_OK
@@ -195,84 +150,165 @@ LAB3_OBSERVABILITY_OVERHEAD_TASK_OK
 WORKSHOP_EXPERIMENT_COMPLETED
 ```
 
-Teacher notes:
+### O que o warmup consegue e não consegue reduzir
 
-```text
-This is a mechanism demonstration, not sufficient benchmark evidence. Use it
-to show the three collector modes, equivalent output shapes, and appended
-metadata. Then move to the validated post-mortem for the actual discussion. Do
-not draw an overhead conclusion from one measured repetition.
-```
+Cada repetição deste benchmark é uma nova aplicação Spark. Portanto, o warmup
+não reutiliza o driver JVM, o JIT ou os executor JVMs da aplicação seguinte.
+Esses custos podem reaparecer em todo `spark-submit`.
 
-### Why the classroom demonstration skips warmup
+O warmup serve principalmente para identificar e reduzir efeitos frios do
+ambiente compartilhado, como containers recém-iniciados, artefatos ainda não
+acessados, conexões iniciais com serviços e caches do sistema operacional ou do
+MinIO. Esses efeitos também não são garantidamente eliminados.
 
-A benchmark warmup reduces cold-start bias from work such as:
+Por isso, warmup melhora a disciplina experimental, mas não transforma as runs
+medidas em execuções livres de startup ou de ruído.
 
-- JVM class loading and JIT compilation;
-- Spark executor initialization;
-- first-read Delta metadata work;
-- initial MinIO connections;
-- operating-system and filesystem caches.
-
-The runner persists warmup executions with:
+O runner persiste essas execuções com:
 
 ```text
 is_warmup=true
 ```
 
-Measured analysis must filter those rows out. Warmup is important when
-regenerating reliable benchmark evidence, but it doubles this short live
-demonstration from three to six submits. The classroom flow therefore explains
-the concept and uses the recorded post-mortem instead of waiting for an extra
-round.
+Uma análise medida deve filtrá-las. Adicionar uma rodada de warmup dobraria a
+demonstração curta de três para seis submits; por isso a aula explica o conceito
+e usa a evidência repetida do post-mortem para discutir overhead.
 
-## 5. Read the timing boundaries correctly
+### Checkpoint de raciocínio — demonstração curta
 
-The shell runner logs:
+- **Pergunta:** os três modes executam o mesmo mecanismo de workload e produzem
+  metadados comparáveis?
+- **Hipótese:** `none`, `stage` e `task` preservam o código do workload, mas
+  adicionam fronteiras diferentes de coleta.
+- **Evidência:** markers de sucesso e escrita, `row_count`,
+  `workload_wall_ms`, `collector_begin_end_ms` e
+  `collector_aggregate_ms` por mode.
+- **Conclusão:** a demonstração comprova o mecanismo de execução, medição e
+  persistência necessário à comparação.
+- **Limitação:** uma repetição sem warmup não forma uma distribuição, não valida
+  equivalência completa dos outputs e não estabelece overhead confiável.
+
+## 4. Leia corretamente as fronteiras de tempo
+
+O runner shell registra:
 
 ```text
 spark_submit_wall_ms
 ```
 
-This includes Docker exec, Python/JVM startup, SparkSession work, the workload,
-validation, metadata persistence, and process shutdown. It is useful for
-planning classroom time but is not the primary collector comparison.
+Essa fronteira inclui Docker exec, startup de Python/JVM, SparkSession,
+workload, validação, persistência de metadados e encerramento do processo. Ela é
+útil para planejar o tempo ocupado pelo comando, não para isolar o collector.
 
-The Delta metadata table contains:
+A tabela Delta registra:
 
 ```text
 workload_wall_ms
 ```
 
-This is the primary comparison field. It times the workload section while the
-selected collector is active.
+Essa é a fronteira principal da comparação. Ela mede o corpo do workload com o
+collector selecionado ativo quando aplicável.
 
-Supporting timing fields:
-
-| Field | Meaning |
+| Campo | Fronteira medida |
 |---|---|
-| `app_wall_ms` | complete Python application time before metadata persistence finishes |
-| `spark_session_ms` | SparkSession setup timing recorded by the runtime |
-| `workload_wall_ms` | measured Spark workload body; primary comparison |
-| `collector_begin_end_ms` | complete collector window, including begin/end around the workload |
-| `collector_report_ms` | optional native report rendering time |
-| `collector_aggregate_ms` | aggregation of collected sparkMeasure metrics |
-| `validation_wall_ms` | output validation after workload execution |
+| `app_wall_ms` | início do app até o fim da validação, antes da escrita dos metadados |
+| `spark_session_ms` | criação/reuso da SparkSession |
+| `workload_wall_ms` | corpo do workload; campo principal da comparação |
+| `collector_begin_end_ms` | janela completa de `begin()` a `end()`, incluindo o workload |
+| `collector_report_ms` | renderização opcional do relatório nativo |
+| `collector_aggregate_ms` | agregação das métricas após `end()` |
+| `validation_wall_ms` | validação do output depois do workload |
 
-Metadata persistence happens after the collector window and writes its own
-Delta row. Those extra Spark jobs do not belong to `workload_wall_ms`.
+`collector_begin_end_ms` não é overhead puro: ele contém o workload. O custo
+isolado também não deve ser inferido subtraindo duas runs únicas e ruidosas.
+`collector_report_ms` e `collector_aggregate_ms` ficam fora de
+`workload_wall_ms`. A persistência dos metadados ocorre depois dessas etapas.
 
-Teacher notes:
+No mode `none`, os campos produzidos pelo sparkMeasure são persistidos como `0`
+porque nenhum collector os emitiu. Esses zeros representam indisponibilidade
+da métrica nesse mode, não prova de que o Spark executou zero stages, tasks,
+executor time ou shuffle.
+
+Ao analisar métricas do sparkMeasure, não inclua esses zeros em médias ou
+comparações entre collectors. Use `mode` para tratá-los como indisponíveis.
+`workload_wall_ms`, por outro lado, é válido nos três modes.
+
+> **Regra da aula:** compare modes por `workload_wall_ms`. Use
+> `spark_submit_wall_ms` apenas quando a pergunta for quanto tempo o comando
+> completo ocupou a máquina.
+
+`workload_wall_ms` estima o impacto da instrumentação enquanto o workload está
+executando. Ele não representa o custo end-to-end completo de usar
+sparkMeasure.
+
+Os percentuais apresentados neste lab são deltas da fronteira do workload.
+Custos de `begin/end`, agregação, relatório e persistência pertencem a outras
+fronteiras e devem ser incluídos somente quando fizerem parte da pergunta
+operacional.
+
+## 5. Discuta a evidência repetida do post-mortem
+
+Abra:
+
+[Post-mortem do benchmark de overhead de observabilidade](docs/observability_overhead_postmortem.md)
+
+A primeira calibração, baseada somente em `sales`, produziu 208 tasks medidas.
+Mesmo com dez repetições, o ruído local foi maior que a diferença entre
+collectors:
+
+| Mode | Média de `workload_wall_ms` | Delta médio contra `none` |
+|---|---:|---:|
+| `none` | 24.369s | baseline |
+| `stage` | 24.873s | +504ms |
+| `task` | 24.510s | +141ms |
+
+Essa inversão local não demonstra que StageMetrics seja mais caro. Ela mostra
+que o experimento era leve demais para separar o sinal do ruído.
+
+O workload atual de multi-join produziu, no exemplo local validado:
 
 ```text
-Use workload_wall_ms when comparing modes. Use spark_submit_wall_ms only when
-the question is how long the complete classroom command occupied the machine.
-Mixing these boundaries produces a misleading benchmark.
+20 stages
+2,581 tasks
+~643 MB shuffle written
+200 output rows
 ```
 
-## 6. Inspect the persisted evidence
+Com três repetições medidas:
 
-Each run writes a unique business output:
+| Mode | Média de `workload_wall_ms` | Mediana | Delta médio contra `none` |
+|---|---:|---:|---:|
+| `none` | 63.463s | 63.432s | baseline |
+| `stage` | 64.467s | 64.600s | +1.004s / +1.58% |
+| `task` | 64.691s | 64.898s | +1.228s / +1.93% |
+
+A segunda calibração é direcionalmente coerente com o custo adicional de
+eventos por task, mas a diferença continua modesta. Os valores são evidência
+local do Lab 3, não percentuais oficiais ou universais.
+
+A orientação oficial do sparkMeasure é qualitativa: usar StageMetrics sempre
+que possível por ser mais leve e recorrer a TaskMetrics quando skew, long tails
+ou stragglers exigirem detalhe por task. A fonte e o trecho exato estão
+preservados no [post-mortem](docs/observability_overhead_postmortem.md#official-sparkmeasure-guidance).
+
+### Checkpoint de raciocínio — evidência repetida
+
+- **Pergunta:** após warmup e repetições, existe sinal consistente de custo?
+- **Hipótese:** TaskMetrics tende a adicionar mais trabalho porque coleta
+  eventos por task, enquanto StageMetrics permanece a primeira camada mais
+  leve.
+- **Evidência:** distribuições de `workload_wall_ms`, quantidade de tasks,
+  mesmas fronteiras de medição, rotação da ordem dos modes e orientação oficial.
+- **Conclusão:** a segunda calibração sustenta localmente a direção do tradeoff;
+  não sustenta um percentual universal de overhead.
+- **Limitação:** três repetições permitem observar uma direção local, mas não
+  estimam robustamente variância, intervalo de confiança ou significância
+  estatística. Startup do Spark, Delta, MinIO, Docker, WSL, ordem das runs,
+  event logs e caches ainda podem aproximar ou inverter resultados individuais.
+
+## 6. Evidência persistida
+
+Cada run escreve um output de negócio único:
 
 ```text
 s3a://lakehouse/gold/lab3/observability_overhead/workload/
@@ -282,16 +318,16 @@ s3a://lakehouse/gold/lab3/observability_overhead/workload/
   run_id=<run_id>
 ```
 
-The unique path prevents a later run from overwriting or reusing the previous
-Delta output.
+A identidade física impede que uma run sobrescreva ou reutilize o output Delta
+de outra.
 
-Every run appends one metadata row to:
+Uma linha de metadados é adicionada a:
 
 ```text
 s3a://observability/lab3/overhead_runs
 ```
 
-Important identity fields:
+Campos de identidade:
 
 ```text
 benchmark_id
@@ -304,7 +340,7 @@ app_name
 application_id
 ```
 
-Important sparkMeasure fields when a collector is active:
+Métricas do sparkMeasure quando existe collector:
 
 ```text
 num_stages
@@ -313,23 +349,21 @@ executor_run_time_ms
 shuffle_bytes_written
 ```
 
-In `none` mode those sparkMeasure fields are stored as `0` because no collector
-emitted them. Do not interpret that as proof that the native Spark workload had
-zero stages, tasks, executor time, or shuffle.
-
-Warmup rows are intentionally persisted with:
+Antes de comparar distribuições, filtre:
 
 ```text
-is_warmup=true
+is_warmup=false
 ```
 
-Any analysis must filter them out before comparing measured distributions.
+## 7. Caminhos opcionais
 
-## 7. Optional: inspect one mode manually
+As atividades seguintes aprofundam a operação, mas não pertencem ao núcleo da
+aula.
 
-The shell runner is preferred because it creates comparable run identities and
-rotates mode order. For teaching the Python app itself, submit one stage-mode
-run manually from the Lab 3 folder:
+### 7.1 Submit manual de um mode
+
+O runner é preferível porque cria identidades comparáveis e rotaciona a ordem
+dos modes. Para observar apenas o app em mode `stage`:
 
 ```bash
 docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
@@ -345,7 +379,7 @@ docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.y
   /opt/spark/src/apps/labs/lab_3/lab_3_observability_overhead_benchmark.py
 ```
 
-Available configurations:
+Configurações disponíveis:
 
 ```text
 lab3-overhead-none
@@ -353,18 +387,18 @@ lab3-overhead-stage
 lab3-overhead-task
 ```
 
-The config name and `LAB3_MODE` must describe the same collector. The runtime
-fails fast when they disagree.
+`LAB3_CONFIG_NAME` e `LAB3_MODE` precisam descrever o mesmo collector; o
+runtime falha imediatamente quando eles divergem.
 
-## 8. Optional: print the native sparkMeasure report
+### 7.2 Relatório nativo do sparkMeasure
 
-Repeated benchmark runs suppress native report printing by default:
+O benchmark repetido desabilita o relatório por padrão:
 
 ```text
 LAB3_EMIT_SPARKMEASURE_REPORT=false
 ```
 
-For one demonstration:
+Para uma demonstração isolada:
 
 ```bash
 LAB3_REPETITIONS=1 \
@@ -373,75 +407,15 @@ LAB3_EMIT_SPARKMEASURE_REPORT=true \
 bash run_observability_overhead_benchmark.sh
 ```
 
-Teacher notes:
+Renderizar o relatório possui custo próprio. Não misture runs com e sem
+relatório na comparação principal, salvo quando esse custo fizer parte da
+pergunta experimental.
 
-```text
-Report rendering is a separate cost. Do not mix report-enabled runs with the
-main overhead comparison unless report rendering is explicitly part of the
-benchmark question.
-```
+### 7.3 Benchmark completo com warmup
 
-## 9. Discuss the validated post-mortem
-
-The safest classroom artifact is the recorded post-mortem, not a promise that
-one live run will show a dramatic difference.
-
-```text
-Standard classroom flow:
-run one short measured demonstration -> explain warmup -> discuss recorded evidence
-```
-
-Open:
-
-[Observability overhead benchmark post-mortem](docs/observability_overhead_postmortem.md)
-
-The first sales-only design produced only 208 measured tasks. With ten measured
-repetitions, local noise was larger than the collector signal:
-
-| Mode | Average workload | Average delta versus none |
-|---|---:|---:|
-| none | 24.369s | baseline |
-| stage | 24.873s | +504ms |
-| task | 24.510s | +141ms |
-
-The current multi-join workload produced:
-
-```text
-20 stages
-2,581 tasks
-~643 MB shuffle written
-200 output rows
-```
-
-With three measured repetitions:
-
-| Mode | Average workload | Median workload | Average delta versus none |
-|---|---:|---:|---:|
-| none | 63.463s | 63.432s | baseline |
-| stage | 64.467s | 64.600s | +1.004s / +1.58% |
-| task | 64.691s | 64.898s | +1.228s / +1.93% |
-
-Teacher notes:
-
-```text
-The second result is directionally coherent: TaskMetrics is slightly more
-expensive than StageMetrics. The difference remains modest because local Spark,
-Delta, MinIO, Docker, WSL, JVM startup, event logs, and filesystem cache create
-noise of their own.
-
-The conclusion is not “TaskMetrics always costs 1.228 seconds.” The conclusion
-is that collector cost depends on task-event volume, workload shape, and the
-environment where the measurement is made.
-```
-
-## 10. Optional only: regenerate the ten-repetition evidence
-
-> **Classroom warning:** This is not part of the standard live flow. It runs 33
-> sequential Spark applications and can occupy approximately 43-44 minutes.
-> Normally, discuss the persisted post-mortem in step 9 instead.
-
-Run this only when the schedule explicitly includes the wait or when
-regenerating evidence outside the class:
+> **Aviso:** este caminho não faz parte do fluxo ao vivo padrão. Ele executa 33
+> aplicações Spark sequenciais e pode ocupar aproximadamente 43–44 minutos no
+> ambiente local validado.
 
 ```bash
 LAB3_REPETITIONS=10 \
@@ -449,19 +423,15 @@ LAB3_WARMUP_REPETITIONS=1 \
 bash run_observability_overhead_benchmark.sh
 ```
 
-With the default three modes, this means:
+Com os três modes:
 
 ```text
-1 warmup round  x 3 modes =  3 warmup submits
+1 warmup round    x 3 modes =  3 warmup submits
 10 measured rounds x 3 modes = 30 measured submits
 total = 33 sequential spark-submit executions
 ```
 
-The measured 30-submit portion projects to roughly `39-40m` on the development
-machine. Including the warmup round, reserve approximately `43-44m` plus local
-variation.
-
-The runner rotates the first mode by measured iteration:
+O runner rotaciona o primeiro mode por iteração medida:
 
 ```text
 iteration 1: none  -> stage -> task
@@ -469,19 +439,21 @@ iteration 2: stage -> task  -> none
 iteration 3: task  -> none  -> stage
 ```
 
-It remains sequential. Parallel modes would compete for the same CPU, memory,
-Spark workers, disk, MinIO, and event-log destination, turning the benchmark
-into a resource-contention experiment.
+Ele permanece sequencial. Executar modes em paralelo transformaria o benchmark
+em um experimento de contenção por CPU, memória, workers, disco, MinIO e event
+logs.
 
-## 11. Optional: inspect Spark History Server
+### 7.4 UIs auxiliares
 
-Open:
+URLs do ambiente local:
 
 ```text
-http://127.0.0.1:28090
+Spark Master UI:      http://127.0.0.1:28091
+Spark History Server: http://127.0.0.1:28090
+MinIO Console:        http://127.0.0.1:29011
 ```
 
-Application names:
+Nomes das aplicações:
 
 ```text
 workshop-lab3-overhead-none
@@ -489,51 +461,52 @@ workshop-lab3-overhead-stage
 workshop-lab3-overhead-task
 ```
 
-What to inspect:
+No Spark History Server, confirme a forma do workload, compare as descrições
+`LAB3 | observability_overhead` e separe jobs de negócio dos jobs de validação
+e escrita Delta dos metadados. A UI complementa a tabela persistida; IDs
+numéricos de jobs e stages não são estáveis entre runs.
 
-- confirm that the business workload shape is equivalent across modes;
-- compare the `LAB3 | observability_overhead` job descriptions;
-- distinguish workload jobs from output validation and metadata Delta writes;
-- use the UI as a detailed companion to the persisted benchmark metadata.
+Use o Spark Master apenas para verificar os workers durante uma execução ativa
+e o MinIO para confirmar os paths persistidos, sem transformar essas inspeções
+em etapas obrigatórias do argumento pedagógico.
 
-## 12. Classroom conclusion
+### 7.5 Cleanup depois da aula
 
-The expected conclusion is:
-
-```text
-sparkMeasure has observable overhead. The size of that overhead depends on
-collector granularity, task-event volume, workload shape, and environment.
-Measure the tradeoff before enabling detailed task observability everywhere.
-```
-
-StageMetrics remains the preferred first diagnostic layer because it is
-coarser and normally cheaper. TaskMetrics is valuable when task-level
-distribution is required, but the extra detail should have a diagnostic reason.
-
-Lab 3 metadata remains reusable for future benchmark analysis. Lab 4 does not
-depend on this table: the current Lab 4 runs its own workload and creates a
-stage-level operational fingerprint.
-
-## 13. Optional cleanup after class
-
-Return to the repository root:
+Retorne à raiz:
 
 ```bash
 cd ../../../..
 make down
 ```
 
-To remove generated MinIO data:
+Para remover dados do MinIO:
 
 ```bash
 make clean-data
 ```
 
-To remove workshop images:
+Para remover imagens do workshop:
 
 ```bash
 make removeimage
 ```
 
-Do not run `make clean-data` between benchmark repetitions. It removes the
-shared Bronze inputs and the persisted benchmark evidence.
+Não execute `make clean-data` entre repetições. O comando remove tanto as
+fontes Bronze compartilhadas quanto a evidência persistida do benchmark.
+
+## Conclusão da aula
+
+sparkMeasure possui overhead observável, mas o tamanho desse overhead depende
+da granularidade do collector, do volume de eventos, da forma do workload e do
+ambiente. StageMetrics continua sendo a primeira camada diagnóstica recomendada;
+TaskMetrics deve responder a uma pergunta que realmente dependa da distribuição
+entre tasks.
+
+O ponto do Lab 3 não é provar que sparkMeasure sempre adiciona X milissegundos.
+É aprender a construir e interpretar uma comparação repetível sem confundir
+uma demonstração ao vivo com evidência estatística.
+
+## Ponte para a próxima aula
+
+Depois de medir o custo de coletar StageMetrics, o Lab 4 mostra como transformar
+seus agregados em uma primeira hipótese operacional sobre o perfil do workload.
