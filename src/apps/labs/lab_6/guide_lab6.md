@@ -1,52 +1,56 @@
-# Lab 6 guide: stage metrics contract gate
+# Guia do Lab 6: contract gate para StageMetrics
 
-This guide is the classroom runbook for Lab 6.
+Este guia organiza a execução em sala do Lab 6. Não estamos testando se o
+sparkMeasure funciona nem validando a precisão interna de seus contadores. O
+lab verifica se a linha normalizada, enriquecida e persistida preserva
+contexto e metadata suficientes para que um consumidor automatizado decida se
+pode utilizá-la.
 
-Goal:
+Notas detalhadas:
 
-```text
-run one Spark workload
-  -> collect contract-ready StageMetrics
-  -> persist the clean raw metrics row
-  -> validate schema, semantic, and correlation contracts
-  -> persist rule-level evidence and a summary decision
-  -> demonstrate a controlled contract failure without corrupting clean data
-```
+[Notas de aula sobre o StageMetrics contract gate](docs/stage_metrics_contract_gate_class_notes.md)
 
-Lab 5 used stage-level evidence as policy. Lab 6 inserts a trust boundary before
-that policy: metrics must behave like a reliable operational data product.
+Consulte-as para disponibilidade de métricas, tipos de falha, premissas dos
+consumidores e o racional de data product.
 
-Class notes:
+## Enquadramento da aula
 
-[Stage metrics contract gate class
-notes](docs/stage_metrics_contract_gate_class_notes.md)
+- **Pergunta norteadora:** esta linha normalizada preserva informação suficiente
+  para uma automação distinguir valor real, métrica indisponível, produtor
+  incompatível e execução duplicada?
+- **Por que agora:** o Lab 5 mostrou a policy primeiro; o Lab 6 volta um passo e
+  questiona se a evidência integrada merece confiança.
+- **Resultado de aprendizagem:** validar schema, valores, disponibilidade e
+  correlação antes de usar telemetria em decisões.
+- **Modo de condução:** dois experimentos principais ao vivo — cenário limpo e
+  falha controlada — conduzidos pelo instrutor com participação da turma.
 
-Keep those notes open for metric availability, consumer assumptions, failure
-types, and the production data-product rationale.
+Uma aplicação isolada usando diretamente uma versão fixada do sparkMeasure tende
+a receber a mesma estrutura de métricas. O contrato ganha valor quando várias
+aplicações normalizam, enriquecem e publicam essas métricas em um produto
+central. Nessas etapas, perda de campos, placeholders incorretos, identidades
+ausentes, scopes incompatíveis e duplicidade podem transformar uma métrica
+válida em uma linha operacionalmente inadequada.
 
-## 0. Confirm the shared workshop prerequisites
+## 0. Pré-requisitos
 
-Start from the repository root:
+Comece na raiz do repositório:
 
 ```bash
 cd workshop-spark-measures
 ```
 
-This guide assumes that the workshop images and shared Bronze retail sources
-already exist.
+O Lab 6 reutiliza as fontes Bronze compartilhadas pelos Labs 1–6. Se for a
+primeira execução do workshop, ou se imagens e dados do MinIO foram removidos,
+siga as seções 1 a 5 do [guia do Lab 0](../lab_0/guide_lab0.md).
 
-If this is the first workshop run, or project images and MinIO data were
-removed, follow [Lab 0 guide: bootstrap through Bronze data
-generation](../lab_0/guide_lab0.md). Follow sections 1 through 5 there; the
-full bootstrap sequence is intentionally not duplicated here.
-
-If only the containers were stopped and MinIO data remains, restart the stack:
+Se os dados continuam disponíveis e apenas os containers foram interrompidos:
 
 ```bash
 make compose
 ```
 
-Expected shared sources:
+Inputs esperados:
 
 ```text
 s3a://lakehouse/bronze/retail/sales
@@ -55,208 +59,236 @@ s3a://lakehouse/bronze/retail/products
 s3a://lakehouse/bronze/retail/customers
 ```
 
-Teacher notes:
+> **Nota do instrutor:** `make down` preserva os dados do MinIO;
+> `make clean-data` os remove. Não regenere as fontes antes de cada lab.
 
-```text
-Labs 1-6 share the generated retail sources. `make down` preserves MinIO data.
-Regenerate only after `make clean-data` or when a required Bronze table is
-missing.
-```
-
-## 1. Move to the Lab 6 folder
-
-The remaining commands assume this directory:
+## 1. Entre na pasta do Lab 6
 
 ```bash
 cd src/apps/labs/lab_6
 ```
 
-Optional sanity check:
-
-```bash
-ls
-```
-
-Expected classroom entry points:
+Pontos de entrada:
 
 ```text
 lab_6_stage_metrics_contract_gate.py
 run_stage_metrics_contract_gate.sh
 ```
 
-## 2. Establish the trust question
+## 2. Compare a ordem do workshop com a ordem de produção
 
-Ask the class:
-
-```text
-Can we trust this metrics row before using it for automation?
-```
-
-The platform flow is:
+O workshop escolhe uma ordem didática:
 
 ```text
-collect metrics
-  -> validate the contract
-  -> use trustworthy evidence in dashboards, alerts, reviews, and gates
+Lab 5: usar StageMetrics como policy
+  -> Lab 6: questionar a confiança na telemetria que alimentou a policy
 ```
 
-Teacher notes:
+Uma plataforma de produção deve aplicar a ordem operacional:
 
 ```text
-Observability metrics are data. Once automation consumes them, a wrong metric
-row can produce a wrong engineering decision even when the Spark workload
-itself completed successfully.
+coletar métricas
+  -> validar contract
+  -> aplicar policy
+  -> decidir a promoção
 ```
 
-## 3. Understand the workload and collection boundary
+O Lab 6 não repete o runtime budget. Ele torna linhas inadequadas detectáveis e
+registra uma decisão de contrato. O bloqueio efetivo depende de o consumidor ou
+orquestrador exigir `PASS`.
 
-Open:
+## 3. Onde isso aparece em uma plataforma real
+
+```text
+milhares de Spark jobs
+  -> sparkMeasure produz maps de métricas
+  -> uma camada normaliza os nomes
+  -> as linhas são gravadas em uma tabela Delta central
+  -> consumidores usam a tabela para alerts e gates
+```
+
+Considere um erro de integração:
+
+```text
+sparkMeasure emite shuffleTotalBytesRead
+  -> um normalizador incorreto procura shuffleBytesRead
+  -> shuffle_bytes_read recebe placeholder 0
+  -> shuffle_bytes_read_available=false preserva a indisponibilidade
+```
+
+O schema contract atual exige a existência das colunas `*_available`, mas não
+reprova automaticamente uma métrica opcional apenas porque `available=false`.
+Cada consumidor precisa decidir quais métricas são obrigatórias para sua
+decisão. Um runtime budget dependente de shuffle deveria recusar-se a decidir
+quando `shuffle_bytes_read_available=false`, em vez de interpretar zero como
+ausência real de shuffle. Essa recusa pertence ao consumidor e não está
+implementada pelo Lab 6.
+
+As regras atuais conseguem rejeitar, quando presentes no DataFrame avaliado:
+
+- `metric_scope=task` quando o contrato espera `stage`;
+- `collector_name` incompatível;
+- identidade obrigatória nula;
+- duplicidade dentro do mesmo batch;
+- contador configurado com valor negativo;
+- `num_stages = 0` ou `num_tasks = 0` para uma linha de ação Spark;
+- required columns ou availability metadata ausentes.
+
+## 4. Entenda o workload e a fronteira raw versus trusted
+
+Abra:
 
 ```text
 lab_6_stage_metrics_contract_gate.py
 lab_6_utils/transformations.py
 lab_6_utils/experiments.yaml
+lab_6_utils/contract.py
+lab_6_utils/contract_rules.yaml
 ```
 
-The workload performs:
+O workload lê `sales`, faz joins com `vendors`, `products` e `customers`, reduz
+o fato às colunas de negócio, reparticiona por mês, região e categoria, agrega e
+escreve o Gold output:
 
 ```text
-sales
-  -> prune fact columns
-  -> join vendor region
-  -> join product category
-  -> join customer context
-  -> select the business fact
-  -> repartition by month, region, and category
-  -> aggregate revenue, orders, and customers
-  -> write the Gold output
+sales + vendors + products + customers
+  -> select business fact -> repartition -> aggregate -> write Gold
 ```
 
-The business output is intentionally ordinary:
+O resultado contém `order_month`, `region`, `category`, `gross_revenue`,
+`order_count` e `customer_count`.
 
-```text
-order_month
-region
-category
-gross_revenue
-order_count
-customer_count
-```
+StageMetrics envolve leitura, transformação e escrita do workload. Depois que o
+collector termina, o runtime normaliza os contadores, enriquece a identidade e
+escreve a linha em `stage_metrics_raw`. O contrato avalia um DataFrame e grava
+resultados por regra e summary em tabelas separadas.
 
-StageMetrics wraps the executed workload and captures one aggregate metrics
-map. This lab is not diagnosing a pathological job. It is validating the
-observability record produced by a valid Spark action.
+Raw telemetry continua existindo quando a decisão é `FAIL`. O lab não cria
+quarentena, não remove linhas do raw e não materializa uma tabela `trusted`
+contendo somente registros aprovados. Na falha didática, os registros
+controlados permanecem isolados no demo input, enquanto a linha limpa continua
+no raw.
 
-## 4. Inspect the contract before running it
+Em produção, um consumidor ou orquestrador deve exigir `decision=PASS` antes de
+publicar ou utilizar a telemetria em automação. O Lab 6 modela essa decisão, mas
+não implementa a promoção física para um produto trusted.
 
-Open:
+## 5. Leia as três camadas do contrato
+
+O contrato está em:
 
 ```text
 lab_6_utils/contract_rules.yaml
 ```
 
-The contract version is explicit:
+Versão atual:
 
 ```yaml
 contract:
   version: "1.0.0"
 ```
 
-The contract validates three layers.
+### 5.1 Schema contract
 
-### 4.1 Schema contract
+Verifica required columns e exige que cada métrica opcional exponha o valor e a
+coluna `*_available` correspondente.
 
-Question:
+### 5.2 Semantic contract
 
-```text
-Do the columns required by downstream automation exist?
-```
+Exige `num_stages > 0`, `num_tasks > 0`, `created_at` não nulo e contadores
+configurados não negativos.
 
-Examples include `run_id`, `app_name`, `workload_name`, `num_stages`,
-`num_tasks`, `executor_run_time_ms`, and `created_at`.
+### 5.3 Correlation contract
 
-### 4.2 Semantic contract
-
-Question:
+Verifica identidades não nulas, valores esperados de `collector_name` e
+`metric_scope` e esta uniqueness key:
 
 ```text
-Do the values make operational sense?
+run_id + workload_name + workload_variant + metric_scope
 ```
 
-Examples include positive stage/task counts, non-negative counters, and a
-non-null creation timestamp.
+A uniqueness é avaliada somente dentro do DataFrame recebido nesta execução.
+Ela detecta duplicidade intra-batch, mas não consulta o histórico de
+`stage_metrics_raw` e não garante idempotência histórica, deduplicação entre
+execuções ou proteção contra retries em batches diferentes.
 
-### 4.3 Correlation contract
+## 6. Entenda identidade e disponibilidade
 
-Question:
+| Campo | Origem | Propósito no lab |
+|---|---|---|
+| `run_id` | UUID criado pelo runtime | identidade da evidência e parte da uniqueness key |
+| `application_id` | `spark.sparkContext.applicationId` | correlação com Spark History Server |
+| `app_name` | `experiments.yaml` | identificação legível da aplicação |
+| `lab_id` | valor fixo `lab_6` | ownership didático da telemetria |
+| `workload_name` | `experiments.yaml` | identidade lógica do workload |
+| `workload_variant` | `experiments.yaml` | variante que produziu a evidência |
+| `collector_name` | `sparkmeasure_stage_metrics` | produtor esperado |
+| `metric_scope` | `stage` | impede mistura silenciosa com métricas de task |
+| `contract_version` | `contract_rules.yaml` | versão das expectativas aplicadas |
+| `created_at` | timestamp UTC criado no registro | auditoria e análise histórica |
+
+`validation_run_id` relaciona os resultados por regra ao summary da validação.
+`application_id` permite chegar ao History Server, mas não pertence à
+uniqueness key nem às identity columns obrigatórias atuais.
+
+- **Métricas obrigatórias:** `num_stages`, `num_tasks` e
+  `executor_run_time_ms`.
+- **Métricas opcionais:** `shuffle_bytes_written`, `shuffle_bytes_read`,
+  `jvm_gc_time_ms`, `memory_bytes_spilled`, `disk_bytes_spilled` e
+  `input_bytes`.
+
+O normalizador considera uma métrica disponível quando a chave existe e o valor
+não é `None`:
 
 ```text
-Can the row be traced, joined, grouped, and audited safely?
+value=0, available=true  -> o collector emitiu um zero real
+value=0, available=false -> o contador não foi emitido; zero é placeholder seguro
 ```
 
-The layer validates identity fields, expected collector/scope values, and the
-configured uniqueness key.
+A semântica correta da linha limpa é produzida pelo normalizador. O contrato
+`1.0.0` garante a presença das colunas `*_available`, mas não valida a coerência
+entre cada valor e sua flag.
 
-Teacher notes:
+## 7. O que o contrato atual garante
 
-```text
-The lab is a focused reliability layer, not a generic data-quality framework.
-Each rule exists because a downstream engineering consumer makes an assumption
-about schema, meaning, or identity.
-```
+- presença das required columns;
+- presença das availability columns das métricas opcionais;
+- stages e tasks maiores que zero;
+- contadores configurados não negativos;
+- identidades obrigatórias não nulas;
+- `collector_name` e `metric_scope` esperados;
+- uniqueness dentro do DataFrame avaliado;
+- resultados e summary versionados por `contract_version`.
 
-## 5. Understand required and optional metrics
+`severity` é metadata descritiva: qualquer regra com falha contribui para o
+`FAIL` global. A versão atual não produz `WARNING` com base na severidade.
 
-Required metrics:
+## 8. O que o contrato atual não garante
 
-```text
-num_stages
-num_tasks
-executor_run_time_ms
-```
+- precisão física interna do sparkMeasure;
+- comparação das métricas com Spark UI ou event logs;
+- coerência entre valor e `*_available`;
+- reprovação automática de métrica opcional apenas por `available=false`;
+- uniqueness contra todo o histórico Delta;
+- proteção contra retries ou duplicidade em batches separados;
+- read-back do Delta para validar o round trip de storage;
+- tabela `trusted` contendo somente linhas aprovadas;
+- quarentena ou bloqueio automático dos consumidores;
+- decisões diferentes por severity.
 
-Optional collector-dependent metrics:
+Também não existe validação de compatibilidade semântica entre versões além das
+regras e colunas configuradas. Schema ou version drift continua sendo um risco
+de integração a ser modelado explicitamente.
 
-```text
-shuffle_bytes_written
-shuffle_bytes_read
-jvm_gc_time_ms
-memory_bytes_spilled
-disk_bytes_spilled
-input_bytes
-```
+## 9. Experimento A — cenário limpo
 
-Each optional metric has an explicit availability field:
-
-```text
-shuffle_bytes_written
-shuffle_bytes_written_available
-```
-
-This preserves the difference between:
-
-```text
-value=0, available=true  -> the collector emitted a real zero
-value=0, available=false -> the counter was unavailable; zero is a placeholder
-```
-
-Teacher notes:
-
-```text
-Metric absence and metric value zero are different facts. Collapsing them into
-one number makes dashboards and automated decisions look confident when the
-evidence is actually missing.
-```
-
-## 6. Run the clean passing scenario
-
-Use the classroom runner:
+Execute:
 
 ```bash
 bash run_stage_metrics_contract_gate.sh
 ```
 
-Expected progress markers:
+Markers de progresso:
 
 ```text
 LAB6_STAGE_METRICS_CAPTURED_OK
@@ -268,34 +300,13 @@ LAB6_CORRELATION_CONTRACT_EVALUATED
 LAB6_CONTRACT_RESULTS_WRITTEN_OK
 ```
 
-Expected final marker:
+Marker final esperado:
 
 ```text
 LAB6_STAGE_METRICS_CONTRACT_PASS
 ```
 
-The clean raw row should satisfy all three contract layers.
-
-Optional expanded submit command from the Lab 6 folder:
-
-```bash
-docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
-  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-    LAB6_CONFIG_NAME=lab6-stage-metrics-contract-gate \
-    LAB6_INJECT_INVALID_RECORDS=false \
-    /opt/spark/bin/spark-submit \
-    --master spark://spark-master:7077 \
-    --deploy-mode client \
-    --conf spark.driver.host=spark-master \
-    --conf spark.eventLog.dir=s3a://observability/event-logs \
-    --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-    /opt/spark/src/apps/labs/lab_6/lab_6_stage_metrics_contract_gate.py \
-    --inject-invalid-records false
-```
-
-## 7. Read the final contract block
-
-Near the end of each submit, the app prints one boxed block:
+O bloco terminal apresenta:
 
 ```text
 ## LAB 6 STAGE METRICS CONTRACT GATE
@@ -322,165 +333,186 @@ rule_id: failed_count=... sample=...
 ...
 ```
 
-Read it in this order:
+Leia `demo_mode`, decisão, rule counts, availability metadata, resultados por
+layer e failed rule details. Os markers usam `EVALUATED` porque uma camada
+avaliada pode produzir `PASS` ou `FAIL`.
 
-1. confirm whether this is the clean or demo input;
-2. read the overall decision and rule counts;
-3. verify optional metric availability metadata;
-4. identify which contract layer failed;
-5. use rule IDs, failed counts, and sample keys to make the result actionable.
+### Checkpoint de raciocínio — cenário limpo
 
-Teacher notes:
+- **Pergunta:** a linha normalizada satisfaz as três camadas do contrato?
+- **Hipótese:** o caminho limpo preserva schema, valores, availability metadata
+  e identidade configurados.
+- **Evidência:** resultados `SCHEMA`, `SEMANTIC` e `CORRELATION`, availability
+  columns, rule counts e decisão `PASS`.
+- **Conclusão:** a linha satisfaz as regras configuradas e possui a estrutura
+  necessária para os consumidores modelados pelo lab.
+- **Limitação:** `PASS` não prova precisão interna do collector, coerência de
+  todas as combinações possíveis, uniqueness histórica ou promoção para trusted.
 
-```text
-The layer markers say EVALUATED because an evaluated layer may return PASS or
-FAIL. The final contract marker communicates the overall decision.
-```
+## 10. Experimento B — falha controlada
 
-## 8. Run the controlled failure demonstration
-
-Run:
+Execute:
 
 ```bash
 LAB6_INJECT_INVALID_RECORDS=true \
 bash run_stage_metrics_contract_gate.sh
 ```
 
-The application keeps the valid raw StageMetrics row in the clean table and
-writes a separate demonstration input containing:
+O runtime preserva a linha limpa em `stage_metrics_raw` e cria um demo input
+separado. Os casos injetados estão identificados nas categorias abaixo.
 
-- the clean base row;
-- null `run_id`;
-- zero stages;
-- zero tasks;
-- negative shuffle bytes;
-- null `created_at`;
-- invalid `metric_scope=task`;
-- a duplicate uniqueness key.
-
-Expected final marker:
+Marker final esperado:
 
 ```text
 LAB6_STAGE_METRICS_CONTRACT_FAIL
 ```
 
-This is an expected policy result and the runner exits with status `0`. A
-technical error—missing sources, invalid YAML, broken Spark session, or failed
-Delta write—still exits non-zero.
+O `FAIL` esperado retorna exit code `0` para permitir a inspeção. Erro técnico
+continua retornando exit code diferente de zero; em produção, a orquestração
+deve transformar `decision=FAIL` em bloqueio.
 
-Teacher notes:
+### Falhas mais próximas de problemas de plataforma
+
+- identidade ausente — `run_id` nulo é injetado no demo;
+- `metric_scope` incorreto — `task` é injetado no demo;
+- `collector_name` incompatível;
+- duplicidade no batch — injetada no demo;
+- availability metadata ausente;
+- incompatibilidade de schema ou versão.
+
+O demo injeta somente parte desses casos. As regras atuais detectam schema
+ausente, mas compatibilidade completa entre versões permanece fora do escopo.
+
+### Falhas principalmente didáticas neste caminho local
+
+- `num_stages = 0`, injetado no demo;
+- `num_tasks = 0`, injetado no demo;
+- `shuffle_bytes_written = -1`, injetado no demo;
+- `created_at` nulo, injetado no demo.
+
+O normalizador e o schema controlado pelo próprio Lab 6 já impedem parte dessas
+falhas no caminho limpo. As linhas sintéticas demonstram categorias de um
+contract gate; elas não afirmam que sparkMeasure normalmente produza contadores
+negativos ou identidades nulas.
+
+Na tabela Delta de resultados por regra, leia:
 
 ```text
-The demo does not mutate or corrupt the clean raw metrics table. Controlled bad
-records are isolated so students can inspect contract failures safely and the
-next clean run remains trustworthy.
+rule_id
+rule_type
+severity
+decision
+failed_count
+sample_failed_keys
+recommendation
 ```
 
-## 9. Optional: inspect the persisted evidence
+### Checkpoint de raciocínio — falha controlada
 
-Business output:
+- **Pergunta:** o contrato torna visíveis linhas inadequadas para automação?
+- **Hipótese:** falhas estruturais, semânticas e de correlação aparecem como
+  resultados acionáveis antes do consumo automatizado.
+- **Evidência:** rule IDs, layer, severity, failed count, sample failed keys,
+  recommendation e decisão `FAIL`.
+- **Conclusão:** o gate torna falhas estruturais, semânticas e de correlação
+  visíveis antes do uso automatizado.
+- **Limitação:** os registros são sintéticos; o experimento demonstra categorias
+  de contrato, não falhas naturais do sparkMeasure nem um framework completo de
+  data quality.
+
+## 11. Relacione o contrato aos consumidores
+
+| Consumidor | Premissa protegida pelo contrato |
+|---|---|
+| Dashboard | identidade e timestamps permitem agrupar e filtrar |
+| Alerts | contadores configurados são não negativos antes dos thresholds |
+| Runtime budgets | required metrics existem; o consumidor ainda deve exigir availability das métricas usadas |
+| PR review | `run_id` e `workload_variant` identificam a evidência comparada |
+| Drift monitoring | uniqueness detecta duplicidade intra-batch; deduplicação histórica permanece fora do escopo |
+
+## 12. Caminhos opcionais
+
+### 12.1 Inspecione a evidência Delta
 
 ```text
 s3a://lakehouse/gold/lab6/stage_metrics_contract_gate/business_output
-```
-
-Clean raw StageMetrics:
-
-```text
 s3a://observability/lab6/stage_metrics_raw
-```
-
-Controlled demo validation input:
-
-```text
 s3a://observability/lab6/stage_metrics_contract_demo_input
-```
-
-One row per evaluated rule is appended to:
-
-```text
 s3a://observability/lab6/stage_metrics_contract_results
-```
-
-Each rule row includes its type, severity, decision, failed count, sample keys,
-recommendation, contract version, and validation run ID.
-
-One summary row per validation is appended to:
-
-```text
 s3a://observability/lab6/stage_metrics_contract_summary
 ```
 
-Use the MinIO Console:
+Os resultados por regra preservam `validation_run_id`, `source_path`,
+`contract_version`, tipo, severity, decisão, contagem, amostra, recomendação e
+`created_at`.
+
+MinIO Console:
 
 ```text
 http://127.0.0.1:29011
 ```
 
-Default credentials:
+Credenciais locais padrão:
 
 ```text
 user:     sparkworkshop
 password: sparkworkshop123
 ```
 
-## 10. Connect contract fields to consumers
-
-| Consumer | Contract assumption |
-| --- | --- |
-| Dashboard | Identity and timestamps exist for grouping and filtering. |
-| Alerts | Runtime, shuffle, spill, and GC values are semantically valid. |
-| Runtime budgets | Required metrics and availability flags are trustworthy. |
-| PR review | Run and workload variant identify the evidence being compared. |
-| Drift monitoring | Stable keys prevent duplicate inflation across history. |
-
-Teacher notes:
-
-```text
-The contract is valuable because a consumer depends on it. Rules without a
-known consumer assumption quickly become ceremonial checks with no operational
-owner.
-```
-
-## 11. Optional: correlate with Spark History Server
-
-Open:
+### 12.2 Correlacione com o Spark History Server
 
 ```text
 http://127.0.0.1:28090
 ```
 
-The History Server explains the Spark application that produced the row. The
-contract gate answers a different question: whether that row is safe for
-downstream automation.
+Use `application_id` para localizar a aplicação. O History Server explica a
+execução Spark; o contract gate valida a linha integrada.
 
-## 12. Classroom conclusion
-
-End with:
-
-```text
-A mature Spark observability platform does not only collect metrics. It
-validates that the evidence is reliable enough to support engineering
-decisions.
-```
-
-The progression is:
-
-```text
-collect
-  -> preserve identity and availability
-  -> validate schema, meaning, and correlation
-  -> persist rule-level evidence
-  -> automate only after the contract passes
-```
-
-## 13. Optional cleanup after class
-
-From the repository root:
+### 12.3 Execute o submit manual do cenário limpo
 
 ```bash
+docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+    LAB6_CONFIG_NAME=lab6-stage-metrics-contract-gate \
+    LAB6_INJECT_INVALID_RECORDS=false \
+    /opt/spark/bin/spark-submit \
+    --master spark://spark-master:7077 \
+    --deploy-mode client \
+    --conf spark.driver.host=spark-master \
+    --conf spark.eventLog.dir=s3a://observability/event-logs \
+    --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+    /opt/spark/src/apps/labs/lab_6/lab_6_stage_metrics_contract_gate.py \
+    --inject-invalid-records false
+```
+
+### 12.4 Cleanup depois da aula
+
+Retorne à raiz:
+
+```bash
+cd ../../../..
 make down
 ```
 
-This stops the stack and preserves generated MinIO data. Use the project soft
-cleanup drill only when the next workshop run must start from a clean state.
+Isso interrompe os containers e preserva os dados do MinIO. Use o soft cleanup
+drill somente quando a próxima execução precisar começar sem o estado anterior.
+
+## Conclusão da aula
+
+Não estamos testando se o sparkMeasure funciona. Estamos verificando se a linha
+normalizada, enriquecida e persistida continua acompanhada de contexto e de uma
+decisão de contrato suficientes para que o consumidor avalie se pode utilizá-la:
+
+```text
+sparkMeasure output
+  -> normalized telemetry row
+  -> explicit contract
+  -> consumer-aware decision
+  -> future trusted observability product
+```
+
+## Ponte para a próxima aula
+
+Com métricas contratadas e correlacionáveis, o Lab 7 muda a pergunta: como o
+workload se comporta ao longo do tempo de negócio e através de várias
+aplicações Spark?
