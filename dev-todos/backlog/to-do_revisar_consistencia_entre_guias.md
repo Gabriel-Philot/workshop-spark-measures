@@ -49,9 +49,10 @@ src/apps/labs/lab_7/guide_lab7.md
 11. Confirmar que Lab 0 é a referência de bootstrap e Labs 1–7 continuam
     utilizáveis isoladamente por meio de pré-requisitos curtos e links precisos.
 12. Confirmar que comandos, paths, markers, schemas e runtime não mudaram.
-13. Confirmar que todo conteúdo narrativo criado ou editado permanece em
-    português, sem produzir guides bilíngues; comandos, paths, markers, nomes de
-    campos e termos técnicos permanecem intactos.
+13. Confirmar que, ao final de cada tarefa, toda a narrativa do guide, inclusive
+    a prosa preexistente em inglês, está em português. Comandos, outputs
+    literais, paths, markers, nomes de campos e termos técnicos permanecem
+    intactos.
 14. Confirmar que os checkpoints foram integrados às seções existentes e não
     criaram um segundo resumo do mesmo experimento.
 15. Confirmar que cada campo de Pergunta, Hipótese, Evidência, Conclusão e

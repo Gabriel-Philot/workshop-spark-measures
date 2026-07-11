@@ -53,8 +53,9 @@ src/apps/labs/lab_7/guide_lab7.md
 8. Integrar o checkpoint à apresentação do dashboard e à evidência validada já
    existente, sem duplicar tabelas, métricas, expected outputs, comandos ou
    troubleshooting.
-9. Manter toda narrativa criada ou editada no guide em português, preservando
-   comandos, paths, markers, nomes de campos e termos técnicos.
+9. Ao final da tarefa, toda a narrativa do guide, inclusive a prosa preexistente
+   em inglês, deverá estar em português. Comandos, outputs literais, paths,
+   markers, nomes de campos e termos técnicos permanecem intactos.
 
 ## Checkpoint de raciocínio — comportamento ao longo do tempo
 
@@ -72,7 +73,8 @@ src/apps/labs/lab_7/guide_lab7.md
   wall-clock possuem fronteiras diferentes. Custos de startup e encerramento
   pertencem às medições de wall-clock, não explicam diretamente
   `executorRunTime`; a fonte controlada e o dashboard também não provam causa
-  raiz.
+  raiz. Spill igual a zero demonstra somente que não houve spill observado nessa
+  execução; não demonstra ausência de outros gargalos.
 
 Formulação técnica que o guide deverá preservar em português:
 
@@ -97,6 +99,8 @@ as relações mudarem.
 - O dashboard é apresentado como lente read-only.
 - Números e duração local estão claramente rotulados.
 - Executor runtime, submit wall-clock e batch wall-clock permanecem distintos.
+- Spill igual a zero é tratado somente como ausência de spill observado nessa
+  execução, não como ausência de outros gargalos.
 - O checkpoint é conciso, reutiliza os gráficos e não duplica a tabela de
   evidência validada.
 - O guide permanece integralmente em português na narrativa pedagógica e não

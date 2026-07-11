@@ -44,8 +44,9 @@ src/apps/labs/lab_4/guide_lab4.md
 7. Integrar o checkpoint à leitura do bloco diagnóstico existente, sem repetir
    profiles, flags, métricas, ratios ou fórmulas detalhadas que já estejam nas
    class notes linkadas.
-8. Manter toda narrativa criada ou editada no guide em português, preservando
-   comandos, paths, markers, nomes de campos e termos técnicos.
+8. Ao final da tarefa, toda a narrativa do guide, inclusive a prosa preexistente
+   em inglês, deverá estar em português. Comandos, outputs literais, paths,
+   markers, nomes de campos e termos técnicos permanecem intactos.
 
 ## Checkpoint de raciocínio — fingerprint
 

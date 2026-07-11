@@ -53,8 +53,9 @@ Adicionar no início um bloco conciso com:
 7. Integrar o enquadramento e os checkpoints às seções existentes, reutilizando
    pergunta, evidência e limitação já documentadas em vez de criar um segundo
    resumo do mesmo experimento.
-8. Manter toda a narrativa criada ou editada no guide em português, sem traduzir
-   comandos, paths, markers, nomes de campos ou termos técnicos.
+8. Ao final da tarefa, toda a narrativa do guide, inclusive a prosa preexistente
+   em inglês, deverá estar em português. Comandos, outputs literais, paths,
+   markers, nomes de campos e termos técnicos permanecem intactos.
 
 ## Checkpoints de raciocínio
 

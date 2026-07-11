@@ -48,8 +48,9 @@ src/apps/labs/lab_3/guide_lab3.md
 6. Integrar os checkpoints às seções de demonstração e post-mortem, sem copiar
    novamente as tabelas, boundaries ou explicações históricas já preservadas no
    post-mortem linkado.
-7. Manter toda narrativa criada ou editada no guide em português, preservando
-   comandos, paths, markers, nomes de campos e termos técnicos.
+7. Ao final da tarefa, toda a narrativa do guide, inclusive a prosa preexistente
+   em inglês, deverá estar em português. Comandos, outputs literais, paths,
+   markers, nomes de campos e termos técnicos permanecem intactos.
 
 ## Checkpoints de raciocínio
 

@@ -47,8 +47,9 @@ src/apps/labs/lab_5/guide_lab5.md
 7. Integrar os checkpoints ao bloco de compatibilidade e à decisão já impressos
    pelo lab, sem duplicar métricas, deltas, failed rules, expected outputs ou
    troubleshooting.
-8. Manter toda narrativa criada ou editada no guide em português, preservando
-   comandos, paths, markers, nomes de campos e termos técnicos.
+8. Ao final da tarefa, toda a narrativa do guide, inclusive a prosa preexistente
+   em inglês, deverá estar em português. Comandos, outputs literais, paths,
+   markers, nomes de campos e termos técnicos permanecem intactos.
 
 ## Checkpoints de raciocínio
 

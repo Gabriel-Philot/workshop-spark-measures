@@ -52,8 +52,9 @@ src/apps/labs/lab_6/guide_lab6.md
 8. Integrar os checkpoints ao bloco de contrato e à tabela de consumers já
    existentes, sem repetir columns, availability fields, rule results,
    expected outputs ou troubleshooting.
-9. Manter toda narrativa criada ou editada no guide em português, preservando
-   comandos, paths, markers, nomes de campos e termos técnicos.
+9. Ao final da tarefa, toda a narrativa do guide, inclusive a prosa preexistente
+   em inglês, deverá estar em português. Comandos, outputs literais, paths,
+   markers, nomes de campos e termos técnicos permanecem intactos.
 
 ## Checkpoints de raciocínio
 

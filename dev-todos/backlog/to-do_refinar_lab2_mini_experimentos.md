@@ -46,8 +46,9 @@ src/apps/labs/lab_2/guide_lab2.md
 8. Integrar cada checkpoint à comparação já existente no respectivo
    mini-experimento; não repetir as tabelas, métricas brutas, expected outputs ou
    explicações completas mantidas em `exam_questions.md`.
-9. Manter toda narrativa criada ou editada no guide em português, preservando
-   comandos, paths, markers, nomes de campos e termos técnicos.
+9. Ao final da tarefa, toda a narrativa do guide, inclusive a prosa preexistente
+   em inglês, deverá estar em português. Comandos, outputs literais, paths,
+   markers, nomes de campos e termos técnicos permanecem intactos.
 
 ## Checkpoints de raciocínio
 

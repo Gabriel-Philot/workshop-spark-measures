@@ -49,8 +49,9 @@ src/apps/labs/lab_1/guide_lab1.md
    mudança de código do workload.
 6. Integrar os checkpoints às seções de 1A e 1B, condensando as `Teacher notes`
    existentes em vez de repetir pergunta, métricas, outputs ou limitações.
-7. Manter toda narrativa criada ou editada no guide em português, preservando
-   comandos, paths, markers, nomes de campos e termos técnicos.
+7. Ao final da tarefa, toda a narrativa do guide, inclusive a prosa preexistente
+   em inglês, deverá estar em português. Comandos, outputs literais, paths,
+   markers, nomes de campos e termos técnicos permanecem intactos.
 
 ## Checkpoints de raciocínio
 
