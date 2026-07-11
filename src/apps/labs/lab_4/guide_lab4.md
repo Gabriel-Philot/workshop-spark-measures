@@ -15,8 +15,8 @@ limitações do `input_bytes`.
 
 - **Pergunta norteadora:** como transformar contadores agregados em uma primeira
   hipótese sobre o perfil operacional do workload?
-- **Por que agora:** o Lab 3 estabeleceu o custo e os limites da coleta; o Lab 4
-  explora o valor interpretativo da camada de stage.
+- **Por que esta aula aparece agora:** o Lab 3 estabeleceu o custo e os limites
+  da coleta; o Lab 4 explora o valor interpretativo da camada de stage.
 - **Resultado de aprendizagem:** conectar profile, flags, métricas brutas,
   ratios e próximo passo sem confundir interpretação com prova de causa raiz.
 - **Modo de condução:** exercício principal guiado e executado ao vivo;

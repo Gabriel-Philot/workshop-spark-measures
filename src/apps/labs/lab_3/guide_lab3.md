@@ -16,8 +16,9 @@ calibrações completas e suas limitações.
 
 - **Pergunta norteadora:** quanto custo observável os collectors adicionam e o
   que é necessário para comparar esse custo com disciplina?
-- **Por que agora:** os Labs 1 e 2 usaram StageMetrics e TaskMetrics para
-  diagnóstico; agora investigamos o custo de escolher cada granularidade.
+- **Por que esta aula aparece agora:** os Labs 1 e 2 usaram StageMetrics e
+  TaskMetrics para diagnóstico; agora investigamos o custo de escolher cada
+  granularidade.
 - **Resultado de aprendizagem:** distinguir demonstração, benchmark, warmup,
   fronteiras temporais e ruído do ambiente sem transformar um resultado local
   em regra universal.

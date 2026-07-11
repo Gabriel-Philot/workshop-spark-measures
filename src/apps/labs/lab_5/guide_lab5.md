@@ -15,8 +15,8 @@ de low signal e o mapeamento para produção.
 
 - **Pergunta norteadora:** uma implementação funcionalmente correta também cabe
   no orçamento operacional definido pela equipe?
-- **Por que agora:** o Lab 4 produziu uma hipótese operacional; o Lab 5
-  transforma StageMetrics em uma decisão de engenharia.
+- **Por que esta aula aparece agora:** o Lab 4 produziu uma hipótese operacional;
+  o Lab 5 transforma StageMetrics em uma decisão de engenharia.
 - **Resultado de aprendizagem:** separar compatibilidade funcional, mudança
   relativa de custo e decisão de policy.
 - **Modo de condução:** exercício principal guiado e executado ao vivo;

@@ -18,8 +18,8 @@ consumidores e o racional de data product.
 - **Pergunta norteadora:** esta linha normalizada preserva informação suficiente
   para uma automação distinguir valor real, métrica indisponível, produtor
   incompatível e execução duplicada?
-- **Por que agora:** o Lab 5 mostrou a policy primeiro; o Lab 6 volta um passo e
-  questiona se a evidência integrada merece confiança.
+- **Por que esta aula aparece agora:** o Lab 5 mostrou a policy primeiro; o Lab 6
+  volta um passo e questiona se a evidência integrada merece confiança.
 - **Resultado de aprendizagem:** validar schema, valores, disponibilidade e
   correlação antes de usar telemetria em decisões.
 - **Modo de condução:** dois experimentos principais ao vivo — cenário limpo e
