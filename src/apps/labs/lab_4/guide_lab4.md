@@ -37,7 +37,7 @@ shared Bronze retail tables exist.
 
 If this is the first workshop run, or images and MinIO data were removed,
 follow [Lab 0 guide: bootstrap through Bronze data
-generation](../lab_0/guide_lab0.md#1-bootstrap-local-dependencies) before
+generation](../lab_0/guide_lab0.md) before
 continuing. Follow sections 1 through 5 there; the full bootstrap sequence is
 not duplicated in this guide.
 
@@ -312,7 +312,7 @@ A normalized ratio is useful only when its denominator is trustworthy. The
 low-confidence flag is part of the diagnosis, not an error to hide.
 ```
 
-## 8. Inspect the persisted evidence
+## 8. Optional: inspect the persisted evidence
 
 The workload output is overwritten so each class run has one current business
 result:
