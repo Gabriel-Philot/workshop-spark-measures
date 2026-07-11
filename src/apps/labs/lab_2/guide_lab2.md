@@ -1,98 +1,57 @@
-# Lab 2 guide: professional metric-reading diagnostics
+# Guia do Lab 2: quatro exercícios de leitura de métricas
 
-This guide is the classroom runbook for Lab 2.
+Este é o roteiro de aula do Lab 2.
 
-Goal:
-
-```text
-prepare the shared retail sources
-  -> diagnose stage-level shuffle cost
-  -> distinguish shuffle, spill, and GC evidence
-  -> use TaskMetrics for high-end skew
-  -> use TaskMetrics for low-end empty partitions
-```
-
-Lab 2 connects an instructor-selected set of Spark UI questions from Databricks
-Certified Data Engineer Professional practice exams to controlled local
-workloads. The exam context asks students to interpret numeric Spark signals;
-the workshop makes analogous signals observable and comparable through
-sparkMeasure.
-
-The emphasis is not memorizing one magic threshold. Students should learn to
-read a metric relationship, connect it to the physical workload, and choose the
-right sparkMeasure granularity. sparkMeasure complements the Spark UI by
-condensing useful evidence; it does not replace plan, stage, or executor
-inspection.
-
-Question reference:
+Fluxo:
 
 ```text
-docs/exam_questions.md
+confirmar as fontes Bronze compartilhadas
+  -> diagnosticar movimento e custo de shuffle em nível de stage
+  -> distinguir shuffle, spill e evidência de GC
+  -> usar TaskMetrics para o extremo superior da distribuição
+  -> usar TaskMetrics para o extremo inferior da distribuição
 ```
 
-Use that document to present each complete question and answer. Keep this guide
-open for commands, expected evidence, and teacher notes.
+## Enquadramento da aula
 
-The questions are a focused selection from certification practice exams. They
-are not presented as the complete exam or as official Databricks exam material.
+- **Pergunta norteadora:** como transformar relações numéricas da Spark UI em
+  perguntas diagnósticas reproduzíveis com sparkMeasure?
+- **Por que esta aula aparece agora:** o Lab 1 ensinou a escolher a granularidade;
+  o Lab 2 exercita essa escolha em quatro sintomas diferentes.
+- **Resultado de aprendizagem:** distinguir movimento excessivo, pressão
+  agregada, outlier no extremo superior e partitions vazias no extremo inferior.
+- **Modo de condução:** quatro exercícios principais do aluno, executados ao vivo
+  e discutidos pelo instrutor; questões de exame funcionam como contexto.
 
-## 0. Start from the repository root
+As perguntas foram selecionadas de simulados do Databricks Data Engineer
+Professional para criar conhecimento proximal, não para transformar o workshop
+em uma preparação completa para certificação. Leia os enunciados e respostas em:
+
+[Questões selecionadas do Lab 2](docs/exam_questions.md)
+
+O objetivo não é memorizar um threshold. É ler uma relação entre métricas,
+conectá-la ao workload e escolher a granularidade adequada. sparkMeasure
+complementa a Spark UI; não substitui plano, stage ou executor inspection.
+
+## 0. Confirme os pré-requisitos compartilhados
+
+Execute os comandos a partir da raiz do repositório:
 
 ```bash
 cd workshop-spark-measures
 ```
 
-Expected:
+Se esta for a primeira execução, ou se images e dados do MinIO foram removidos,
+siga as seções 1–5 do [guia do Lab 0](../lab_0/guide_lab0.md). O bootstrap
+completo não é repetido aqui.
 
-- `Makefile` exists;
-- `.env.example` exists;
-- `src/apps/labs/lab_2` exists.
-
-
-
-## 1. Prepare the local platform
-
-If Labs 0 or 1 were already run and the stack is still available, do not
-regenerate the shared retail data. Continue to step 2.
-
-If the containers were stopped but images and MinIO data remain, restart only
-the platform:
+Se somente os containers foram parados e os dados permanecem no MinIO:
 
 ```bash
 make compose
 ```
 
-`make down` stops containers but does not erase generated MinIO data.
-
-If `make clean-data` was used, generate the retail data again after starting the
-stack:
-
-```bash
-make compose
-make generate SCALE=xs GENERATOR_RUN_ID=workshop-sparkMeasures-lab1-6
-```
-
-When starting from a clean machine or after images were removed, use the full
-sequence:
-
-```bash
-make bootstrap
-make build
-make compose
-make dry-test
-make generate SCALE=xs GENERATOR_RUN_ID=workshop-sparkMeasures-lab1-6
-```
-
-Why this sequence exists:
-
-- `make bootstrap` prepares pinned dependencies and local configuration;
-- `make build` builds the workshop images;
-- `make compose` starts MinIO, Spark, workers, and Spark History Server;
-- `make dry-test` proves Spark, Delta, S3A, MinIO, and sparkMeasure work
-together;
-- `make generate` creates the Bronze retail sources shared by Labs 1-6.
-
-Expected Bronze sources:
+As fontes Bronze esperadas são:
 
 ```text
 s3a://lakehouse/bronze/retail/vendors
@@ -101,46 +60,23 @@ s3a://lakehouse/bronze/retail/customers
 s3a://lakehouse/bronze/retail/sales
 ```
 
-Useful UIs:
+Se `make clean-data` foi executado, volte à geração de dados da seção 5 do Lab 0.
+Não diagnostique um workload enquanto o ambiente ainda puder ser a causa da
+falha.
 
-```text
-Spark Master UI:      http://127.0.0.1:28091
-Spark History Server: http://127.0.0.1:28090
-MinIO Console:        http://127.0.0.1:29011
-```
-
-Default MinIO credentials:
-
-```text
-user:     sparkworkshop
-password: sparkworkshop123
-```
-
-Teacher notes:
-
-```text
-Do not diagnose a Spark workload before proving the environment is healthy.
-If the dry test or source generation fails, fix the platform first. Otherwise
-students may confuse missing infrastructure with a performance symptom.
-```
-
-
-
-## 2. Move to the Lab 2 folder
-
-The next commands assume the current directory is the Lab 2 application folder.
+## 1. Entre na pasta do Lab 2
 
 ```bash
 cd src/apps/labs/lab_2
 ```
 
-Optional sanity check:
+Verificação opcional:
 
 ```bash
 ls
 ```
 
-Expected scripts:
+Scripts esperados:
 
 ```text
 lab_2a_shuffle_aggregation_diagnosis.py
@@ -149,42 +85,39 @@ lab_2c_task_duration_skew_diagnosis.py
 lab_2d_empty_partitions_diagnosis.py
 ```
 
-Lesson progression:
+Progressão da aula:
 
+| Exercício | Coletor | Pergunta diagnóstica |
+| --- | --- | --- |
+| 2A | StageMetrics | Uma distribuição desnecessária está aumentando shuffle e tasks? |
+| 2B | StageMetrics | Os agregados sustentam shuffle, spill ou pressão de GC? |
+| 2C | TaskMetrics | Uma task no extremo superior é muito maior que a task típica? |
+| 2D | TaskMetrics | Existem tasks vazias ou quase vazias no extremo inferior? |
 
-| Exercise | Collector    | Diagnostic question                                             |
-| -------- | ------------ | --------------------------------------------------------------- |
-| 2A       | StageMetrics | Is unnecessary distribution increasing shuffle and task volume? |
-| 2B       | StageMetrics | Do the aggregates support shuffle, spill, or GC pressure?       |
-| 2C       | TaskMetrics  | Is one high-end task much larger than the typical task?         |
-| 2D       | TaskMetrics  | Are a few low-end tasks empty or nearly empty?                  |
+StageMetrics permanece como primeira camada. TaskMetrics aparece somente quando
+a pergunta depende da distribuição dentro de um stage.
 
+## 2. Lab 2A: distribuição antes da agregação
 
-The collector change is intentional. StageMetrics remains the default first
-diagnostic layer. TaskMetrics is introduced only when the question depends on
-the distribution inside a stage.
+Leia primeiro a questão de origem:
 
-## 3. Lab 2A: shuffle aggregation diagnosis
+[Lab 2A: reduzindo shuffle durante uma agregação](docs/exam_questions.md)
 
-Read the complete source question first:
+### 2.1 Execute a variante baseline
 
-[Lab 2A: reducing shuffle during aggregation](docs/exam_questions.md)
-
-### 3.1 Run the baseline
-
-Open:
+Abra:
 
 ```text
 lab_2a_shuffle_aggregation_diagnosis.py
 ```
 
-Keep the classroom control point as:
+Mantenha o controle didático em:
 
 ```python
 CONFIG_NAME = "lab2-shuffle-aggregation-baseline"
 ```
 
-Run:
+Execute:
 
 ```bash
 docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
@@ -197,21 +130,20 @@ docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.y
   /opt/spark/src/apps/labs/lab_2/lab_2a_shuffle_aggregation_diagnosis.py
 ```
 
-The baseline performs this physical sequence:
+A sequência física intencional é:
 
 ```text
 sales + vendors
-  -> round-robin repartition(1024)
-  -> select the regional fact
+  -> repartition round-robin(1024)
+  -> selecionar o fato regional
   -> groupBy(vendor_region, sale_year_month)
-  -> Gold Delta write
+  -> escrita Delta em Gold
 ```
 
-The round-robin repartition is intentionally not aligned with the grouping
-keys. It moves wide rows and creates far more tasks than the small local cluster
-can use efficiently.
+A repartição round-robin não está alinhada às chaves da agregação. Ela movimenta
+linhas largas e cria mais tasks do que o cluster local consegue aproveitar.
 
-Watch the native sparkMeasure report for:
+Leia no relatório nativo:
 
 ```text
 numStages
@@ -225,28 +157,19 @@ recordsRead
 recordsWritten
 ```
 
-Teacher notes:
-
-```text
-Start from evidence, not the fix. A tiny four-row result required millions of
-input rows, meaningful shuffle, and many tasks. Zero spill means memory spill is
-not the first suspect. The next place to inspect is the distribution decision
-before the grouped aggregation.
-```
-
-Expected marker:
+Marker esperado:
 
 ```text
 LAB2_SHUFFLE_AGGREGATION_BASELINE_OK
 ```
 
-Expected output:
+Output esperado:
 
 ```text
 s3a://lakehouse/gold/lab2/shuffle_aggregation/baseline
 ```
 
-Business output shape:
+Formato do output de negócio:
 
 ```text
 vendor_region
@@ -257,55 +180,49 @@ gross_sales_amount
 average_sale_amount
 ```
 
+### 2.2 Execute a variante optimized
 
-
-### 3.2 Run the optimized variant
-
-Change only the top-level classroom switch:
+Altere somente:
 
 ```python
 CONFIG_NAME = "lab2-shuffle-aggregation-optimized"
 ```
 
-Run the same submit command again.
+Execute novamente o mesmo submit.
 
-The optimized variant:
+A variante:
 
 ```text
 sales + vendors
-  -> narrow the aggregation fact
-  -> repartition by vendor_region and sale_year_month
-  -> groupBy the same keys
-  -> Gold Delta write
+  -> reduzir o fato da agregação
+  -> repartition por vendor_region e sale_year_month
+  -> groupBy pelas mesmas chaves
+  -> escrita Delta em Gold
 ```
 
-Expected marker:
+Marker esperado:
 
 ```text
 LAB2_SHUFFLE_AGGREGATION_OPTIMIZED_OK
 ```
 
-Expected output:
+Output esperado:
 
 ```text
 s3a://lakehouse/gold/lab2/shuffle_aggregation/optimized
 ```
 
+### 2.3 Compare a evidência
 
+Exemplo local validado com `SCALE=xs`:
 
-### 3.3 Compare the evidence
+| Variante | Stages | Tasks | Executor runtime | Shuffle written | Shuffle read |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| baseline | 14 | 1,296 | ~65s | ~69.1 MiB | ~69.1 MiB |
+| optimized | 13 | 301 | ~43s | ~50.9 MiB | ~50.9 MiB |
 
-Latest validated `SCALE=xs` comparison:
-
-
-| Variant   | Stages | Tasks | Executor runtime | Shuffle written | Shuffle read |
-| --------- | ------ | ----- | ---------------- | --------------- | ------------ |
-| baseline  | 14     | 1,296 | ~65s             | ~69.1 MiB       | ~69.1 MiB    |
-| optimized | 13     | 301   | ~43s             | ~50.9 MiB       | ~50.9 MiB    |
-
-
-The baseline reduced roughly five million input rows to four output rows. Its
-compact sparkMeasure evidence included:
+A variante baseline reduziu aproximadamente cinco milhões de linhas de entrada
+para quatro linhas de saída. A evidência compacta incluiu:
 
 ```text
 recordsRead=5,000,367
@@ -314,69 +231,49 @@ memoryBytesSpilled=0
 diskBytesSpilled=0
 ```
 
-Teacher notes:
+#### Checkpoint de raciocínio — distribuição desnecessária
 
-```text
-Do not claim that repartitioning by the key removes shuffle. groupBy remains a
-wide operation. The evidence says the optimized path reduces unjustified work:
-fewer tasks, lower executor runtime, and less shuffle on the validated run.
+- **Pergunta:** a repartição não alinhada aumenta shuffle e volume de tasks?
+- **Hipótese:** a variante `baseline` movimenta linhas largas e cria trabalho
+  desnecessário antes de agregar.
+- **Evidência:** `baseline` versus `optimized` em tasks, stages, shuffle
+  read/write e executor runtime. As variantes foram construídas para produzir o
+  mesmo grain e schema, mas o lab não compara automaticamente os dois datasets.
+- **Conclusão:** o exemplo local mostra menor trabalho operacional na variante
+  `optimized`; essa conclusão de otimização pressupõe que a equivalência
+  funcional seja validada separadamente.
+- **Limitação:** o marker confirma execução e escrita bem-sucedidas, não
+  equivalência completa entre os outputs. O experimento também não afirma que
+  toda repartição é ruim ou que shuffle deve chegar a zero.
 
-The lesson is the diagnostic method:
-read the code -> inspect StageMetrics -> form a hypothesis -> rerun -> compare.
-```
+## 3. Lab 2B: interpretação de shuffle, spill e GC
 
-Optional Spark History review:
+Leia as duas questões de origem separadamente:
 
-- open `workshop-lab2-shuffle-aggregation-baseline` and the optimized app;
-- compare Jobs and Stages using the `LAB2` descriptions;
-- inspect task count and shuffle read/write on the expensive stages;
-- use SQL / DataFrame to connect `Exchange` and aggregation operators to the
-sparkMeasure counters.
+- [Lab 2B: interpretando GC alto](docs/exam_questions.md)
+- [Lab 2B: interpretando shuffle spill](docs/exam_questions.md)
 
+A primeira questão usa 25% como sinal teórico de GC relevante. A segunda discute
+memory e disk spill. O workload local conecta as duas relações, mas a evidência
+validada reproduziu claramente spill e manteve a razão de GC perto de 3.4%.
+Não apresente as duas questões como um único enunciado nem diagnostique o que a
+execução não demonstrou.
 
+### 3.1 Execute a variante pressure
 
-## 4. Lab 2B: stage metrics interpretation drill
-
-Read both source questions before the run:
-
-- [Lab 2B: interpreting high GC time](docs/exam_questions.md)
-- [Lab 2B: interpreting shuffle spill](docs/exam_questions.md)
-
-Teacher reminder:
-
-```text
-Lab 2B connects two separate practice-exam questions to one local workload.
-Do not present them as one combined question.
-
-Question 1 asks how to interpret a material GC-time ratio, using 25% as its
-theoretical signal.
-
-Question 2 asks how to interpret memory and disk shuffle spill.
-
-The validated local run clearly reproduces the shuffle-spill scenario. Its GC
-ratio stays around 3.4%, so it does not reproduce the 25% high-GC scenario.
-This contrast is part of the lesson: diagnose only what the measured evidence
-supports.
-```
-
-This exercise deliberately asks students to interpret the native aggregated
-sparkMeasure report. It does not print a separate diagnosis line.
-
-### 4.1 Run the pressure variant
-
-Open:
+Abra:
 
 ```text
 lab_2b_stage_metrics_interpretation_drill.py
 ```
 
-Start with:
+Comece com:
 
 ```python
 CONFIG_NAME = "lab2-stage-metrics-drill-pressure"
 ```
 
-Run:
+Execute:
 
 ```bash
 docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
@@ -389,19 +286,19 @@ docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.y
   /opt/spark/src/apps/labs/lab_2/lab_2b_stage_metrics_interpretation_drill.py
 ```
 
-The pressure variant carries wider payload columns through a round-robin
-repartition before narrowing the aggregation fact:
+A variante carrega payloads largos por uma repartição round-robin antes de
+reduzir o fato:
 
 ```text
 sales + vendors + products
-  -> keep wide payload columns
-  -> round-robin repartition(512)
-  -> narrow the fact
+  -> manter colunas largas de payload
+  -> repartition round-robin(512)
+  -> reduzir o fato
   -> groupBy(region, category, month)
-  -> Gold Delta write
+  -> escrita Delta em Gold
 ```
 
-Read these fields directly from the aggregated stage report:
+Leia diretamente do relatório agregado:
 
 ```text
 numStages
@@ -414,91 +311,81 @@ shuffleTotalBytesRead
 shuffleBytesWritten
 ```
 
-Use this evidence table:
+Relações de evidência:
 
+| Observação | Interpretação permitida |
+| --- | --- |
+| shuffle bytes > 0 | uma operação wide movimentou dados entre stages |
+| memory e disk spill > 0 | houve spill observado nesta execução |
+| spill = 0 | não houve spill observado; isso não elimina outros gargalos |
+| `jvmGCTime / executorRunTime` material | pressão de memória pode estar presente |
+| razão de GC baixa e spill zero | investigue movimento e partitioning antes |
+| uma task lenta | não é demonstrada por agregados de StageMetrics |
 
-| Observation                        | Interpretation                                   |
-| ---------------------------------- | ------------------------------------------------ |
-| shuffle bytes > 0                  | a wide operation exchanged data between stages   |
-| memory and disk spill > 0          | shuffle data exceeded available execution memory |
-| spill = 0                          | this run does not show a spill symptom           |
-| high `jvmGCTime / executorRunTime` | memory pressure may be present                   |
-| low GC ratio and zero spill        | investigate movement and partitioning first      |
-| one slow task                      | not proven by StageMetrics aggregates            |
-
-
-Expected marker:
+Marker esperado:
 
 ```text
 LAB2_STAGE_METRICS_DRILL_PRESSURE_OK
 ```
 
-Expected output:
+Output esperado:
 
 ```text
 s3a://lakehouse/gold/lab2/stage_metrics_drill/pressure
 ```
 
-Both Lab 2B variants produce a category/month summary at this grain:
+As duas variantes produzem um resumo com este grain:
 
 ```text
 vendor_region, category_id, sale_year_month
 ```
 
+### 3.2 Execute a variante default
 
-
-### 4.2 Run the default variant
-
-Change only:
+Altere somente:
 
 ```python
 CONFIG_NAME = "lab2-stage-metrics-drill-default"
 ```
 
-Run the same submit command again.
+Execute novamente o mesmo submit. A variante `default` reduz os dados antes de
+uma repartição por chave e produz o mesmo resumo de 50 linhas.
 
-The default variant narrows data before a keyed repartition and produces the
-same 50-row business summary.
-
-Expected marker:
+Marker esperado:
 
 ```text
 LAB2_STAGE_METRICS_DRILL_DEFAULT_OK
 ```
 
-Expected output:
+Output esperado:
 
 ```text
 s3a://lakehouse/gold/lab2/stage_metrics_drill/default
 ```
 
+### 3.3 Compare a evidência
 
+Exemplo local validado com `SCALE=xs`:
 
-### 4.3 Compare the evidence
+| Variante | Stages | Tasks | Executor runtime | Shuffle written | Memory spilled | Disk spilled | GC time |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| default | 16 | 356 | ~59.3s | ~40.0 MiB | 0 B | 0 B | ~1.7s |
+| pressure | 17 | 839 | ~94.2s | ~670.9 MiB | ~800.0 MiB | ~382.2 MiB | ~3.2s |
 
-Latest validated `SCALE=xs` comparison:
-
-
-| Variant  | Stages | Tasks | Executor runtime | Shuffle written | Memory spilled | Disk spilled | GC time |
-| -------- | ------ | ----- | ---------------- | --------------- | -------------- | ------------ | ------- |
-| default  | 16     | 356   | ~59.3s           | ~40.0 MiB       | 0 B            | 0 B          | ~1.7s   |
-| pressure | 17     | 839   | ~94.2s           | ~670.9 MiB      | ~800.0 MiB     | ~382.2 MiB   | ~3.2s   |
-
-
-The pressure run's raw evidence was:
+Evidência bruta da execução `pressure`:
 
 ```text
 numStages => 17
 numTasks => 839
 executorRunTime => 94175
-jvmGCTime => 3246n
+jvmGCTime => 3246
 diskBytesSpilled => 400765052
 memoryBytesSpilled => 838859488
 shuffleTotalBytesRead => 703458127
 shuffleBytesWritten => 703458127
 ```
 
-The default run's raw evidence was:
+Evidência bruta da execução `default`:
 
 ```text
 numStages => 16
@@ -511,19 +398,7 @@ shuffleTotalBytesRead => 41940653
 shuffleBytesWritten => 41940653
 ```
 
-Teacher notes:
-
-```text
-The strongest local evidence is shuffle plus memory/disk spill. The GC ratio is
-only about 3.4%, far from the professional question's 25% example. Say that
-explicitly: this run supports a spill diagnosis, not a strong GC diagnosis.
-
-If spill is zero on another machine, the lesson still works. The honest result
-is: shuffle exists, but this run does not show spill. Do not force every slow
-stage into a memory-pressure narrative.
-```
-
-Both variants must remain semantically equivalent:
+Na validação local documentada, uma comparação adicional dos outputs apresentou:
 
 ```text
 default row count=50
@@ -532,33 +407,49 @@ default minus pressure=0
 pressure minus default=0
 ```
 
+Esses valores são evidência pré-computada da calibração. O `validate_result()`
+da aplicação confirma somente que o output foi produzido; ele não executa essa
+comparação entre variantes.
 
+#### Checkpoint de raciocínio — pressão agregada
 
-## 5. Lab 2C: high-end task skew diagnosis
+- **Pergunta:** os agregados sustentam pressão de shuffle, spill ou GC?
+- **Hipótese:** carregar payload largo e reparticionar cedo aumenta movimento e
+  pode ultrapassar a memória disponível para essa execução.
+- **Evidência:** shuffle, memory spill, disk spill e a relação entre `jvmGCTime`
+  e `executorRunTime` nas variantes `pressure` e `default`.
+- **Conclusão:** spill positivo demonstra spill nesta execução; a razão local de
+  GC sustenta uma observação de aproximadamente 3.4%, não o cenário teórico de
+  25% da questão.
+- **Limitação:** StageMetrics não identifica qual task concentrou a pressão. Em
+  outra máquina, spill zero significa somente que spill não foi observado nessa
+  execução; não autoriza forçar uma narrativa de memory pressure.
 
-Read the source question:
+## 4. Lab 2C: outlier no extremo superior
 
-[Lab 2C: diagnosing high-end task skew](docs/exam_questions.md)
+Leia a questão de origem:
 
-StageMetrics was enough for Labs 2A and 2B because those questions concerned
-aggregate stage pressure. Lab 2C asks whether one or a few tasks are much larger
-than the rest. That requires a task distribution.
+[Lab 2C: diagnosticando high-end task skew](docs/exam_questions.md)
 
-### 5.1 Run the TaskMetrics workload
+StageMetrics foi suficiente em 2A e 2B porque as perguntas tratavam pressão
+agregada. O 2C pergunta se uma ou poucas tasks são muito maiores que a task
+típica e, por isso, exige uma distribuição.
 
-Open:
+### 4.1 Execute o workload com TaskMetrics
+
+Abra:
 
 ```text
 lab_2c_task_duration_skew_diagnosis.py
 ```
 
-The classroom config is:
+Configuração da aula:
 
 ```python
 CONFIG_NAME = "lab2c-task-skew-task"
 ```
 
-Run:
+Execute:
 
 ```bash
 docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
@@ -571,43 +462,41 @@ docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.y
   /opt/spark/src/apps/labs/lab_2/lab_2c_task_duration_skew_diagnosis.py
 ```
 
-The workload keeps the generated hot vendor visible:
+O workload preserva o hot vendor gerado:
 
 ```text
 sales
   -> repartition(27, vendor_id)
-  -> shuffle join vendors
-  -> aggregate by vendor_id and vendor_region
-  -> Gold Delta write
+  -> shuffle join com vendors
+  -> aggregate por vendor_id e vendor_region
+  -> escrita Delta em Gold
 ```
 
-AQE and automatic broadcast joins are disabled for this exercise so the
-27-task hot-key shuffle remains visible.
+AQE e automatic broadcast joins estão desabilitados para manter visível o
+shuffle de 27 tasks.
 
-Expected marker:
+Marker esperado:
 
 ```text
 LAB2C_TASK_SKEW_TASK_OK
 ```
 
-Expected output:
+Output esperado:
 
 ```text
 s3a://lakehouse/gold/lab2/task_skew/task
 ```
 
-Business output grain:
+Grain do output de negócio:
 
 ```text
 vendor_id, vendor_region
 ```
 
+### 4.2 Leia o boxed report
 
-
-### 5.2 Read the boxed report
-
-The native sparkMeasure TaskMetrics report is printed first. The lab then emits
-one classroom projection of the same TaskMetrics DataFrame:
+O relatório nativo do TaskMetrics aparece primeiro. Em seguida, o lab projeta o
+mesmo TaskMetrics DataFrame:
 
 ```text
 LAB 2C TASKMETRICS DIAGNOSTIC REPORT
@@ -616,24 +505,22 @@ Metric summary
 Top task outliers by shuffleTotalBytesRead
 ```
 
-Primary decision rule:
+Regra de decisão:
 
 ```text
-If max is much larger than p75 for both duration and data volume,
-diagnose high-end task skew.
+Se max for muito maior que p75 tanto para duration quanto para volume de dados,
+diagnostique high-end task skew.
 ```
 
-Latest validated `SCALE=xs` evidence:
+Exemplo local validado com `SCALE=xs`:
 
+| Métrica | p75 | Max | Max / p75 |
+| --- | ---: | ---: | ---: |
+| `duration` | 227 ms | 2,033 ms | 8.96x |
+| `shuffleTotalBytesRead` | 617,822 B | 28,946,218 B | 46.85x |
+| `shuffleRecordsRead` | 75,904 | 3,561,478 | 46.92x |
 
-| Metric                  | p75       | Max          | Max / p75 |
-| ----------------------- | --------- | ------------ | --------- |
-| `duration`              | 227 ms    | 2,033 ms     | 8.96x     |
-| `shuffleTotalBytesRead` | 617,822 B | 28,946,218 B | 46.85x    |
-| `shuffleRecordsRead`    | 75,904    | 3,561,478    | 46.92x    |
-
-
-The highest-volume task in the validated report made the imbalance tangible:
+A task de maior volume no exemplo validado foi:
 
 ```text
 task=236
@@ -644,56 +531,52 @@ memoryBytesSpilled=80.0 MiB
 diskBytesSpilled=16.4 MiB
 ```
 
-Teacher notes:
+#### Checkpoint de raciocínio — high-end task skew
 
-```text
-The professional question calls its volume metric Input Size. This selected
-stage consumes shuffle, so Shuffle Read is the equivalent local evidence. The
-column name changes with stage type; the percentile reasoning does not.
+- **Pergunta:** uma ou poucas tasks processaram muito mais dados que a task
+  típica?
+- **Hipótese:** a chave dominante cria máximos muito acima de p75 para tempo e
+  volume de dados.
+- **Evidência:** max/p75 de `duration`, `shuffleTotalBytesRead` e
+  `shuffleRecordsRead` no stage selecionado de 27 tasks.
+- **Conclusão:** a forma da distribuição sustenta um sinal de skew controlado.
+  Neste stage, `shuffleTotalBytesRead` é o sinal de volume por task usado para
+  reproduzir o raciocínio distributivo da questão de origem; ele não é o mesmo
+  contador que `Input Size`.
+- **Limitação:** valores de duração variam com o scheduling local, e o exercício
+  para no diagnóstico; ele não prova uma solução de produção.
 
-Focus on the distribution shape, not exact milliseconds. Local WSL scheduling
-can move duration values, while the hot-key data-volume ratio remains the
-stronger signal.
+Opções de remediação apenas para discussão:
 
-The total number of tasks in the application may also vary after the first
-Delta overwrite. The selected 27-task shuffle stage is the stable classroom
-unit because it mirrors the professional question.
-```
+- aplicar salting à hot key;
+- usar agregação em duas etapas;
+- processar a chave dominante separadamente;
+- avaliar o tratamento de skew do AQE em produção.
 
-Discussion-only remediation options:
+## 5. Lab 2D: tasks vazias no extremo inferior
 
-- salt the hot key;
-- use two-step aggregation;
-- process the dominant key separately;
-- evaluate AQE skew handling in a production workload.
+Leia a questão de origem:
 
-The exercise intentionally stops at diagnosis.
+[Lab 2D: diagnosticando partitions quase vazias](docs/exam_questions.md)
 
-## 6. Lab 2D: low-end empty partitions diagnosis
+O 2D continua em TaskMetrics, mas inverte a pergunta: em vez de procurar um
+máximo dominante, procura tasks no mínimo que não processaram dados úteis.
 
-Read the source question:
+### 5.1 Execute o workload com TaskMetrics
 
-[Lab 2D: diagnosing near-empty partitions](docs/exam_questions.md)
-
-Lab 2D uses TaskMetrics again but reverses the direction of the diagnostic
-question. Instead of looking for one dominant maximum, inspect whether a few
-tasks at the minimum processed no useful data.
-
-### 6.1 Run the TaskMetrics workload
-
-Open:
+Abra:
 
 ```text
 lab_2d_empty_partitions_diagnosis.py
 ```
 
-The classroom config is:
+Configuração da aula:
 
 ```python
 CONFIG_NAME = "lab2d-empty-partitions-task"
 ```
 
-Run:
+Execute:
 
 ```bash
 docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
@@ -706,43 +589,41 @@ docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.y
   /opt/spark/src/apps/labs/lab_2/lab_2d_empty_partitions_diagnosis.py
 ```
 
-The workload derives a synthetic bucket from `sale_id` so it does not inherit
-the hot-vendor skew from Lab 2C:
+O workload deriva um bucket sintético de `sale_id` para não herdar o hot-vendor
+skew do 2C:
 
 ```text
 sales
-  -> derive partition_bucket with 48 active buckets
+  -> derivar partition_bucket com 48 buckets ativos
   -> repartition(27, partition_bucket)
-  -> aggregate by partition_bucket
-  -> Gold Delta write
+  -> aggregate por partition_bucket
+  -> escrita Delta em Gold
 ```
 
-AQE is disabled so Spark does not coalesce away the distribution the lesson is
-trying to expose.
+AQE está desabilitado para não coalescer a distribuição que a aula precisa
+observar.
 
-Expected marker:
+Marker esperado:
 
 ```text
 LAB2D_EMPTY_PARTITIONS_TASK_OK
 ```
 
-Expected output:
+Output esperado:
 
 ```text
 s3a://lakehouse/gold/lab2/empty_partitions/task
 ```
 
-Business output grain:
+Grain do output de negócio:
 
 ```text
 partition_bucket
 ```
 
+### 5.2 Leia o boxed report
 
-
-### 6.2 Read the boxed report
-
-The native sparkMeasure report is followed by:
+O relatório nativo é seguido por:
 
 ```text
 LAB 2D TASKMETRICS EMPTY PARTITIONS REPORT
@@ -751,26 +632,23 @@ Metric summary
 Lowest task outliers by shuffleRecordsRead
 ```
 
-Primary decision rule:
+Regra de decisão:
 
 ```text
-If data-volume min is much smaller than median, inspect low-end tasks.
-If data-volume max remains close to p75, do not diagnose high-end skew.
+Se o mínimo de volume for muito menor que a mediana, inspecione as tasks no
+extremo inferior. Se o máximo permanecer próximo de p75, não diagnostique
+high-end skew.
 ```
 
-Latest validated `SCALE=xs` evidence:
+Exemplo local validado com `SCALE=xs`:
 
+| Métrica | Min | Mediana | p75 | Max | Max / p75 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `shuffleRecordsRead` | 0 | 104,633 | 311,706 | 521,959 | 1.67x |
+| `shuffleTotalBytesRead` | 0 B | 831.9 KiB | 3.0 MiB | 5.4 MiB | 1.79x |
+| `recordsWritten` | 0 | 1 | 3 | 5 | 1.67x |
 
-| Metric                  | Min | Median    | p75     | Max     | Max / p75 |
-| ----------------------- | --- | --------- | ------- | ------- | --------- |
-| `shuffleRecordsRead`    | 0   | 104,633   | 311,706 | 521,959 | 1.67x     |
-| `shuffleTotalBytesRead` | 0 B | 831.9 KiB | 3.0 MiB | 5.4 MiB | 1.79x     |
-| `recordsWritten`        | 0   | 1         | 3       | 5       | 1.67x     |
-
-
-The selected stage contained four empty tasks.
-
-The lowest-volume tasks in the validated report showed the intended pattern:
+O stage selecionado continha quatro tasks vazias. O extremo inferior mostrou:
 
 ```text
 task=193 shuffleRecordsRead=0 shuffleTotalBytesRead=0 B recordsWritten=0
@@ -779,45 +657,42 @@ task=191 shuffleRecordsRead=0 shuffleTotalBytesRead=0 B recordsWritten=0
 task=190 shuffleRecordsRead=0 shuffleTotalBytesRead=0 B recordsWritten=0
 ```
 
-Teacher notes:
+#### Checkpoint de raciocínio — partitions vazias
+
+- **Pergunta:** o extremo inferior contém tasks sem trabalho útil?
+- **Hipótese:** o mapeamento hash dos 48 buckets ativos para 27 shuffle
+  partitions não ocupa necessariamente todas as partitions de maneira uniforme,
+  podendo produzir tasks sem registros enquanto a mediana permanece positiva.
+- **Evidência:** mínimo, mediana, p75, máximo, bytes e registros processados no
+  stage selecionado.
+- **Conclusão:** TaskMetrics mostra que algumas shuffle partitions não receberam
+  registros. O padrão é `min = 0` com mediana positiva e sem um máximo
+  proporcionalmente dominante.
+- **Limitação:** o sinal demonstra ocupação desigual das partitions, mas não
+  prova que a quantidade de partitions, isoladamente, seja a causa; duration
+  local também pode oscilar por scheduling.
+
+## 6. Comparação final da aula
+
+| Sintoma | Primeiro coletor | Relação de evidência | Próxima investigação |
+| --- | --- | --- | --- |
+| movimento excessivo no stage | StageMetrics | shuffle bytes e task volume elevados | joins, aggregations e repartitions |
+| pressão de memória no shuffle | StageMetrics | memory/disk spill maior que zero | partition size, memory e operações wide |
+| pressão de GC | StageMetrics | razão GC/runtime material e repetível | object pressure, caching, serialization e memory |
+| high-end task skew | TaskMetrics | max muito maior que p75 | hot keys e stragglers |
+| partitions vazias no extremo inferior | TaskMetrics | min muito menor que mediana | partition count e key distribution |
+
+Mensagem principal:
 
 ```text
-Use data volume as the primary diagnosis. A local duration maximum can move
-because of scheduling noise even when records and bytes show a clear low-end
-empty-partition pattern.
-
-Contrast this explicitly with Lab 2C:
-2C asks whether max >> p75.
-2D asks whether min << median while the data-volume high end stays constrained.
+Comece com StageMetrics para classificar o sintoma operacional amplo.
+Use TaskMetrics como microscópio somente quando o diagnóstico depender da
+distribuição dentro de um stage.
 ```
 
+## Material operacional opcional
 
-
-## 7. Final classroom comparison
-
-Use this table after completing all four exercises:
-
-
-| Symptom                  | First collector | Evidence pattern                         | Next investigation                              |
-| ------------------------ | --------------- | ---------------------------------------- | ----------------------------------------------- |
-| excessive stage movement | StageMetrics    | high shuffle bytes and task volume       | joins, aggregations, repartitions               |
-| shuffle memory pressure  | StageMetrics    | memory/disk spill greater than zero      | partition size, memory, wide operations         |
-| GC pressure              | StageMetrics    | material and repeatable GC/runtime ratio | object pressure, caching, serialization, memory |
-| high-end task skew       | TaskMetrics     | max much greater than p75                | hot keys and stragglers                         |
-| low-end empty partitions | TaskMetrics     | min much lower than median               | partition count and key distribution            |
-
-
-Main teaching message:
-
-```text
-Start with StageMetrics to classify the broad operational symptom.
-Use TaskMetrics as a microscope only when the diagnosis depends on the
-distribution inside a stage.
-```
-
-
-
-## 8. Optional: inspect Spark History Server and MinIO
+### 7. Inspecione Spark History Server e MinIO
 
 Spark History Server:
 
@@ -836,14 +711,10 @@ workshop-lab2c-task-skew-task
 workshop-lab2d-empty-partitions-task
 ```
 
-What to inspect:
-
-- `Jobs`: use `LAB2`, `LAB2C`, or `LAB2D` descriptions to identify workshop
-materialization work;
-- `Stages`: compare duration, task count, shuffle read/write, and spill;
-- `SQL / DataFrame`: connect exchanges and aggregations to metric evidence;
-- completed-stage Summary Metrics: compare the task distribution used by 2C
-and 2D.
+Em `Jobs`, use descrições `LAB2`, `LAB2C` e `LAB2D`. Em `Stages`, compare
+duração, tasks, shuffle e spill. Em `SQL / DataFrame`, conecte exchanges e
+aggregations às métricas. Para 2C e 2D, use Summary Metrics do stage concluído
+para revisar a distribuição.
 
 MinIO Console:
 
@@ -851,7 +722,7 @@ MinIO Console:
 http://127.0.0.1:29011
 ```
 
-Expected Gold paths:
+Paths Gold esperados:
 
 ```text
 s3a://lakehouse/gold/lab2/shuffle_aggregation/baseline
@@ -862,55 +733,61 @@ s3a://lakehouse/gold/lab2/task_skew/task
 s3a://lakehouse/gold/lab2/empty_partitions/task
 ```
 
-Metric persistence is disabled for these exercises. The metrics appear in the
-terminal and Spark event history; the business outputs are persisted as Delta.
+A persistência das métricas está desabilitada. As métricas aparecem no terminal
+e no event history; os outputs de negócio são persistidos como Delta.
 
-## 9. Optional cleanup after class
+Credenciais padrão do MinIO:
 
-From the repository root:
+```text
+user:     sparkworkshop
+password: sparkworkshop123
+```
+
+### 8. Limpeza opcional depois da aula
+
+Na raiz do repositório:
 
 ```bash
 cd ../../../..
 make down
 ```
 
-To remove generated MinIO data as well:
+Para remover também os dados do MinIO:
 
 ```bash
 make clean-data
 ```
 
-To remove workshop images:
+Para remover as images do workshop:
 
 ```bash
 make removeimage
 ```
 
-`make clean-data` removes data used by other labs. Do not run it between Lab 2
-exercises.
+`make clean-data` remove dados usados pelos outros labs. Não execute esse comando
+entre os exercícios do Lab 2.
 
-## Appendix A: why the boxed TaskMetrics reports exist
+### Apêndice A — Por que os boxed reports de TaskMetrics existem
 
-Labs 2C and 2D retain the native sparkMeasure TaskMetrics output. Their boxed
-reports do not collect new measurements. They create a compact classroom view
-from:
+2C e 2D preservam o output nativo do TaskMetrics. Os boxes não coletam novas
+medições; eles criam uma visão didática a partir de:
 
 ```python
 task_metrics = collector.create_taskmetrics_DF(...)
 ```
 
-The shared flow is:
+Fluxo compartilhado:
 
 ```text
 TaskMetrics begin/end
   -> create_taskmetrics_DF
-  -> select a useful completed stage
-  -> aggregate task percentiles
-  -> collect a small outlier table
-  -> render one multiline logger block
+  -> selecionar um stage concluído útil
+  -> agregar percentis de task
+  -> coletar uma pequena tabela de outliers
+  -> renderizar um bloco multilinha pelo logger
 ```
 
-Lab 2C selects the clearest high-end data-volume stage and computes:
+O 2C seleciona o sinal mais claro no extremo superior e calcula:
 
 ```text
 p75
@@ -918,9 +795,9 @@ max
 max / p75
 ```
 
-It sorts the outlier table by `shuffleTotalBytesRead` descending.
+Depois ordena os outliers por `shuffleTotalBytesRead` decrescente.
 
-Lab 2D selects the clearest low-end data-volume stage and computes:
+O 2D seleciona o sinal mais claro no extremo inferior e calcula:
 
 ```text
 min
@@ -931,16 +808,18 @@ median / min
 max / p75
 ```
 
-It sorts the outlier table by `shuffleRecordsRead` ascending.
+Depois ordena os outliers por `shuffleRecordsRead` crescente. Os dois boxes usam
+uma única chamada multilinha do logger; o relatório nativo permanece disponível
+imediatamente antes deles.
 
-Both reports use one multiline project logger call so the diagnostic evidence
-remains readable in `spark-submit`. The native collector report is still
-available immediately before the classroom box.
+Quando `min = 0`, `median / min` não é uma razão numérica definida. O zero já é
+o sinal explícito de uma task vazia; a implementação atual usa um sentinel para
+esse caso e apresenta a razão como `∞` no boxed report.
 
-## Appendix B: local validation context
+### Apêndice B — Contexto da validação local
 
-The documented values were captured on the local WSL stack with two Spark
-workers and generated `SCALE=xs` data:
+Os valores documentados foram coletados na stack local WSL, com dois Spark
+workers e dados `SCALE=xs`:
 
 ```text
 sales rows=5,000,000
@@ -949,16 +828,22 @@ sales total bytes≈762 MB
 hot vendor share≈0.7001
 ```
 
-Treat exact runtime and GC values as environment-specific. Docker, WSL, the
-host, driver, and executors compete for the same local resources. The durable
-teaching evidence is the relationship between counters:
+Runtime e GC exatos dependem do ambiente. Docker, WSL, host, driver e executors
+competem pelos mesmos recursos. A evidência durável está nas relações:
 
-- shuffle bytes compared across equivalent variants;
-- spill greater than or equal to zero;
-- GC time relative to executor runtime;
-- max compared with p75 for high-end skew;
-- min compared with median for low-end empty partitions.
+- shuffle comparado somente quando a compatibilidade funcional foi verificada
+  pelo experimento ou por evidência de calibração separada;
+- spill observado maior que zero ou ausência de spill observado;
+- GC time em relação ao executor runtime;
+- max comparado com p75 no extremo superior;
+- min comparado com mediana no extremo inferior.
 
-`SCALE=s` was used during earlier stress testing, but the latest documented
-workloads were calibrated and validated with `SCALE=xs`. Re-run the larger
-scale before presenting any historical `SCALE=s` numbers.
+`SCALE=s` foi usado em stress tests anteriores, mas os exemplos documentados
+mais recentes usam `SCALE=xs`. Reexecute a escala maior antes de apresentar
+qualquer número histórico de `SCALE=s`.
+
+## Ponte para a próxima aula
+
+O Lab 2 mostrou quando StageMetrics basta e quando TaskMetrics é necessário.
+O Lab 3 usa os mesmos coletores para investigar uma nova pergunta: qual é o
+custo de coletar evidência mais detalhada?
