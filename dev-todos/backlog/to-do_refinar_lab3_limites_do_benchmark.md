@@ -45,6 +45,11 @@ src/apps/labs/lab_3/guide_lab3.md
 4. Preservar os comandos, modes, paths, markers e relatório nativo opcional.
 5. Colocar manual submit, relatório expandido, benchmark completo, History e
    cleanup depois do núcleo.
+6. Integrar os checkpoints às seções de demonstração e post-mortem, sem copiar
+   novamente as tabelas, boundaries ou explicações históricas já preservadas no
+   post-mortem linkado.
+7. Manter toda narrativa criada ou editada no guide em português, preservando
+   comandos, paths, markers, nomes de campos e termos técnicos.
 
 ## Checkpoints de raciocínio
 
@@ -84,6 +89,10 @@ agregados em uma primeira hipótese operacional.
 - Evidência local está rotulada como exemplo validado.
 - Não existe promessa de overhead universal.
 - Caminhos longos permanecem disponíveis, mas opcionais.
+- Checkpoints concisos reutilizam a evidência existente e não duplicam o
+  post-mortem.
+- O guide permanece integralmente em português na narrativa pedagógica e não
+  cresce materialmente sem reorganização de conteúdo repetido.
 - O guia termina com a ponte para o Lab 4.
 
 ## Validação e gate

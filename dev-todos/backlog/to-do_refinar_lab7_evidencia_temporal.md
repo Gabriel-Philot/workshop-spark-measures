@@ -50,21 +50,38 @@ src/apps/labs/lab_7/guide_lab7.md
 6. Explicar que Streamlit e DuckDB somente leem a tabela persistida.
 7. Manter MinIO, 14 aplicações no History, Make controls e cleanup como caminhos
    opcionais depois da aula principal.
+8. Integrar o checkpoint à apresentação do dashboard e à evidência validada já
+   existente, sem duplicar tabelas, métricas, expected outputs, comandos ou
+   troubleshooting.
+9. Manter toda narrativa criada ou editada no guide em português, preservando
+   comandos, paths, markers, nomes de campos e termos técnicos.
 
 ## Checkpoint de raciocínio — comportamento ao longo do tempo
 
 - **Pergunta:** os dias 1x, 10x e 100x alteram os sinais de execução de forma
   coerente com o volume conhecido?
-- **Hipótese:** records read acompanha o volume; shuffle separa os grupos com
-  clareza; runtime cresce de forma menos linear por causa do custo fixo por
-  submit.
+- **Hipótese:** `recordsRead` e shuffle devem acompanhar o volume conhecido.
+  Executor runtime pode crescer de forma menos linear, mas esse comportamento
+  não deve ser atribuído automaticamente ao custo de startup do `spark-submit`.
 - **Evidência:** volume plan, 14 datas do mesmo batch, records read,
   shuffle read/write, executor runtime, tasks, GC e zero real de spill quando
   disponível.
 - **Conclusão:** StageMetrics persistidas com data de negócio permitem localizar
   quais partições temporais mudaram o perfil operacional.
-- **Limitação:** a fonte é controlada, o dashboard não prova causa raiz e ausência
-  de spill não significa ausência de outros gargalos.
+- **Limitação:** executor runtime, application/submit wall-clock e batch
+  wall-clock possuem fronteiras diferentes. Custos de startup e encerramento
+  pertencem às medições de wall-clock, não explicam diretamente
+  `executorRunTime`; a fonte controlada e o dashboard também não provam causa
+  raiz.
+
+Formulação técnica que o guide deverá preservar em português:
+
+```text
+recordsRead e shuffle devem acompanhar o volume conhecido. Executor runtime
+pode crescer de forma menos linear, mas isso não deve ser atribuído
+automaticamente ao custo de startup do spark-submit. Custos de startup e
+encerramento pertencem ao wall-clock do submit ou do batch.
+```
 
 ## Ponte para a próxima aula
 
@@ -79,6 +96,11 @@ as relações mudarem.
 - O fallback pré-computado não depende de inventar novos arquivos ou serviços.
 - O dashboard é apresentado como lente read-only.
 - Números e duração local estão claramente rotulados.
+- Executor runtime, submit wall-clock e batch wall-clock permanecem distintos.
+- O checkpoint é conciso, reutiliza os gráficos e não duplica a tabela de
+  evidência validada.
+- O guide permanece integralmente em português na narrativa pedagógica e não
+  cresce materialmente sem reorganização de conteúdo repetido.
 - O guia termina com a ponte para uso em produção.
 
 ## Validação e gate

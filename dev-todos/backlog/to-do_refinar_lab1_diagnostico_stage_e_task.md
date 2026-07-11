@@ -47,6 +47,10 @@ src/apps/labs/lab_1/guide_lab1.md
    caminhos opcionais.
 5. Explicar que a troca manual de `CONFIG_NAME` é um controle didático, não uma
    mudança de código do workload.
+6. Integrar os checkpoints às seções de 1A e 1B, condensando as `Teacher notes`
+   existentes em vez de repetir pergunta, métricas, outputs ou limitações.
+7. Manter toda narrativa criada ou editada no guide em português, preservando
+   comandos, paths, markers, nomes de campos e termos técnicos.
 
 ## Checkpoints de raciocínio
 
@@ -58,10 +62,19 @@ src/apps/labs/lab_1/guide_lab1.md
   antes da escrita.
 - **Evidência:** `explain`, Spark UI, shuffle read/write, número de tasks, stages
   e executor runtime coletados no modo observed-stage.
-- **Conclusão:** a relação entre plano e métricas sustenta a hipótese de custo da
-  ordenação global.
-- **Limitação:** os agregados não identificam uma task específica nem tornam os
-  valores locais universais.
+- **Conclusão:** o plano e as métricas mostram que a ordenação global envolveu
+  `Exchange`, shuffle e trabalho distribuído nesta execução.
+- **Limitação:** sem um baseline equivalente sem sort, o lab não quantifica o
+  custo incremental causado pelo `orderBy`; os agregados também não identificam
+  uma task específica.
+
+Formulação técnica que o guide deverá preservar em português:
+
+```text
+O plano e as métricas mostram que a ordenação global envolveu Exchange, shuffle
+e trabalho distribuído nesta execução. Sem um baseline equivalente sem sort, o
+lab não quantifica o custo incremental causado pela ordenação.
+```
 
 ### 1B — task outlier e validação do ajuste
 
@@ -89,7 +102,11 @@ leitura de relações métricas do Lab 2.
 - Spark History do 1A permanece ligada à evidência central.
 - Inspeções e cleanup não interrompem a sequência principal.
 - O guia termina com a ponte para o Lab 2.
-- Prosa em português e interfaces técnicas intactas.
+- Prosa integralmente em português e interfaces técnicas intactas.
+- Checkpoints concisos, integrados ao conteúdo existente e sem duplicação de
+  métricas, expected outputs, comandos ou troubleshooting.
+- Crescimento material do guide exige remoção, reorganização ou referência
+  explícita ao detalhe preservado em uma class note.
 
 ## Validação e gate
 

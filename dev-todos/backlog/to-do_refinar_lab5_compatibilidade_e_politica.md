@@ -44,18 +44,33 @@ src/apps/labs/lab_5/guide_lab5.md
 5. Explicar que Lab 5 confia na telemetria recebida; ele não valida o contrato
    dessa telemetria.
 6. Manter MinIO, History e cleanup depois da aula principal.
+7. Integrar os checkpoints ao bloco de compatibilidade e à decisão já impressos
+   pelo lab, sem duplicar métricas, deltas, failed rules, expected outputs ou
+   troubleshooting.
+8. Manter toda narrativa criada ou editada no guide em português, preservando
+   comandos, paths, markers, nomes de campos e termos técnicos.
 
 ## Checkpoints de raciocínio
 
 ### Compatibilidade funcional
 
 - **Pergunta:** baseline e candidate entregam o mesmo resultado de negócio?
-- **Hipótese:** as duas variantes são semanticamente equivalentes apesar do
-  plano físico diferente.
+- **Hipótese:** as variantes são compatíveis segundo os invariantes funcionais
+  definidos pelo lab, apesar do plano físico diferente.
 - **Evidência:** schema, row count, receita dentro da tolerância e total de
   pedidos.
-- **Conclusão:** somente após compatibilidade a comparação operacional é válida.
-- **Limitação:** equivalência funcional não diz nada sobre custo ou performance.
+- **Conclusão:** os checks demonstram compatibilidade somente dentro dos
+  invariantes selecionados: schema, row count, revenue tolerance e total orders.
+- **Limitação:** esses checks não provam equivalência semântica completa e não
+  dizem nada, isoladamente, sobre custo ou performance.
+
+Formulação técnica que o guide deverá preservar em português:
+
+```text
+As variantes são compatíveis segundo os invariantes funcionais definidos pelo
+lab. Essa validação não demonstra equivalência semântica completa além dos
+checks selecionados.
+```
 
 ### Runtime budget
 
@@ -80,6 +95,10 @@ telemetria é confiável? Essa é a tese do Lab 6.
 - Os dois checkpoints estão separados.
 - A diferença Lab 5 versus Lab 6 aparece de forma curta e inequívoca.
 - Valores locais estão rotulados como exemplos.
+- Os checkpoints são concisos, reutilizam o bloco terminal e não duplicam a
+  comparação já apresentada.
+- O guide permanece integralmente em português na narrativa pedagógica e não
+  cresce materialmente sem reorganizar conteúdo repetido.
 - O guia termina com a pergunta que abre o Lab 6.
 
 ## Validação e gate

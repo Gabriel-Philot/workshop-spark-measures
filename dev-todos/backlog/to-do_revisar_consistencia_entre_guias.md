@@ -49,16 +49,73 @@ src/apps/labs/lab_7/guide_lab7.md
 11. Confirmar que Lab 0 é a referência de bootstrap e Labs 1–7 continuam
     utilizáveis isoladamente por meio de pré-requisitos curtos e links precisos.
 12. Confirmar que comandos, paths, markers, schemas e runtime não mudaram.
+13. Confirmar que todo conteúdo narrativo criado ou editado permanece em
+    português, sem produzir guides bilíngues; comandos, paths, markers, nomes de
+    campos e termos técnicos permanecem intactos.
+14. Confirmar que os checkpoints foram integrados às seções existentes e não
+    criaram um segundo resumo do mesmo experimento.
+15. Confirmar que cada campo de Pergunta, Hipótese, Evidência, Conclusão e
+    Limitação possui normalmente uma ou duas frases.
+16. Confirmar que tabelas, métricas, expected outputs, comandos e
+    troubleshooting não foram duplicados.
+17. Confirmar que detalhes condensados continuam disponíveis em uma class note
+    explicitamente linkada e que nenhum conteúdo operacional útil foi removido
+    sem preservação equivalente.
+18. Confirmar que nenhum guide cresceu materialmente sem justificativa e sem
+    compensação pela remoção ou reorganização de conteúdo repetido.
+19. Confirmar que a padronização atingiu o raciocínio pedagógico, não a estrutura
+    operacional específica de cada lab.
 
 ## Validação técnica
 
-- Verificar todos os links Markdown relativos.
-- Verificar headings repetidos ou quebrados.
+### Links internos e inbound
+
+- Verificar todos os links Markdown relativos presentes nos guides.
+- Preservar links para README, class notes, walkthroughs e post-mortems, salvo
+  quando substituídos por referência equivalente e válida.
+- Procurar no repositório inteiro referências que apontam para anchors dos
+  guides:
+
+```bash
+rg -n 'guide_lab[0-7]\.md#[^ )]+' .
+```
+
+- Para cada referência encontrada, validar o fragmento contra o heading final do
+  guide correspondente.
+- Verificar headings repetidos, quebrados ou incompatíveis com links inbound.
+
+### Escopo cumulativo da branch
+
+Usar a base real da branch, não apenas o worktree atual:
+
+```bash
+BASE_SHA=$(git merge-base main HEAD)
+
+git diff --name-status "$BASE_SHA"...HEAD
+git diff "$BASE_SHA"...HEAD --check
+
+git diff --check
+git diff --cached --check
+git status --short
+```
+
+O diff cumulativo pode conter somente:
+
+```text
+src/apps/labs/lab_0/guide_lab0.md
+...
+src/apps/labs/lab_7/guide_lab7.md
+dev-todos/backlog/*
+dev-todos/done/*
+```
+
+Qualquer README, código Python, runner, YAML, schema ou mudança de runtime no
+diff cumulativo é falha do gate.
+
+### Evidência adicional
+
 - Comparar comandos e markers dos guides com source, runners e YAML.
-- Executar `git diff --check`.
 - Executar `make tests`.
-- Usar `git diff --name-only` para provar que nenhum README principal, código,
-  runner ou YAML foi alterado.
 
 ## Relatório final esperado
 

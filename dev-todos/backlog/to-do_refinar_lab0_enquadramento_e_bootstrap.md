@@ -50,6 +50,11 @@ Adicionar no início um bloco conciso com:
 5. Manter a jornada pela Spark UI ligada ao 0C, pois ela participa do argumento
    Spark nativo versus sparkMeasure.
 6. Deixar MinIO e limpeza ao final como material operacional opcional.
+7. Integrar o enquadramento e os checkpoints às seções existentes, reutilizando
+   pergunta, evidência e limitação já documentadas em vez de criar um segundo
+   resumo do mesmo experimento.
+8. Manter toda a narrativa criada ou editada no guide em português, sem traduzir
+   comandos, paths, markers, nomes de campos ou termos técnicos.
 
 ## Checkpoints de raciocínio
 
@@ -100,7 +105,12 @@ aprofundando com TaskMetrics somente quando necessário.
 - Spark UI permanece parte relevante da narrativa do 0C.
 - MinIO e limpeza aparecem depois do conteúdo principal.
 - O guia termina com `Ponte para a próxima aula`.
-- Todo texto pedagógico está em português; termos técnicos permanecem intactos.
+- Todo texto pedagógico está em português, sem trechos narrativos bilíngues;
+  termos técnicos e interfaces permanecem intactos.
+- Os checkpoints reutilizam o conteúdo existente, têm normalmente uma ou duas
+  frases por campo e não duplicam métricas, outputs, comandos ou troubleshooting.
+- O guide não cresce materialmente sem que conteúdo repetido seja removido,
+  reorganizado ou direcionado para uma class note explicitamente linkada.
 - Nenhum comando, path, marker ou comportamento foi alterado.
 
 ## Validação e gate

@@ -43,6 +43,11 @@ src/apps/labs/lab_2/guide_lab2.md
 6. Mover Spark History, MinIO, cleanup e apêndices depois dos quatro experimentos
    e da comparação final.
 7. Não transformar preparação para certificação na tese principal da aula.
+8. Integrar cada checkpoint à comparação já existente no respectivo
+   mini-experimento; não repetir as tabelas, métricas brutas, expected outputs ou
+   explicações completas mantidas em `exam_questions.md`.
+9. Manter toda narrativa criada ou editada no guide em português, preservando
+   comandos, paths, markers, nomes de campos e termos técnicos.
 
 ## Checkpoints de raciocínio
 
@@ -103,6 +108,11 @@ pergunta abre o benchmark de observabilidade do Lab 3.
 - A tabela comparativa final foi preservada.
 - Questões de exame continuam referenciadas sem dominar a narrativa.
 - Exemplos locais estão rotulados e não viraram thresholds universais.
+- Os checkpoints possuem normalmente uma ou duas frases por campo e reutilizam
+  a evidência já apresentada.
+- O guide não cresce materialmente sem compensação por condensação ou
+  reorganização de conteúdo repetido.
+- O guide permanece integralmente em português na narrativa pedagógica.
 - O guia termina com a ponte para o Lab 3.
 
 ## Validação e gate

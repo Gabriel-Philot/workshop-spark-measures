@@ -49,6 +49,11 @@ src/apps/labs/lab_6/guide_lab6.md
 6. Relacionar validation metadata a dashboards, alerts, runtime budgets, PR
    review e drift monitoring.
 7. Manter persistência, MinIO, History e cleanup como opcionais finais.
+8. Integrar os checkpoints ao bloco de contrato e à tabela de consumers já
+   existentes, sem repetir columns, availability fields, rule results,
+   expected outputs ou troubleshooting.
+9. Manter toda narrativa criada ou editada no guide em português, preservando
+   comandos, paths, markers, nomes de campos e termos técnicos.
 
 ## Checkpoints de raciocínio
 
@@ -86,6 +91,10 @@ por data de negócio e ao longo de várias aplicações.
 - Cenário limpo e falha injetada possuem checkpoints próprios.
 - Zero e indisponibilidade permanecem diferentes.
 - Metadata e consumidores estão conectados sem alterar schemas.
+- Checkpoints concisos reutilizam os resultados por layer e não criam um segundo
+  resumo do contrato.
+- O guide permanece integralmente em português na narrativa pedagógica e não
+  cresce materialmente sem reorganização de conteúdo repetido.
 - O guia termina com a ponte para o Lab 7.
 
 ## Validação e gate

@@ -41,6 +41,11 @@ src/apps/labs/lab_4/guide_lab4.md
 4. Preservar profiles, flags, ratios, thresholds e paths existentes.
 5. Explicar que `input_bytes` indisponível não é igual a zero real.
 6. Manter persistência, MinIO, Spark History e cleanup como opcionais finais.
+7. Integrar o checkpoint à leitura do bloco diagnóstico existente, sem repetir
+   profiles, flags, métricas, ratios ou fórmulas detalhadas que já estejam nas
+   class notes linkadas.
+8. Manter toda narrativa criada ou editada no guide em português, preservando
+   comandos, paths, markers, nomes de campos e termos técnicos.
 
 ## Checkpoint de raciocínio — fingerprint
 
@@ -66,6 +71,10 @@ regra de promoção. O Lab 5 fará essa passagem para policy.
 - A interpretação segue profile → flags → métricas → ratios → próximo passo.
 - Indisponibilidade e zero verdadeiro continuam distintos.
 - Thresholds locais não são tratados como universais.
+- O checkpoint é conciso, reutiliza o bloco terminal existente e não cria um
+  segundo relatório.
+- O guide permanece integralmente em português na narrativa pedagógica e não
+  cresce materialmente sem compensação.
 - O guia termina com a ponte para o Lab 5.
 
 ## Validação e gate
