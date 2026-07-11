@@ -1,54 +1,46 @@
-# Lab 4 guide: stage-level workload fingerprint
+# Guia do Lab 4: fingerprint de workload em nível de stage
 
-This guide is the classroom runbook for Lab 4.
+Este guia organiza a execução em sala do Lab 4. O lab coleta StageMetrics,
+normaliza contadores agregados e produz uma primeira hipótese operacional sobre
+o workload.
 
-Goal:
+Notas detalhadas:
 
-```text
-run one controlled retail workload
-  -> collect aggregate StageMetrics
-  -> normalize raw execution counters
-  -> assign an explainable operational profile
-  -> persist metrics and fingerprint evidence as Delta
-```
+[Notas de aula sobre o fingerprint](docs/stage_workload_fingerprint_class_notes.md)
 
-Lab 3 asked how much observability costs. Lab 4 asks what the observed workload
-looks like. The lesson remains stage-first: use the lower-cost aggregate layer
-to form a useful first hypothesis before requesting more detailed evidence.
+Consulte-as para as definições completas dos ratios, a calibração local e as
+limitações do `input_bytes`.
 
-Class notes:
+## Enquadramento da aula
 
-[Stage workload fingerprint class
-notes](docs/stage_workload_fingerprint_class_notes.md)
+- **Pergunta norteadora:** como transformar contadores agregados em uma primeira
+  hipótese sobre o perfil operacional do workload?
+- **Por que agora:** o Lab 3 estabeleceu o custo e os limites da coleta; o Lab 4
+  explora o valor interpretativo da camada de stage.
+- **Resultado de aprendizagem:** conectar profile, flags, métricas brutas,
+  ratios e próximo passo sem confundir interpretação com prova de causa raiz.
+- **Modo de condução:** exercício principal guiado e executado ao vivo;
+  inspeções da persistência, MinIO e Spark History Server opcionais.
 
-Keep those notes open for the ratio definitions, profile limitations, and the
-important `input_bytes` caveat.
+## 0. Pré-requisitos
 
-## 0. Confirm the shared workshop prerequisites
-
-Start from the repository root:
+Comece na raiz do repositório:
 
 ```bash
 cd workshop-spark-measures
 ```
 
-This guide assumes that the platform has already been prepared and that the
-shared Bronze retail tables exist.
+O Lab 4 reutiliza as fontes Bronze compartilhadas pelos Labs 1–6. Se for a
+primeira execução do workshop, ou se imagens e dados do MinIO foram removidos,
+siga as seções 1 a 5 do [guia do Lab 0](../lab_0/guide_lab0.md).
 
-If this is the first workshop run, or images and MinIO data were removed,
-follow [Lab 0 guide: bootstrap through Bronze data
-generation](../lab_0/guide_lab0.md) before
-continuing. Follow sections 1 through 5 there; the full bootstrap sequence is
-not duplicated in this guide.
-
-If only the containers were stopped and MinIO data was retained, restart the
-platform without regenerating data:
+Se os dados continuam disponíveis e apenas os containers foram interrompidos:
 
 ```bash
 make compose
 ```
 
-Expected shared inputs:
+Inputs esperados:
 
 ```text
 s3a://lakehouse/bronze/retail/sales
@@ -57,74 +49,58 @@ s3a://lakehouse/bronze/retail/products
 s3a://lakehouse/bronze/retail/customers
 ```
 
-Teacher notes:
+> **Nota do instrutor:** `make down` preserva os dados do MinIO;
+> `make clean-data` os remove. Não regenere as fontes antes de cada lab.
 
-```text
-Labs 1-6 share the generated retail sources. Do not regenerate them before
-every lab. `make down` stops containers but preserves MinIO data;
-`make clean-data` removes that generated state.
-```
-
-## 1. Move to the Lab 4 folder
-
-The remaining commands assume this directory:
+## 1. Entre na pasta do Lab 4
 
 ```bash
 cd src/apps/labs/lab_4
 ```
 
-Optional sanity check:
-
-```bash
-ls
-```
-
-Expected classroom entry points:
+Pontos de entrada:
 
 ```text
 lab_4_stage_workload_fingerprint.py
 run_stage_workload_fingerprint.sh
 ```
 
-## 2. Establish the diagnostic question
+## 2. Estabeleça a pergunta diagnóstica
 
-Ask the class:
-
-```text
-What does this Spark workload look like from a stage-level execution
-perspective?
-```
-
-The target is not a universal root-cause diagnosis. The target is a consistent
-first summary that can say:
-
-- shuffle-heavy;
-- memory-pressure-heavy;
-- I/O-heavy;
-- GC-heavy;
-- many-small-tasks;
-- low-parallelism;
-- balanced or low-signal.
-
-Teacher notes:
+Pergunte à turma:
 
 ```text
-The fingerprint is an interpretation of evidence, not proof of root cause.
-Use it to standardize the next engineering question. Spark UI inspection and
-TaskMetrics remain available when the aggregate signal is insufficient.
+Como este workload Spark se comporta a partir da perspectiva de execução em
+nível de stage?
 ```
 
-## 3. Inspect the classroom control points
+O objetivo não é automatizar root-cause analysis. O fingerprint organiza
+StageMetrics em um vocabulário operacional capaz de produzir estes profiles:
 
-Open:
+- `SHUFFLE_HEAVY`;
+- `MEMORY_PRESSURE`;
+- `IO_HEAVY_SCAN`;
+- `GC_PRESSURE`;
+- `MANY_SMALL_TASKS`;
+- `LOW_PARALLELISM_SIGNAL`;
+- `BALANCED_OR_LOW_SIGNAL`.
+
+O profile é apenas a hipótese prioritária. As demais flags continuam
+importantes e podem apontar sinais simultâneos. Spark UI, plano e TaskMetrics
+permanecem disponíveis quando os agregados não respondem à pergunta.
+
+## 3. Localize os controles da aula
+
+Abra:
 
 ```text
 lab_4_stage_workload_fingerprint.py
 lab_4_utils/experiments.yaml
 lab_4_utils/fingerprint_rules.yaml
+lab_4_utils/fingerprint.py
 ```
 
-The main app keeps one visible configuration selector:
+O app mantém um único seletor visível:
 
 ```python
 CONFIG_NAME = os.environ.get(
@@ -133,29 +109,17 @@ CONFIG_NAME = os.environ.get(
 )
 ```
 
-The experiment config defines:
+`experiments.yaml` define os quatro inputs, `96` shuffle partitions, `512`
+fingerprint buckets, StageMetrics como único collector e os outputs Delta.
+`fingerprint_rules.yaml` separa as decisões dos contadores coletados.
 
-- the four Bronze inputs;
-- `96` shuffle partitions;
-- `512` deterministic fingerprint buckets;
-- StageMetrics as the only collector;
-- one Gold workload output;
-- two observability Delta outputs.
+Os thresholds são deliberadamente simples e específicos desta calibração. Eles
+não são SLAs nem limites universais. Durante a aula, reconstrua cada flag usando
+o valor da métrica e a regra correspondente no YAML.
 
-The rules file defines classroom thresholds. These are deliberately simple and
-environment-specific; they are not production SLAs.
+## 4. Entenda o workload antes do profile
 
-Teacher notes:
-
-```text
-Separating workload configuration from fingerprint rules makes the decision
-explainable. Students can see which execution evidence was collected and which
-threshold converted that evidence into a flag.
-```
-
-## 4. Understand the workload before reading its metrics
-
-The app performs this sequence:
+O app executa:
 
 ```text
 sales
@@ -169,10 +133,10 @@ sales
   -> write Delta
 ```
 
-This workload intentionally contains joins, repartitions, and two aggregations
-so StageMetrics has meaningful shuffle and task signals to classify.
+Os joins, repartitions e as duas agregações criam sinais de shuffle e tasks
+suficientes para a classificação em nível de stage.
 
-The business output contains:
+O output de negócio contém:
 
 ```text
 vendor_region
@@ -188,26 +152,20 @@ average_sale_amount
 fingerprint_bucket_count
 ```
 
-Teacher notes:
+> **Nota do instrutor:** leia a transformação antes do resultado. As regras
+> classificam sintomas; o código e o plano mostram quais operações podem ter
+> produzido esses sintomas.
 
-```text
-Read the transformation before looking at the profile. A classifier can label
-symptoms, but the code explains which joins and repartitions could have caused
-them.
-```
-
-## 5. Run the stage-level fingerprint
-
-Run the classroom wrapper:
+## 5. Execute o fingerprint
 
 ```bash
 bash run_stage_workload_fingerprint.sh
 ```
 
-The wrapper performs one `spark-submit`, preserves the application output, and
-fails only if the Spark app fails or one of the required markers is absent.
+O wrapper realiza um `spark-submit`, preserva o output da aplicação e falha se o
+app ou algum marker obrigatório falhar.
 
-Expected markers:
+Markers esperados:
 
 ```text
 LAB4_STAGE_METRICS_CAPTURED_OK
@@ -216,30 +174,15 @@ LAB4_WORKLOAD_PROFILE_ASSIGNED_OK
 LAB4_WORKLOAD_FINGERPRINT_WRITTEN_OK
 ```
 
-The runner finishes with:
+Marker final do runner:
 
 ```text
 LAB4_FINGERPRINT_COMPLETED output=s3a://observability/lab4/workload_fingerprints
 ```
 
-Optional manual `spark-submit` equivalent from the Lab 4 folder:
+## 6. Leia o bloco diagnóstico como evidência
 
-```bash
-docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
-  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-    LAB4_CONFIG_NAME=lab4-stage-workload-fingerprint \
-    /opt/spark/bin/spark-submit \
-    --master spark://spark-master:7077 \
-    --deploy-mode client \
-    --conf spark.driver.host=spark-master \
-    --conf spark.eventLog.dir=s3a://observability/event-logs \
-    --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
-    /opt/spark/src/apps/labs/lab_4/lab_4_stage_workload_fingerprint.py
-```
-
-## 6. Read the diagnostic block in order
-
-Near the end of the submit, the app prints one boxed block:
+Ao final do submit, o app imprime:
 
 ```text
 ## STAGE WORKLOAD FINGERPRINT DIAGNOSTIC
@@ -269,25 +212,40 @@ task_density_score: ...
 ...
 ```
 
-Read the block in this order:
+Leia sempre na ordem:
 
-1. identify the assigned profile;
-2. find the flags that caused it;
-3. verify those flags against the raw StageMetrics signals;
-4. inspect the normalized ratios;
-5. treat the recommendation as the next investigation, not an automatic fix.
+1. identifique o `workload_profile`;
+2. localize todas as `diagnostic_flags`;
+3. reconstrua cada flag usando os contadores e thresholds do YAML;
+4. inspecione a ordem de precedência em `classify_workload()` para explicar por
+   que uma flag foi escolhida como profile principal;
+5. verifique se os denominadores dos ratios são confiáveis;
+6. trate a recomendação como próxima investigação, não como correção automática.
 
-Teacher notes:
+Não comece pela recomendação. Um fingerprint só é explicável quando a turma
+consegue reconstruir suas flags a partir das métricas e regras. O YAML define
+thresholds, mas não a precedência entre profiles. Quando várias flags são
+verdadeiras, `classify_workload()` escolhe o profile principal por uma ordem
+explícita no código; ele não representa necessariamente o maior valor numérico
+observado.
 
-```text
-Do not start with the recommendation. Make students prove that the profile is
-consistent with the raw counters. The lab teaches interpretation, not blind
-trust in a label.
-```
+### Checkpoint de raciocínio — fingerprint
 
-## 7. Interpret the ratios carefully
+- **Pergunta:** qual profile é compatível com a relação observada entre input,
+  shuffle, spill, GC, tasks e executor runtime?
+- **Hipótese:** regras simples podem resumir o primeiro sinal operacional e
+  indicar qual evidência investigar em seguida.
+- **Evidência:** profile, flags, contadores brutos, disponibilidade das métricas,
+  ratios normalizados e thresholds acionados.
+- **Conclusão:** o fingerprint é uma primeira hipótese explicável quando as
+  flags podem ser reconstruídas a partir das métricas e thresholds, e o profile
+  principal pode ser explicado pela precedência explícita do classificador.
+- **Limitação:** os thresholds são locais; o fingerprint não localiza uma task,
+  não lê o plano e não prova causa raiz.
 
-The app derives:
+## 7. Interprete os ratios com cuidado
+
+O app deriva:
 
 ```text
 shuffle_amplification_ratio = total shuffle bytes / input bytes
@@ -296,100 +254,123 @@ spill_ratio                  = spill bytes / largest available volume signal
 task_density_score           = tasks / stages
 ```
 
-`task_density_score` uses aggregate task count from StageMetrics. It is not
-task-level analysis and does not inspect individual task distributions.
+`task_density_score` usa a quantidade agregada de tasks observada por
+StageMetrics. Ele não examina duração ou distribuição de tasks; portanto, uma
+flag de task overhead é uma pista grosseira, não prova de many-small-tasks.
 
-The `input_bytes` denominator needs special care. It is the sparkMeasure
-StageMetrics `bytesRead` counter, not the physical size of the Delta source.
-When it is absent or below `minimum_reliable_input_bytes`, the lab marks the
-shuffle amplification ratio as unavailable or low-confidence and uses absolute
-shuffle volume as the safer evidence.
+`input_bytes` corresponde ao contador `bytesRead` reportado por StageMetrics,
+não ao tamanho físico da tabela Delta. O Lab 4 ainda não possui um campo
+explícito de disponibilidade para essa métrica. O normalizador converte um
+contador ausente ou `None` para `0` e, por segurança, o classificador trata
+qualquer zero como indisponível para o ratio.
 
-Teacher notes:
+Essa é uma convenção conservadora do Lab 4, não uma prova de que todo valor zero
+seja realmente uma métrica ausente. A distinção explícita entre zero real e
+indisponibilidade será tratada pelo contrato de métricas do Lab 6.
 
-```text
-A normalized ratio is useful only when its denominator is trustworthy. The
-low-confidence flag is part of the diagnosis, not an error to hide.
-```
+Na prática, o classificador separa:
 
-## 8. Optional: inspect the persisted evidence
+- `input_bytes = 0`: `INPUT_BYTES_UNAVAILABLE_FOR_RATIO`; o zero representa
+  indisponibilidade para esse cálculo segundo a convenção do Lab 4, não ausência
+  comprovada de leitura;
+- `0 < input_bytes < minimum_reliable_input_bytes`:
+  `INPUT_BYTES_LOW_CONFIDENCE_FOR_RATIO`; o ratio pode ser exibido, mas não
+  aciona `HIGH_SHUFFLE_AMPLIFICATION`.
 
-The workload output is overwritten so each class run has one current business
-result:
+Quando o denominador não é confiável, `HIGH_SHUFFLE_VOLUME` permite interpretar
+o volume absoluto de shuffle sem inventar precisão na amplification. A
+calibração e os valores locais completos permanecem nas
+[notas de aula](docs/stage_workload_fingerprint_class_notes.md#ratios-used-by-the-lab).
+
+## 8. Caminhos opcionais
+
+### 8.1 Inspecione a evidência persistida
+
+O output de negócio é sobrescrito para manter apenas o resultado atual:
 
 ```text
 s3a://lakehouse/gold/lab4/stage_workload_fingerprint/workload_summary
 ```
 
-The normalized StageMetrics rows are appended to:
+As linhas normalizadas de StageMetrics são adicionadas a:
 
 ```text
 s3a://observability/lab4/stage_metrics
 ```
 
-The interpreted fingerprint rows are appended to:
+Os fingerprints interpretados são adicionados a:
 
 ```text
 s3a://observability/lab4/workload_fingerprints
 ```
 
-Each observability row contains `run_id`, `application_id`, workload identity,
-metrics, and creation time. This preserves both the evidence and its
-interpretation for later comparison.
+As duas tabelas de observabilidade compartilham `run_id`, `application_id`,
+identidade do workload e `created_at`, preservando evidência e interpretação.
 
-Use the MinIO Console to show the physical separation:
+MinIO Console:
 
 ```text
 http://127.0.0.1:29011
 ```
 
-Default credentials:
+Credenciais locais padrão:
 
 ```text
 user:     sparkworkshop
 password: sparkworkshop123
 ```
 
-## 9. Optional: correlate with Spark History Server
-
-Open:
+### 8.2 Correlacione com o Spark History Server
 
 ```text
 http://127.0.0.1:28090
 ```
 
-Use the application name and `application_id` printed by the submit to find the
-run. The History Server remains useful for plan, job, stage, and executor
-detail. The fingerprint condenses aggregate evidence; it does not replace the
-UI.
+Use `application_id` e o application name impresso pelo submit para localizar a
+run. A UI oferece plano, jobs, stages e executors; o fingerprint apenas condensa
+os agregados e não substitui essa evidência.
 
-## 10. Classroom conclusion
+### 8.3 Execute o submit manual
 
-End with this statement:
-
-```text
-Stage-level metrics are not only raw counters. With explicit and explainable
-rules, they become a lightweight operational fingerprint that helps engineers
-agree on what to inspect next.
-```
-
-The progression is:
-
-```text
-collect aggregate evidence
-  -> normalize carefully
-  -> classify transparently
-  -> preserve evidence and interpretation
-  -> choose the next diagnostic layer only when needed
-```
-
-## 11. Optional cleanup after class
-
-From the repository root:
+Comando equivalente a partir da pasta do Lab 4:
 
 ```bash
+docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
+  env PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+    LAB4_CONFIG_NAME=lab4-stage-workload-fingerprint \
+    /opt/spark/bin/spark-submit \
+    --master spark://spark-master:7077 \
+    --deploy-mode client \
+    --conf spark.driver.host=spark-master \
+    --conf spark.eventLog.dir=s3a://observability/event-logs \
+    --conf spark.executorEnv.PYTHONPATH=/opt/spark/src:/opt/spark/generator/src \
+    /opt/spark/src/apps/labs/lab_4/lab_4_stage_workload_fingerprint.py
+```
+
+### 8.4 Cleanup depois da aula
+
+Retorne à raiz do repositório:
+
+```bash
+cd ../../../..
 make down
 ```
 
-This stops the containers but preserves generated MinIO data. Use
-`make clean-data` only when the next run must start from empty storage.
+Isso interrompe os containers e preserva os dados do MinIO. Use
+`make clean-data` somente quando a próxima execução precisar começar com storage
+vazio.
+
+## Conclusão da aula
+
+StageMetrics não precisa terminar como uma lista de contadores. Regras
+explícitas podem transformar esses sinais em um fingerprint leve, reproduzível
+e útil para alinhar a próxima pergunta de engenharia.
+
+O resultado continua sendo uma hipótese. Observação, interpretação e prova de
+causa raiz são níveis diferentes de evidência.
+
+## Ponte para a próxima aula
+
+O Lab 5 transforma essa hipótese operacional em uma regra de promoção: compara
+um baseline com um candidate e decide se a mudança permanece dentro de um
+runtime budget.
