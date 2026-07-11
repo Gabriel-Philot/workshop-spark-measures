@@ -1,98 +1,101 @@
-# Lab 0 guide: source inventory and sparkMeasure introduction
+# Guia do Lab 0: inventário das fontes e introdução ao sparkMeasure
 
-This guide is the classroom runbook for Lab 0.
+Este é o roteiro de aula do Lab 0.
 
-Goal:
-
-```text
-prepare local stack
-  -> generate bronze retail data
-  -> inspect source readiness
-  -> show native sparkMeasure API
-  -> show the workshop contract with sparkMeasure enabled
-```
-
-Lab 0 should be run before the diagnosis labs. It gives students the baseline
-context: what data exists, what Spark exposes natively, what sparkMeasure adds,
-and why the workshop uses a small execution contract instead of raw scripts
-everywhere.
-
-Reference note:
+Fluxo:
 
 ```text
-docs/contract_rationale.md
+preparar a stack local
+  -> gerar os dados Bronze de retail
+  -> verificar se as fontes estão prontas
+  -> apresentar a API nativa do sparkMeasure
+  -> apresentar o contrato do workshop com sparkMeasure habilitado
 ```
 
-Use it when explaining why Lab 0 shows the native sparkMeasure API first and
-then introduces the workshop contract.
+## Enquadramento da aula
 
-## 0. Start from the repository root
+- **Pergunta norteadora:** quais evidências o Spark oferece nativamente, o que o
+  sparkMeasure condensa e por que o workshop usa um contrato de execução?
+- **Por que esta aula aparece agora:** a plataforma, as fontes e o vocabulário de
+  evidência precisam estar estabelecidos antes dos labs de diagnóstico.
+- **Resultado de aprendizagem:** distinguir preparação da plataforma, evidência
+  nativa do Spark, API nativa do sparkMeasure e contrato do workshop.
+- **Modo de condução:** preparação pré-aula obrigatória; aula principal conduzida
+  pelo instrutor e executada ao vivo.
+
+### Vocabulário usado neste lab
+
+| Expressão | Significado |
+| --- | --- |
+| Evidência nativa do Spark | `explain`, Spark UI, event logs, jobs, stages, tasks e executors produzidos pelo próprio Spark. |
+| API nativa do sparkMeasure | Uso direto de `StageMetrics`, `begin()`, `end()`, `print_report()` e `aggregate_stagemetrics()`, sem o contrato do workshop. |
+| Modo `native` do Lab 0C | Nome configurado para a execução do contrato com a coleta do sparkMeasure desabilitada e o `explain` habilitado. |
+| Modo `observed` do Lab 0C | A mesma transformação com StageMetrics habilitado pelo contrato; as métricas são exibidas, mas não persistidas neste lab. |
+
+Referência para explicar por que a API nativa aparece antes do contrato:
+
+[Racional do contrato do Lab 0](docs/contract_rationale.md)
+
+## Parte A — Preparação da plataforma antes da aula
+
+### 0. Comece na raiz do repositório
 
 ```bash
 cd workshop-spark-measures
 ```
 
-Expected:
+Esperado:
 
-- `Makefile` exists;
-- `.env.example` exists;
-- `src/apps/labs/lab_0` exists.
+- `Makefile` existe;
+- `.env.example` existe;
+- `src/apps/labs/lab_0` existe.
 
-## 1. Bootstrap local dependencies
+### 1. Prepare as dependências locais
 
-Run this once per machine, or whenever pinned dependencies change.
+Execute uma vez por máquina ou sempre que as dependências fixadas mudarem.
 
 ```bash
 make bootstrap
 ```
 
-Why:
+Esse comando:
 
-- creates or updates `.env`;
-- syncs the local Python environment;
-- pulls pinned base images;
-- downloads Spark/Delta/S3A/sparkMeasure artifacts;
-- prepares the Python wheel cache used by Spark jobs.
+- cria ou atualiza `.env`;
+- sincroniza o ambiente Python local;
+- baixa as base images fixadas;
+- baixa os artefatos de Spark, Delta, S3A e sparkMeasure;
+- prepara o cache de wheels Python usado pelos Spark jobs.
 
-Expected final line:
+Linha final esperada:
 
 ```text
 Bootstrap completed
 ```
 
-## 2. Build local images
+### 2. Construa as images locais
 
 ```bash
 make build
 ```
 
-Why:
+O comando constrói as images locais do runtime Spark, Spark History, MinIO e do
+dashboard do Lab 7, embora o Lab 0 ainda não utilize esse dashboard.
 
-- builds the local Spark runtime image;
-- builds the Spark History image;
-- builds MinIO images;
-- builds the Lab 7 dashboard image, even though Lab 0 will not use it.
+Esperado:
 
-Expected:
+- o comando termina com status `0`;
+- não há erros de artefatos ausentes do bootstrap.
 
-- command exits with status `0`;
-- no missing bootstrap artifact errors.
-
-## 3. Start the platform
+### 3. Inicie a plataforma
 
 ```bash
 make compose
 ```
 
-Why:
+Esse comando inicia MinIO, cria os buckets obrigatórios e sobe Spark Master,
+dois Spark workers e Spark History Server.
 
-- starts MinIO;
-- creates the required buckets;
-- starts Spark Master;
-- starts two Spark workers;
-- starts Spark History Server.
-
-Expected readiness lines:
+Linhas de prontidão esperadas:
 
 ```text
 Validation passed
@@ -102,7 +105,7 @@ Spark Workers (2) is ready
 Spark History is ready
 ```
 
-Useful UIs:
+UIs úteis:
 
 ```text
 Spark Master UI:     http://127.0.0.1:28091
@@ -110,52 +113,45 @@ Spark History Server: http://127.0.0.1:28090
 MinIO Console:       http://127.0.0.1:29011
 ```
 
-Default MinIO credentials:
+Credenciais padrão do MinIO:
 
 ```text
 user:     sparkworkshop
 password: sparkworkshop123
 ```
 
-## 4. Run the sparkMeasure dry test
+### 4. Execute o dry test do sparkMeasure
 
 ```bash
 make dry-test
 ```
 
-Why:
+O dry test comprova que Spark submete jobs, Delta e S3A leem e escrevem pelo
+MinIO e o JAR e o pacote Python do sparkMeasure funcionam juntos.
 
-- proves Spark can submit jobs;
-- proves Delta and S3A can read/write through MinIO;
-- proves the sparkMeasure JAR and Python package are usable together.
+Esperado:
 
-Expected:
-
-- command exits with status `0`;
-- local log exists at:
+- o comando termina com status `0`;
+- o log local existe em:
 
 ```text
 build/var/dry-test.log
 ```
 
-Do not start Lab 0 if this step fails. Fix the platform first.
+Não comece a aula enquanto essa etapa falhar. Corrija a plataforma primeiro.
 
-## 5. Generate the bronze retail data
+### 5. Gere os dados Bronze de retail
 
 ```bash
 make generate SCALE=xs GENERATOR_RUN_ID=workshop-sparkMeasures-lab1-6
 ```
 
-Why this run id is explicit:
+O `GENERATOR_RUN_ID` não altera schema ou escala. Ele identifica a execução nos
+manifests, logs e troubleshooting da aula. O valor
+`workshop-sparkMeasures-lab1-6` identifica as fontes de retail compartilhadas
+pelos Labs 0–6; o Lab 7 usa uma fonte temporal separada.
 
-- `GENERATOR_RUN_ID` does not change the generated schema or scale;
-- it labels the generator execution for manifests, logs, and classroom
-  troubleshooting;
-- `workshop-sparkMeasures-lab1-6` means this is the shared retail source family
-  used before the Lab 7 temporal source;
-- Lab 7 uses a separate temporal source generated later.
-
-Expected bronze paths:
+Paths Bronze esperados:
 
 ```text
 s3a://lakehouse/bronze/retail/vendors
@@ -164,28 +160,30 @@ s3a://lakehouse/bronze/retail/customers
 s3a://lakehouse/bronze/retail/sales
 ```
 
-Expected local log:
+Log local esperado:
 
 ```text
 build/var/generate-xs.log
 ```
 
-## 6. Move to the Lab 0 folder
+## Parte B — Fluxo principal da aula
 
-The next commands are easier to present from the Lab 0 folder, while still
-using repository-relative paths for Docker Compose.
+### 6. Entre na pasta do Lab 0
+
+Os próximos comandos ficam mais fáceis de apresentar a partir da pasta do lab,
+mantendo paths relativos ao repositório para o Docker Compose.
 
 ```bash
 cd src/apps/labs/lab_0
 ```
 
-Optional sanity check:
+Verificação opcional:
 
 ```bash
 ls
 ```
 
-Expected scripts:
+Scripts esperados:
 
 ```text
 lab_0a_source_inventory.py
@@ -193,7 +191,7 @@ lab_0b_sparkmeasure_native_api.py
 lab_0c_sparkmeasure_presentation.py
 ```
 
-## 7. Run 0A: source inventory
+### 7. Execute 0A: inventário das fontes
 
 ```bash
 docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
@@ -206,14 +204,7 @@ docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.y
   /opt/spark/src/apps/labs/lab_0/lab_0a_source_inventory.py
 ```
 
-Why this comes first:
-
-- confirms the generated sources exist before teaching sparkMeasure;
-- shows table row counts and physical file sizes;
-- validates fact-to-dimension relationships;
-- gives students context for later Spark behavior.
-
-Expected markers:
+Markers esperados:
 
 ```text
 LAB0_SOURCE_VOLUME
@@ -223,14 +214,20 @@ WORKSHOP_RUN_COMPLETED
 LAB0_SOURCE_INVENTORY_OK
 ```
 
-Classroom note:
+#### Checkpoint de raciocínio — prontidão das fontes
 
-```text
-This is not a sparkMeasure demo yet. It is the source readiness check.
-We first prove what data exists and whether it is safe to use in the labs.
-```
+- **Pergunta:** as fontes possuem volume, layout físico e relacionamentos
+  adequados para os próximos labs?
+- **Hipótese:** o gerador produziu as quatro tabelas e preservou as chaves de
+  relacionamento esperadas.
+- **Evidência:** linhas, arquivos, bytes, tamanhos por arquivo e violações de
+  chaves aparecem no bloco final do inventário.
+- **Conclusão:** as fontes estão prontas quando os markers e as validações de
+  integridade passam.
+- **Limitação:** o inventário descreve os dados e sua prontidão; ele ainda não é
+  uma demonstração do sparkMeasure nem um diagnóstico de performance.
 
-## 8. Run 0B: native sparkMeasure API
+### 8. Execute 0B: API nativa do sparkMeasure
 
 ```bash
 docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
@@ -243,14 +240,11 @@ docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.y
   /opt/spark/src/apps/labs/lab_0/lab_0b_sparkmeasure_native_api.py
 ```
 
-Why this comes second:
+Esse é o momento da biblioteca sem o wrapper do workshop: o código torna
+visíveis `StageMetrics(spark)`, `begin()`, `end()`, `print_report()` e
+`aggregate_stagemetrics()`.
 
-- shows the natural sparkMeasure API before the workshop wrapper;
-- makes `StageMetrics(spark)`, `begin()`, `end()`, `print_report()`, and
-  `aggregate_stagemetrics()` visible;
-- gives students a direct mental model of what the library does.
-
-Expected markers:
+Markers esperados:
 
 ```text
 SPARKMEASURE_NATURAL_API_BEGIN
@@ -259,15 +253,19 @@ SPARKMEASURE_NATURAL_API_METRICS
 LAB0_SPARKMEASURE_NATURAL_API_OK
 ```
 
-Classroom note:
+#### Checkpoint de raciocínio — API nativa
 
-```text
-This is the "raw library" moment. The workshop abstraction is not hiding magic;
-it is wrapping this pattern so later labs can focus on diagnosis instead of
-boilerplate.
-```
+- **Pergunta:** como o sparkMeasure delimita e agrega uma ação Spark?
+- **Hipótese:** `begin()` e `end()` ao redor da ação produzem um resumo compacto
+  de métricas de stage.
+- **Evidência:** a API está explícita no script, seguida pelo relatório nativo e
+  por `aggregate_stagemetrics()`.
+- **Conclusão:** o collector mede a região executada entre as fronteiras, não o
+  script inteiro.
+- **Limitação:** agregados de stage não explicam a distribuição entre tasks; isso
+  exigiria outra pergunta e outro nível de coleta.
 
-## 9. Run 0C: workshop contract presentation
+### 9. Execute 0C: apresentação do contrato do workshop
 
 ```bash
 docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.yml exec -T spark-master \
@@ -280,15 +278,11 @@ docker compose --env-file ../../../../.env -f ../../../../build/docker-compose.y
   /opt/spark/src/apps/labs/lab_0/lab_0c_sparkmeasure_presentation.py
 ```
 
-Why this comes third:
+O script executa o mesmo enriquecimento Bronze-to-Silver em dois modos. O modo
+native imprime o `explain`; o modo observed habilita StageMetrics por YAML. A
+transformação permanece legível enquanto a observabilidade fica na configuração.
 
-- runs the same Bronze-to-Silver enrichment in two modes;
-- native mode prints Spark explain output;
-- observed mode enables sparkMeasure through YAML config;
-- students can compare Spark's verbose native evidence with compact
-  sparkMeasure summary metrics.
-
-Expected markers:
+Markers esperados:
 
 ```text
 LAB0_PRESENTATION_NATIVE_OK
@@ -298,43 +292,27 @@ SPARKMEASURE_METRICS
 WORKSHOP_RUN_COMPLETED
 ```
 
-Expected Silver output:
+Output Silver esperado:
 
 ```text
 s3a://lakehouse/silver/lab0/sales_enriched
 ```
 
-Classroom note:
+Para explicar a estrutura do script, use o
+[racional do contrato](docs/contract_rationale.md).
 
-```text
-This is the transition from "how the library is called" to "how a data platform
-would operationalize it". The measured workload stays readable, while
-observability settings live in configuration.
-```
+Para seguir do terminal até jobs, stages, plano físico e executors, use o
+[walkthrough da Spark UI até o sparkMeasure](docs/spark_ui_to_sparkmeasure_walkthrough.md).
 
-If students ask why the script is structured this way, use:
+### 10. Investigue a execução no Spark History Server
 
-```text
-docs/contract_rationale.md
-```
-
-For the detailed Spark UI journey after Lab 0C, use:
-
-[`docs/spark_ui_to_sparkmeasure_walkthrough.md`](docs/spark_ui_to_sparkmeasure_walkthrough.md)
-
-Use that walkthrough when switching from terminal output to Spark History. It
-shows how to classify `SPARK_WORKLOAD | ...` rows versus `Delta: ...` rows,
-then how to reach the relevant stage and physical plan.
-
-## 10. Review Spark History Server
-
-Open:
+Abra:
 
 ```text
 http://127.0.0.1:28090
 ```
 
-Look for applications:
+Procure pelas aplicações:
 
 ```text
 workshop-lab0-source-inventory
@@ -343,44 +321,53 @@ workshop-lab0-sparkmeasure-presentation-native
 workshop-lab0-sparkmeasure-presentation-observed
 ```
 
-What to inspect:
+Inspecione:
 
-- `Jobs`: readable job descriptions such as `SPARK_WORKLOAD | ...` and
+- `Jobs`: descrições como `SPARK_WORKLOAD | ...` e
   `Delta: SPARK_WORKLOAD | ...`;
-- the main materialization/write job: the `SPARK_WORKLOAD | ...` row that
-  contains `save at NativeMethodAccessorImpl.java:0`; its detail page should
-  show an `Associated SQL Query` and a completed stage with both `Input` and
-  `Output`;
-- `Stages`: stage duration, task counts, shuffle columns;
-- `SQL / DataFrame`: physical execution details when available.
+- o main materialization/write job: a linha `SPARK_WORKLOAD | ...` com
+  `save at NativeMethodAccessorImpl.java:0`; a página deve apresentar um
+  `Associated SQL Query` e um stage concluído com `Input` e `Output`;
+- `Stages`: duração, quantidade de tasks e colunas de shuffle;
+- `SQL / DataFrame`: detalhes da execução física quando disponíveis.
 
-Do not read that single Spark UI Job as the whole workload. In this lab it is
-the best anchor for the final write path. Delta snapshot/file filtering,
-broadcast preparation, async sub-executions, and commit/statistics work can
-appear as separate jobs under the same `SPARK_WORKLOAD` boundary. Use the
-`Associated SQL Query` to inspect the broader physical plan, and use
-sparkMeasure to compare the aggregate measured region.
+Não interprete esse único Spark UI Job como todo o workload. Ele é a melhor
+âncora para a escrita final, mas Delta snapshot, file filtering, broadcast
+preparation, subexecuções assíncronas e commit/statistics podem aparecer como
+jobs separados dentro da mesma fronteira `SPARK_WORKLOAD`. Use o
+`Associated SQL Query` para chegar ao plano físico mais amplo e o sparkMeasure
+para comparar a região agregada medida.
 
-Classroom note:
+O walkthrough detalhado mostra como localizar esses elementos sem depender de
+job ID, stage ID ou query ID fixos:
 
-```text
-History Server is still useful. sparkMeasure does not replace Spark UI; it
-summarizes useful evidence so the first diagnostic pass is faster.
-```
+[Walkthrough da Spark UI até o sparkMeasure](docs/spark_ui_to_sparkmeasure_walkthrough.md)
 
-Detailed walkthrough:
+#### Checkpoint de raciocínio — evidência nativa e contrato
 
-[`docs/spark_ui_to_sparkmeasure_walkthrough.md`](docs/spark_ui_to_sparkmeasure_walkthrough.md)
+- **Pergunta:** o que o contrato e o sparkMeasure simplificam, e o que ainda
+  exige `explain` ou Spark UI?
+- **Hipótese:** a execução observed condensa sinais úteis sem substituir plano,
+  jobs, stages, tasks e executors.
+- **Evidência:** os modos native e observed executam a mesma transformação; o
+  terminal mostra `explain` e métricas agregadas, enquanto a UI registra a
+  decomposição real da execução.
+- **Conclusão:** contrato, sparkMeasure, `explain` e Spark UI são superfícies de
+  evidência complementares.
+- **Limitação:** um job isolado da UI não representa toda a aplicação, e essa
+  comparação introdutória não prova uma causa raiz de performance.
 
-## 11. Review MinIO
+## Material operacional opcional
 
-Open:
+### 11. Inspecione o MinIO
+
+Abra:
 
 ```text
 http://127.0.0.1:29011
 ```
 
-Useful paths:
+Paths úteis:
 
 ```text
 lakehouse/bronze/retail/vendors
@@ -391,26 +378,33 @@ lakehouse/silver/lab0/sales_enriched
 observability/event-logs
 ```
 
-Lab 0 intentionally does not persist sparkMeasure metrics as Delta tables.
-Metric persistence is disabled for the presentation experiment so the History
-Server stays focused on the workload jobs instead of metrics-write jobs.
+O Lab 0 não persiste as métricas do sparkMeasure como tabelas Delta. A
+persistência está desabilitada nesse experimento para manter o History Server
+focado nos jobs do workload, sem jobs adicionais de escrita das métricas.
 
-## 12. Optional cleanup after class
+### 12. Limpeza opcional depois da aula
 
-Return to the repository root:
+Volte à raiz do repositório:
 
 ```bash
 cd ../../../..
 ```
 
-Stop containers:
+Pare os containers:
 
 ```bash
 make down
 ```
 
-Remove generated local Docker volumes/data only when you want a clean rerun:
+Remova os volumes e dados locais do projeto somente quando desejar uma nova
+execução a partir de storage vazio:
 
 ```bash
 make clean-data
 ```
+
+## Ponte para a próxima aula
+
+O Lab 0 estabeleceu as fontes, as ferramentas nativas e o contrato de execução.
+O Lab 1 usa essa base na primeira investigação real: começa com StageMetrics e
+abre TaskMetrics somente quando a pergunta depende da distribuição entre tasks.
