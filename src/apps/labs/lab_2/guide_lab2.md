@@ -168,7 +168,7 @@ the distribution inside a stage.
 
 Read the complete source question first:
 
-[Lab 2A: reducing shuffle during aggregation](docs/exam_questions.md#lab-2a-reducing-shuffle-during-aggregation)
+[Lab 2A: reducing shuffle during aggregation](docs/exam_questions.md)
 
 ### 3.1 Run the baseline
 
@@ -339,8 +339,8 @@ sparkMeasure counters.
 
 Read both source questions before the run:
 
-- [Lab 2B: interpreting high GC time](docs/exam_questions.md#lab-2b-interpreting-high-gc-time)
-- [Lab 2B: interpreting shuffle spill](docs/exam_questions.md#lab-2b-interpreting-shuffle-spill)
+- [Lab 2B: interpreting high GC time](docs/exam_questions.md)
+- [Lab 2B: interpreting shuffle spill](docs/exam_questions.md)
 
 Teacher reminder:
 
@@ -538,7 +538,7 @@ pressure minus default=0
 
 Read the source question:
 
-[Lab 2C: diagnosing high-end task skew](docs/exam_questions.md#lab-2c-diagnosing-high-end-task-skew)
+[Lab 2C: diagnosing high-end task skew](docs/exam_questions.md)
 
 StageMetrics was enough for Labs 2A and 2B because those questions concerned
 aggregate stage pressure. Lab 2C asks whether one or a few tasks are much larger
@@ -673,7 +673,7 @@ The exercise intentionally stops at diagnosis.
 
 Read the source question:
 
-[Lab 2D: diagnosing near-empty partitions](docs/exam_questions.md#lab-2d-diagnosing-near-empty-partitions)
+[Lab 2D: diagnosing near-empty partitions](docs/exam_questions.md)
 
 Lab 2D uses TaskMetrics again but reverses the direction of the diagnostic
 question. Instead of looking for one dominant maximum, inspect whether a few

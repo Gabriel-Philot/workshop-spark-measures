@@ -1,5 +1,9 @@
 # Lab 5 class notes: stage-level runtime budget guardrail
 
+Classroom runbook:
+
+[Lab 5 classroom guide](../guide_lab5.md)
+
 ## Question
 
 Can we use sparkMeasure StageMetrics as a lightweight promotion gate for Spark
@@ -29,6 +33,13 @@ This creates the teaching moment:
 The output is correct, but the implementation may still be too expensive to
 promote.
 ```
+
+## Workshop connection
+
+Lab 4 used StageMetrics to assign a lightweight operational profile. Lab 5
+keeps the same stage-first principle and asks whether aggregate evidence can
+become policy: is a candidate still acceptable relative to an approved
+baseline?
 
 ## Why StageMetrics are enough here
 

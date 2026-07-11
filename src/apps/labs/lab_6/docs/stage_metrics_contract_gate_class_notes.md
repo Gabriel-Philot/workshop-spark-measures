@@ -1,5 +1,9 @@
 # Lab 6 class notes: Stage Metrics Contract Gate
 
+Classroom runbook:
+
+[Lab 6 classroom guide](../guide_lab6.md)
+
 ## Core idea
 
 Observability metrics are data.
@@ -35,6 +39,12 @@ The answer is a contract gate:
 ```text
 collect metrics -> validate contract -> use metrics with confidence
 ```
+
+## Workshop connection
+
+Lab 5 showed that StageMetrics can become runtime-budget policy. Lab 6 adds the
+trust boundary before that automation: schema, values, identity, and metric
+availability must be validated before downstream consumers rely on the row.
 
 ## Metric availability is part of the contract
 
