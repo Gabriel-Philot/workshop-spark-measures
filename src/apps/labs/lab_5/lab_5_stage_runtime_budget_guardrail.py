@@ -10,7 +10,8 @@ Assumes the Compose stack is running and the generated bronze retail Delta
 tables exist at the configured input artifact paths.
 
 ```bash
-bash src/apps/labs/lab_5/run_stage_runtime_budget_guardrail.sh
+cd src/apps/labs/lab_5
+bash run_stage_runtime_budget_guardrail.sh
 ```
 
 ## Required configuration
