@@ -1,60 +1,64 @@
-# Lab 7 guide: temporal backfill observability
+# Guia do Lab 7: temporal backfill observability
 
-This guide is the classroom runbook for Lab 7.
+Este é o roteiro de aula do Lab 7.
 
-Goal:
+Notas de apoio:
+
+[Notas de aula sobre temporal backfill
+observability](docs/temporal_backfill_observability_class_notes.md)
+
+Mantenha essas notas abertas para consultar o desenho da fonte, as limitações de
+`input_bytes` e a evidência local validada.
+
+## Enquadramento da aula
+
+- **Pergunta norteadora:** quais datas de negócio alteraram o perfil de execução
+  do backfill e quais relações de StageMetrics tornam essa mudança visível?
+- **Por que esta aula aparece agora:** os labs anteriores diagnosticaram ou
+  governaram uma execução. O Lab 7 adiciona contexto temporal persistido e
+  compara várias aplicações associadas a datas de negócio conhecidas.
+- **Resultado de aprendizagem:** correlacionar volume esperado, `records_read`,
+  shuffle, executor runtime, tasks, GC e spill por data sem confundir observação
+  com prova de causa raiz.
+- **Modo de condução:** demonstração principal do instrutor; batch completo ao
+  vivo quando houver aproximadamente 10 minutos, evidência pré-computada como
+  fallback e smoke test apenas como preflight opcional.
+
+O argumento da aula é:
 
 ```text
-create a temporal source with known daily volume
-  -> submit one Spark backfill per business date
-  -> persist StageMetrics with temporal context
-  -> compare normal, 10x, and 100x dates
-  -> visualize the complete batch in Streamlit
+known temporal volume
+  -> one correlated Spark execution per date
+  -> persisted stage-level evidence
+  -> historical comparison
+  -> read-only dashboard
 ```
 
-Earlier labs diagnosed or governed one Spark execution. Lab 7 turns persisted
-StageMetrics into a small historical observability product organized by
-business date.
+## 0. Confirme somente o pré-requisito específico
 
-Class notes:
-
-[Temporal backfill observability class
-notes](docs/temporal_backfill_observability_class_notes.md)
-
-Keep those notes open for metric interpretation, input-byte limitations, and
-the validated local evidence.
-
-## 0. Confirm only the required platform prerequisite
-
-Run the classroom commands from the repository root:
+Execute os comandos a partir da raiz do repositório:
 
 ```bash
 cd workshop-spark-measures
 ```
 
-Lab 7 assumes that the pinned dependencies and workshop images already exist.
-If this is the first workshop run, or images were removed, follow [Lab 0 guide:
-bootstrap and build](../lab_0/guide_lab0.md) before continuing. The Lab 7 public
-runner starts Compose and creates its own isolated temporal source, so this
-guide does not repeat the generic bootstrap sequence.
+O Lab 7 pressupõe que as dependências fixadas e as imagens do workshop já
+existem. No primeiro uso do workshop, ou depois de remover as imagens, siga o
+[guia do Lab 0: bootstrap e build](../lab_0/guide_lab0.md) antes de continuar.
 
-Teacher notes:
+O runner público do Lab 7 inicia Compose e cria ou valida sua própria fonte
+temporal isolada. Ele não depende da regeneração de `sales`, `vendors`,
+`products` ou `customers`, e não altera as fontes Bronze usadas pelos Labs 0–6.
 
-```text
-The Lab 7 source is independent from the Bronze retail tables used by Labs 0-6.
-Running Lab 7 does not require regenerating sales, vendors, products, or
-customers.
-```
+## 1. Entenda o workflow público
 
-## 1. Understand the public Lab 7 workflow
-
-The public orchestration entry point is:
+O ponto público de orquestração é:
 
 ```text
 src/apps/labs/lab_7/run_temporal_backfill_observability.sh
 ```
 
-It performs this sequence:
+Ele executa esta sequência:
 
 ```text
 make compose
@@ -65,34 +69,35 @@ make compose
   -> print the dashboard command and metrics path
 ```
 
-The two Spark entry points remain visible at the lab root:
+Os dois entry points Spark permanecem visíveis na raiz do lab:
 
 ```text
 src/apps/labs/lab_7/lab_7_temporal_source_generator.py
 src/apps/labs/lab_7/lab_7_daily_backfill_stage_metrics.py
 ```
 
-Support runners, configuration, and transformations remain under
-`lab_7_utils/`. Students should use the public runner unless they are debugging
-one component.
+O primeiro garante a fonte temporal; o segundo processa uma única
+`processing_date`. Runners auxiliares, configurações e transformações ficam em
+`lab_7_utils/`. Durante a aula, use o runner público, salvo quando estiver
+depurando um componente isolado.
 
-## 2. Read the temporal volume plan first
+## 2. Leia primeiro o volume plan
 
-Open:
+Abra:
 
 ```text
 src/apps/labs/lab_7/lab_7_utils/volume_plan.yaml
 ```
 
-The plan creates 14 deterministic business dates:
+O plano cria 14 datas de negócio determinísticas:
 
-| date class | rows per date | multiplier |
+| classe da data | linhas por data | multiplicador |
 | --- | ---: | ---: |
 | normal | 10,000 | 1x |
 | medium spike | 100,000 | 10x |
 | large spike | 1,000,000 | 100x |
 
-Configured spike dates:
+Datas de spike configuradas:
 
 ```text
 2026-01-04 -> 1,000,000 rows -> VOLUME_SPIKE
@@ -100,114 +105,113 @@ Configured spike dates:
 2026-01-11 -> 1,000,000 rows -> VOLUME_SPIKE
 ```
 
-Total planned source volume:
+Volume total planejado:
 
 ```text
 2,210,000 rows
 ```
 
-The generator writes an isolated Delta source partitioned by `event_date`:
+O gerador grava uma fonte Delta isolada, particionada por `event_date`:
 
 ```text
 s3a://lakehouse/bronze/lab7/source_events_temporal
 ```
 
-It also persists the expected plan:
+O volume esperado também é persistido em:
 
 ```text
 s3a://observability/lab7/temporal_volume_plan
 ```
 
-Teacher notes:
+Comece pelo volume de negócio conhecido. Ele é a expectativa controlada contra
+a qual `records_read`, shuffle, runtime e tasks serão interpretados.
 
-```text
-Start with known business volume, not Spark metrics. Students need a trusted
-expectation before deciding whether records read, shuffle, runtime, or task
-counts reacted to the date.
-```
+## 3. Preflight opcional: smoke test com duas datas
 
-## 3. Optional: run the two-date smoke test
-
-Use this only for a fast technical check:
+Use este caminho somente para verificar rapidamente o ambiente:
 
 ```bash
 LAB7_PROCESSING_DATES=2026-01-01,2026-01-04 \
 bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
 ```
 
-It compares one normal date with one `100x` date:
+Ele compara uma data normal com uma data `100x`:
 
 ```text
 2026-01-01 -> 10,000 rows
 2026-01-04 -> 1,000,000 rows
 ```
 
-In the clean local rehearsal, this command took:
+Na validação local com storage vazio, o comando levou:
 
 ```text
 136.68 seconds = 2 minutes 16.68 seconds
 ```
 
-That boundary included Compose readiness, generation of the complete temporal
-source, and the two backfill submits.
+Esse wall-clock incluiu a prontidão do Compose, a geração da fonte temporal
+completa e os dois submits. É um exemplo do ambiente local, não uma duração
+garantida.
 
-The smoke batch is isolated by its own `run_id`, but it is not suitable for
-dashboard review. It hides chronological shape and can make spike placement,
-legends, and normalized charts misleading.
+O smoke possui seu próprio `run_id`, mas não é a evidência principal da aula.
+Duas datas escondem a forma cronológica e podem tornar posições de spikes,
+legendas e gráficos normalizados enganosos. Não valide o dashboard por esse
+recorte.
 
-Teacher notes:
+## 4. Evidência principal: execute o batch completo de 14 datas
 
-```text
-The smoke run is optional. Do not use it as the main classroom evidence and do
-not validate dashboard design from only two dates.
-```
+Não execute `make generate-lab7` imediatamente antes do fluxo normal. O runner
+público já cria as datas ausentes ou valida a fonte isolada antes do backfill.
 
-## 4. Run the complete 14-date batch
-
-Do not run `make generate-lab7` immediately before the normal classroom flow.
-The public runner already creates or validates the isolated temporal source
-before starting the backfill. Use `make generate-lab7` only when source
-generation is being prepared or taught separately.
-
-Run the public workflow without `LAB7_PROCESSING_DATES`:
+Execute sem definir `LAB7_PROCESSING_DATES`:
 
 ```bash
 bash src/apps/labs/lab_7/run_temporal_backfill_observability.sh
 ```
 
-The runner submits all dates sequentially. Expected batch start:
+O runner submete as 14 datas sequencialmente. Procure o início:
 
 ```text
 LAB7_DAILY_BACKFILL_BATCH_STARTED ... dates=14 ...
 ```
 
-Expected completion:
+E a conclusão:
 
 ```text
 LAB7_DAILY_BACKFILL_BATCH_COMPLETED ... dates=14 ...
 LAB7_TEMPORAL_BACKFILL_OBSERVABILITY_COMPLETED
 ```
 
-Validated local elapsed time captured during the 2026-07-11 rehearsal:
+Exemplo local validado em 2026-07-11:
 
 ```text
 575.37 seconds = 9 minutes 35.37 seconds
 ```
 
-This measurement started with empty project storage and included:
+Esse é o **batch wall-clock** medido externamente, iniciado com o storage do
+projeto vazio. A fronteira incluiu:
 
-- Compose validation/readiness;
-- generation and validation of the 2,210,000-row temporal source;
-- 14 sequential Spark applications;
-- one StageMetrics Delta append per date.
+- validação e prontidão do Compose;
+- geração e validação das 2,210,000 linhas da fonte temporal;
+- 14 aplicações Spark sequenciais;
+- um append Delta de StageMetrics por data.
 
-It excluded image bootstrap/build time. Reserve approximately 10 minutes in the
-classroom and use the execution window to explain the volume plan and why the
-lab uses one submit per date.
+Bootstrap e build das imagens ficaram fora da medição. Reserve cerca de 10
+minutos apenas como referência para esta stack local e use a janela para explicar
+o volume plan e a escolha de um submit por data.
 
-## 5. Read one daily terminal block before opening the dashboard
+### Fallbacks para a aula
 
-Each processing date prints:
+1. Se a tabela Delta já contém um batch completo, execute
+   `make lab7-dashboard`, selecione o `run_id` com `Processed dates: 14` e use a
+   evidência persistida.
+2. Se não existe evidência persistida, use a tabela em [evidência local
+   validada](docs/temporal_backfill_observability_class_notes.md#validated-local-evidence)
+   como discussão pré-computada. Nesse caso, não apresente o dashboard como uma
+   leitura ao vivo.
+
+## 5. Leia um bloco diário antes do dashboard
+
+Cada data imprime:
 
 ```text
 ## LAB 7 DAILY BACKFILL STAGE METRICS
@@ -237,7 +241,7 @@ input_bytes_per_million_rows: ...
 tasks_per_million_rows: ...
 ```
 
-Expected markers per date:
+Markers esperados por data:
 
 ```text
 LAB7_DAILY_BACKFILL_CONFIG_OK
@@ -247,52 +251,62 @@ LAB7_BACKFILL_VOLUME_SPIKE_SIGNAL_OK
 LAB7_DAILY_BACKFILL_STAGE_METRICS_OK
 ```
 
-Teacher notes:
+Use `source_rows_for_date` e `records_read` como ponte entre volume de negócio e
+execução Spark. `input_bytes` vem do contador `bytesRead` do StageMetrics e é
+somente um sinal de apoio nesta stack Delta/S3A; ele não representa de forma
+confiável o tamanho físico da tabela Delta.
 
-```text
-Use source_rows_for_date and records_read as the bridge from business volume to
-Spark execution. Treat input_bytes as supporting evidence because the
-StageMetrics bytesRead counter does not represent physical Delta table size
-reliably on this local S3A stack.
-```
+`records_read` é um contador da execução capturada, não uma validação funcional
+da quantidade de linhas. O objetivo é observar correlação com o volume esperado,
+não exigir igualdade exata; a diferença local de 45 registros não deve ser
+generalizada.
 
-## 6. Start the Lab 7 Streamlit dashboard
+### Fronteiras de tempo
 
-This is the Lab 7-specific Make command used in class:
+- `executor_run_time_ms` mapeia `executorRunTime` agregado pelo StageMetrics;
+- application/submit wall-clock inclui a vida completa de uma aplicação, mas
+  não é persistido nesta tabela do Lab 7;
+- batch wall-clock inclui a orquestração das 14 aplicações e, na medição local,
+  também Compose e geração/validação da fonte.
+
+Custos de startup e encerramento pertencem ao wall-clock do submit ou do batch.
+Eles não explicam diretamente `executor_run_time_ms`.
+
+## 6. Inicie a lente read-only
+
+Execute o comando específico do Lab 7:
 
 ```bash
 make lab7-dashboard
 ```
 
-The target:
+O target confirma a stack principal, constrói a imagem fixada do dashboard,
+inicia `wsm-lab7-dashboard` e expõe o Streamlit na porta `28501`.
 
-1. confirms the core Compose stack;
-2. builds the pinned lightweight dashboard image;
-3. starts `wsm-lab7-dashboard`;
-4. exposes Streamlit on port `28501`.
-
-Open:
+Abra:
 
 ```text
 http://127.0.0.1:28501
 ```
 
-The dashboard uses:
+O caminho de leitura é:
 
 ```text
 Streamlit -> DuckDB -> Delta table on MinIO
 ```
 
-It is read-only and does not start a Spark query.
+Streamlit e DuckDB somente leem a tabela Delta persistida. Eles não iniciam uma
+query Spark, não coletam StageMetrics e não constituem a solução de
+observabilidade: o dashboard é uma lente de apresentação sobre a evidência.
 
-## 7. Present the dashboard from top to bottom
+## 7. Apresente o batch completo de cima para baixo
 
-Select the complete batch `run_id`. The dashboard defaults to the latest batch,
-but verify that `Processed dates` is `14` before presenting it.
+Selecione o `run_id` completo. O dashboard escolhe inicialmente o batch mais
+recente, mas antes de apresentar confirme `Processed dates: 14`.
 
-### 7.1 Summary cards
+### 7.1 Comece pelo plano conhecido
 
-Validated full-batch values:
+Exemplo validado do batch completo:
 
 ```text
 Processed dates:      14
@@ -303,12 +317,14 @@ Max records read:     1,000,045
 Max shuffle written:  about 20.6 MB
 ```
 
-### 7.2 Shuffle timeline
+Esses números são evidência da calibração local, não thresholds universais.
 
-The dates must remain chronological. The `100x` bars should appear on days 04
-and 11, with the smaller `10x` signal on day 07.
+### 7.2 Relacione volume, leitura e shuffle
 
-Validated shuffle ranges:
+As datas devem permanecer em ordem cronológica. As barras `100x` aparecem nos
+dias 04 e 11; o sinal `10x`, no dia 07.
+
+Intervalos locais validados de `shuffle_bytes_written`:
 
 ```text
 normal:       487,357-522,139 B
@@ -316,116 +332,129 @@ medium spike: 2,484,042 B
 large spike:  21,572,070-21,583,136 B
 ```
 
-### 7.3 Memory pressure
+Use também o scatter de volume versus shuffle. O objetivo não é decorar os
+valores, mas observar se `source_rows_for_date`, `records_read` e shuffle mudam
+coerentemente entre as classes 1x, 10x e 100x.
 
-The validated batch has zero memory and disk spill for all 14 dates. The chart
-still has value: it shows that larger temporal volume increased shuffle without
-crossing into spill pressure. GC ratio remains supporting evidence.
+### 7.3 Interprete runtime, GC e spill com limites
 
-### 7.4 Volume scatter plots
+Use volume versus executor runtime como uma relação empírica. O runtime pode
+crescer menos linearmente que o volume, mas essa forma não deve ser atribuída
+automaticamente ao startup do `spark-submit`; esse custo pertence a outra
+fronteira de medição.
 
-Use volume versus runtime to discuss fixed per-submit cost. Use volume versus
-shuffle to show the clearer relationship between source volume and data
-movement.
+No batch validado, `memory_bytes_spilled` e `disk_bytes_spilled` foram zero nas
+14 datas. Isso demonstra apenas que nenhum spill foi observado nessas
+execuções. Não demonstra ausência de pressão por GC nem de outros gargalos.
 
-### 7.5 Normalized execution view
+### 7.4 Use as visões normalizadas como comparação, não diagnóstico
 
-The raw normalized chart keeps actual per-million values. The companion index
-chart converts each metric to a ratio against the normal-day median so runtime,
-shuffle, and tasks can share one readable scale.
+O gráfico normalizado preserva os valores por milhão de linhas esperadas. O
+índice complementar compara cada métrica com a mediana dos dias `NORMAL`, para
+runtime, shuffle e tasks compartilharem uma escala legível. Esses gráficos
+ajudam a localizar mudanças; não provam sozinhos sua causa.
 
-Teacher notes:
+A normalização por milhão é uma transformação aritmética, não uma extrapolação
+de capacidade. Para um dia `NORMAL` com 10,000 linhas, os valores observados são
+multiplicados por 100; custos fixos existentes dentro da execução, como o número
+mínimo de stages, tasks e trabalho constante do workload, também são
+amplificados. Um valor por milhão maior no dia pequeno não prova ineficiência
+nem prevê o comportamento de uma execução real com um milhão de linhas.
 
-```text
-Do not promise linear runtime. The strongest story is that trusted business
-volume, records read, and shuffle move together, while fixed application cost
-and zero spill explain why other signals behave differently.
-```
+### Checkpoint de raciocínio — comportamento ao longo do tempo
 
-## 8. Optional: inspect the persisted evidence
+- **Pergunta:** os dias 1x, 10x e 100x alteraram os sinais de execução de forma
+  coerente com o volume conhecido?
+- **Hipótese:** `records_read` e shuffle devem acompanhar o volume conhecido.
+  Executor runtime pode crescer de forma menos linear, sem que isso seja
+  atribuído automaticamente ao startup do `spark-submit`.
+- **Evidência:** volume plan, 14 datas do mesmo `run_id`, `records_read`, shuffle
+  read/write, executor runtime, tasks, GC e o zero real de spill observado no
+  batch validado.
+- **Conclusão:** StageMetrics persistidas com data de negócio permitem localizar
+  quais partições temporais mudaram o perfil operacional.
+- **Limitação:** executor runtime, application/submit wall-clock e batch
+  wall-clock têm fronteiras distintas. A fonte controlada, as relações e o
+  dashboard localizam sinais, mas não provam causa raiz; spill zero também não
+  exclui outros gargalos.
 
-Business outputs are separated by date:
+## 8. Caminhos opcionais depois da aula principal
+
+### 8.1 Inspecione a evidência persistida
+
+Outputs de negócio são separados por data:
 
 ```text
 s3a://lakehouse/gold/lab7/daily_activity_dashboard/processing_date=<YYYY-MM-DD>/filter_strategy=early_partition_filter
 ```
 
-StageMetrics rows are appended to:
+As linhas de StageMetrics são adicionadas a:
 
 ```text
 s3a://observability/lab7/daily_backfill_stage_metrics
 ```
 
-All 14 date rows in one batch share the same `run_id`; each date also has its
-own `date_run_id` and Spark `application_id`.
+As 14 linhas de um batch compartilham o mesmo `run_id`; cada data possui seu
+próprio `date_run_id` e `application_id`.
 
-Use the MinIO Console only if the class needs to see the physical Delta layout:
+Abra o MinIO Console somente se a turma precisar inspecionar o layout Delta:
 
 ```text
 http://127.0.0.1:29011
 ```
 
-## 9. Optional: inspect the 14 Spark applications
+### 8.2 Correlacione com as aplicações no History Server
 
-Open Spark History Server:
+Abra:
 
 ```text
 http://127.0.0.1:28090
 ```
 
-One date equals one Spark application. Use `processing_date` from logs and the
-persisted `application_id` to correlate business time, StageMetrics, and Spark
-UI detail.
+Uma data corresponde a uma aplicação Spark. Use `processing_date` nos logs e o
+`application_id` persistido para correlacionar tempo de negócio, StageMetrics e
+detalhe da Spark UI.
 
-This design is intentionally slower than processing all dates in one app. It
-resembles a scheduled daily backfill and keeps correlation simple for students.
+### 8.3 Controles específicos de preparação
 
-## 10. Optional Lab 7-specific Make controls
-
-Generate or validate only the isolated temporal source:
+Gere ou valide somente a fonte temporal isolada:
 
 ```bash
 make generate-lab7
 ```
 
-Generate the shared retail sources first and Lab 7 source last:
+Gere primeiro as fontes retail compartilhadas e, ao final, a fonte do Lab 7:
 
 ```bash
 make generate-all SCALE=xs
 ```
 
-These targets are useful for environment preparation. The normal public Lab 7
-runner already ensures its own source, so do not run `make generate-lab7`
-immediately before it unless the lesson explicitly separates source generation
-from backfill execution.
+O runner público normal já garante sua fonte; use esses targets apenas quando a
+preparação do ambiente ou a geração isolada fizer parte da explicação.
 
-## 11. Classroom conclusion
-
-End with:
-
-```text
-Persisted StageMetrics become more useful when they carry trusted business-time
-context. We can now explain which dates were large, which Spark signals moved,
-and which expected problems—such as spill—did not occur.
-```
-
-The progression is:
-
-```text
-known temporal volume
-  -> one correlated Spark execution per date
-  -> persisted stage-level evidence
-  -> historical comparison
-  -> lightweight dashboard
-```
-
-## 12. Optional cleanup after class
-
-From the repository root:
+### 8.4 Cleanup opcional
 
 ```bash
 make down
 ```
 
-This stops the platform and preserves generated evidence. Use the project soft
-cleanup drill only when the next rehearsal must start from empty storage.
+Esse comando para a plataforma e preserva a evidência gerada. Use o soft cleanup
+do projeto somente quando o próximo ensaio precisar começar com storage vazio.
+
+## Conclusão e ponte para produção
+
+O Lab 7 muda a unidade de análise: uma linha de StageMetrics deixa de ser observada
+isoladamente e passa a compor uma série associada ao tempo de negócio.
+
+```text
+known volume by business date
+  -> correlated StageMetrics history
+  -> explainable temporal signals
+  -> deeper investigation when relationships change
+```
+
+Em produção, o próximo passo é transformar esse padrão em baselines por janela,
+alertas e detecção de drift. Quando uma relação histórica muda, ela aponta onde
+investigar; a confirmação da causa ainda exige contexto do workload, Spark UI,
+planos, logs e, quando a pergunta depender da distribuição, métricas mais
+granulares.
