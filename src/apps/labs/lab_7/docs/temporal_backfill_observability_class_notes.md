@@ -1,5 +1,9 @@
 # Lab 7 class notes: temporal backfill observability
 
+Classroom runbook:
+
+[Lab 7 classroom guide](../guide_lab7.md)
+
 ## Main idea
 
 Lab 7 shows how persisted sparkMeasure StageMetrics can explain temporal
@@ -225,35 +229,46 @@ Spark workload -> persisted StageMetrics -> lightweight operational dashboard
 Once StageMetrics are stored as Delta, other tools can consume them for review,
 dashboards, and post-run analysis.
 
-## Local calibration evidence
+## Validated local evidence
 
-During implementation, a two-date subset was run on the local WSL/Docker stack:
+The final rehearsal ran from empty project storage on the local WSL/Docker
+stack with two Spark workers. The public runner created the temporal source and
+processed all 14 dates under one batch `run_id`.
 
-| processing_date | expected rows | label | executor runtime | records read | shuffle written |
-|---|---:|---|---:|---:|---:|
-| `2026-01-01` | 10,000 | `NORMAL` | about 28-30s | about 10k | about 0.5 MB |
-| `2026-01-04` | 1,000,000 | `VOLUME_SPIKE` | about 38-39s | about 1M | about 20-21 MB |
+| day class | expected rows | records read | executor runtime | shuffle written |
+|---|---:|---:|---:|---:|
+| normal | 10,000 | 10,045 | 26.973-30.671s | 487,357-522,139 B |
+| medium spike | 100,000 | 100,045 | 28.964s | 2,484,042 B |
+| large spike | 1,000,000 | 1,000,045 | 36.455-38.866s | 21,572,070-21,583,136 B |
+
+All 14 rows reported zero memory and disk spill. That is a useful low-pressure
+result rather than missing evidence.
 
 Interpretation:
 
-- `recordsRead` follows the volume plan almost exactly;
-- shuffle is clearly larger on spike days;
-- executor runtime is higher, but not 100x higher because the local run has
-  fixed Spark/Delta/MinIO costs and small output cardinality;
-- this is acceptable because the lab is about persisted evidence by business
-  date, not about forcing every metric to scale linearly.
+- `recordsRead` follows the expected volume almost exactly;
+- shuffle separates normal, `10x`, and `100x` days clearly;
+- executor runtime rises on the large days but does not scale linearly because
+  each submit has fixed Spark, Delta, MinIO, and application lifecycle cost;
+- the dashboard orders all 14 dates correctly and places spike days on
+  `2026-01-04`, `2026-01-07`, and `2026-01-11`.
 
 ## Footnote: classroom timing expectation
 
-A full 14-date local batch took about 9 minutes during calibration.
+On 2026-07-11, the complete public runner took:
 
-That is acceptable for a classroom flow: start the batch, explain the temporal
-design, then return to the StageMetrics output when the backfill completes.
+```text
+575.37 seconds = 9 minutes 35.37 seconds
+```
 
-Be explicit with students that this elapsed time is dominated by the fixed cost
-of starting and stopping one Spark application per date. In this local setup,
-the strongest signals are usually `recordsRead`, `shuffleBytesWritten`, and the
-normalized metrics by business date.
+The measured boundary included Compose readiness, creation and validation of
+the 2,210,000-row temporal source, and 14 sequential Spark applications. Image
+bootstrap/build time was outside that measurement.
+
+Budget approximately 10 minutes in class. Start the runner, explain the source
+and one-submit-per-date design, then return to the StageMetrics evidence when
+the batch completes. The strongest signals in this local setup are
+`recordsRead`, shuffle bytes, and the normalized metrics by business date.
 
 ## Classroom takeaway
 

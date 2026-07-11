@@ -9,7 +9,7 @@ does not rewrite the retail bronze tables used by previous labs.
 Run the Lab 7-only generator:
 
 ```bash
-bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh
+make generate-lab7
 ```
 
 Append one new day:
@@ -18,7 +18,7 @@ Append one new day:
 LAB7_GENERATE_MODE=append_day \
 LAB7_APPEND_DATE=2026-01-15 \
 LAB7_APPEND_VOLUME_MULTIPLIER=100 \
-bash src/apps/labs/lab_7/lab_7_utils/runners/run_temporal_source_generator.sh
+make generate-lab7
 ```
 
 ## Required configuration
