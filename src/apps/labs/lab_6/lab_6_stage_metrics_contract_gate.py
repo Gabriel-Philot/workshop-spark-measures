@@ -10,14 +10,15 @@ Assumes the Compose stack is running and the generated bronze retail Delta
 tables exist at the configured input artifact paths.
 
 ```bash
-bash src/apps/labs/lab_6/run_stage_metrics_contract_gate.sh
+cd src/apps/labs/lab_6
+bash run_stage_metrics_contract_gate.sh
 ```
 
 Failure demonstration mode:
 
 ```bash
 LAB6_INJECT_INVALID_RECORDS=true \
-bash src/apps/labs/lab_6/run_stage_metrics_contract_gate.sh
+bash run_stage_metrics_contract_gate.sh
 ```
 
 ## Required configuration
