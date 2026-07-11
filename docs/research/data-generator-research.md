@@ -2,6 +2,8 @@
 
 Research date: 2026-06-23.
 
+Status: supporting research for the current generator design.
+
 This research supports the Spark Measures workshop data generator decision. The question was whether Polars plus a Faker-like framework should be used to generate multiple bronze Delta tables quickly, including intentionally skewed datasets.
 
 ## Sources checked

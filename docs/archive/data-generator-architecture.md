@@ -66,8 +66,8 @@ build/images/generator/
   Dockerfile
 docs/
   data-generator-architecture.md
-research/
-  data-generator-research.md
+  research/
+    data-generator-research.md
 ```
 
 The generator should have its own image, but it should use the same Docker network and MinIO credentials conventions as the platform. Generated data must be persisted through MinIO, not committed into Git.
