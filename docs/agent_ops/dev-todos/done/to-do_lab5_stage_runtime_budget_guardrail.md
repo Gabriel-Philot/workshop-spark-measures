@@ -392,7 +392,7 @@ from sparkMeasure aggregate metrics.
 
 ## Validation
 
-Before moving this TODO to `dev-todos/done/`, validate at minimum:
+Before moving this TODO to `docs/agent_ops/dev-todos/done/`, validate at minimum:
 
 ```bash
 make tests

@@ -7,11 +7,11 @@ Create a later Lab 2 lesson focused on task-level skew diagnosis.
 Planning source:
 
 ```text
-dev-todos/plan/lab2_lesson_mapping.md
+docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md
 ```
 
 Primary certification-vault reference: see the private vault mapping in
-`dev-todos/plan/lab2_lesson_mapping.md`.
+`docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md`.
 
 Source question numeric pattern:
 
@@ -186,7 +186,7 @@ The notes must explain:
 - how to use Spark UI task pages as a visual cross-check.
 
 Do not include private vault paths in the class-facing notes. Keep private
-reference paths in this TODO or in `dev-todos/plan/lab2_lesson_mapping.md`.
+reference paths in this TODO or in `docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md`.
 
 ## Constraints and expected changes
 
@@ -212,7 +212,7 @@ reference paths in this TODO or in `dev-todos/plan/lab2_lesson_mapping.md`.
 
 ## Validation
 
-Before moving this TODO to `dev-todos/done/`, validate at minimum:
+Before moving this TODO to `docs/agent_ops/dev-todos/done/`, validate at minimum:
 
 ```bash
 make tests

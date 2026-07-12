@@ -5,14 +5,14 @@
 Create the first Lab 2 lesson from the planning document:
 
 ```text
-dev-todos/plan/lab2_lesson_mapping.md
+docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md
 ```
 
 This lesson should connect a certification-style Spark UI / Spark performance
 question to a local sparkMeasure workshop example.
 
 Primary reference: see the private vault mapping in
-`dev-todos/plan/lab2_lesson_mapping.md`.
+`docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md`.
 
 The source question is about a `sales` aggregation by `region` that creates
 shuffle, and the expected reasoning is that partitioning by the grouping key can
@@ -154,7 +154,7 @@ generic Spark tuning guide.
 
 ## Validation
 
-Before moving this TODO to `dev-todos/done/`, validate at minimum:
+Before moving this TODO to `docs/agent_ops/dev-todos/done/`, validate at minimum:
 
 ```bash
 make tests
