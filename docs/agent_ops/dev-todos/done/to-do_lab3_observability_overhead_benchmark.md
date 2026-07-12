@@ -5,7 +5,7 @@
 Create the first Lab 3 lesson from the planning document:
 
 ```text
-dev-todos/plan/lab3_observability_overhead_plan.md
+docs/agent_ops/dev-todos/done/lab3_observability_overhead_plan.md
 ```
 
 This lesson measures the latency added by sparkMeasure observability on the

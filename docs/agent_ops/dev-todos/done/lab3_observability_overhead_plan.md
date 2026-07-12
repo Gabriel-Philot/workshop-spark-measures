@@ -14,7 +14,7 @@ sparkMeasure?
 ```
 
 This is a planning document only. Do not implement directly from this file.
-Create specific TODO files under `dev-todos/backlog/` before implementation.
+Create specific TODO files under `docs/agent_ops/dev-todos/backlog/` before implementation.
 
 ## Post-mortem update
 

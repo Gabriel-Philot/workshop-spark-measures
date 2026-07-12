@@ -522,7 +522,7 @@ Follow the repository ritual:
 3. implement only this lab in the first slice;
 4. keep `main` clean;
 5. test locally before opening the PR;
-6. move this TODO from `dev-todos/backlog/` to `dev-todos/done/` only after the
+6. move this TODO from `docs/agent_ops/dev-todos/backlog/` to `docs/agent_ops/dev-todos/done/` only after the
    lab is implemented and validated;
 7. open the PR and share the PR description before merging.
 

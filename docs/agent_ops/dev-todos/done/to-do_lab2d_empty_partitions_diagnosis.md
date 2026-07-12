@@ -8,11 +8,11 @@ partitions through task-level distribution reasoning.
 Planning source:
 
 ```text
-dev-todos/plan/lab2_lesson_mapping.md
+docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md
 ```
 
 Primary certification-vault reference: see the private vault mapping in
-`dev-todos/plan/lab2_lesson_mapping.md`.
+`docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md`.
 
 Source question numeric pattern:
 
@@ -163,7 +163,7 @@ The notes must explain:
 
 ## Validation
 
-Before moving this TODO to `dev-todos/done/`, validate at minimum:
+Before moving this TODO to `docs/agent_ops/dev-todos/done/`, validate at minimum:
 
 ```bash
 make tests

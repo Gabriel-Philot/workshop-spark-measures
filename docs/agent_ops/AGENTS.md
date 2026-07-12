@@ -2,7 +2,6 @@
 
 ## Scope
 - Applies to this entire repository.
-- Keep `../dataship/spark-plat-v0` read-only; it is reference material only.
 
 ## Stack
 - Apache Spark 4.1.2, Scala 2.13, Delta Lake 4.2.0, sparkMeasure 0.28.0, and MinIO.

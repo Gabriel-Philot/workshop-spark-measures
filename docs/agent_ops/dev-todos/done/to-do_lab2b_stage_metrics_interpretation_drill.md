@@ -5,7 +5,7 @@
 Create the second Lab 2 lesson from the planning document:
 
 ```text
-dev-todos/plan/lab2_lesson_mapping.md
+docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md
 ```
 
 This lesson should not be a generic metric catalog. It should be a
@@ -13,7 +13,7 @@ question-driven workshop exercise that teaches students how to interpret
 sparkMeasure StageMetrics and decide what the metrics can and cannot prove.
 
 Primary reference: see the private vault mapping in
-`dev-todos/plan/lab2_lesson_mapping.md`.
+`docs/agent_ops/dev-todos/done/lab2_lesson_mapping.md`.
 
 The class-facing materials must be self-contained. Do not include private vault
 paths in the app README or class notes.
@@ -271,7 +271,7 @@ Do not include private vault paths in the class notes.
 
 ## Validation
 
-Before moving this TODO to `dev-todos/done/`, validate at minimum:
+Before moving this TODO to `docs/agent_ops/dev-todos/done/`, validate at minimum:
 
 ```bash
 make tests

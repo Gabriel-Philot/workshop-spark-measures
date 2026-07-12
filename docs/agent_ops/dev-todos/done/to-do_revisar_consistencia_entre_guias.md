@@ -106,8 +106,8 @@ O diff cumulativo pode conter somente:
 src/apps/labs/lab_0/guide_lab0.md
 ...
 src/apps/labs/lab_7/guide_lab7.md
-dev-todos/backlog/*
-dev-todos/done/*
+docs/agent_ops/dev-todos/backlog/*
+docs/agent_ops/dev-todos/done/*
 ```
 
 Qualquer README, código Python, runner, YAML, schema ou mudança de runtime no

@@ -12,7 +12,7 @@ shuffle read/write, spill, GC time, input/output bytes, and the difference betwe
 wall-clock time and aggregated task time.
 
 Do not implement directly from this file. For each accepted lesson, create a
-separate TODO under `dev-todos/backlog/` first.
+separate TODO under `docs/agent_ops/dev-todos/backlog/` first.
 
 ## Local references
 

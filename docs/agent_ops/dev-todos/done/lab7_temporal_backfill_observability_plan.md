@@ -11,7 +11,7 @@ Understanding daily volume spikes through stage-level Spark metrics
 
 This is a planning document only. Do not implement directly from this file.
 After this design is validated, create separate TODO files under
-`dev-todos/backlog/`, one task per branch and pull request.
+`docs/agent_ops/dev-todos/backlog/`, one task per branch and pull request.
 
 ## Teaching thesis
 
@@ -840,7 +840,7 @@ visually strong enough for the daily backfill StageMetrics lesson.
 After Task A is reviewed and merged, create the next executable TODO:
 
 ```text
-dev-todos/backlog/to-do_lab7b_daily_backfill_stage_metrics.md
+docs/agent_ops/dev-todos/backlog/to-do_lab7b_daily_backfill_stage_metrics.md
 ```
 
 This keeps the larger lab incremental and lets each branch prove its own output
