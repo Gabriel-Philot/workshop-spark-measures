@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Recap independente sobre fundamentos, observabilidade e automação responsável de workloads Spark."
+    />
+    <title>SparkMeasure Recap — da evidência à decisão</title>
+    <link rel="stylesheet" href="styles.css?v=20260711-labs" />
+    <script src="script.js?v=20260711-controls" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#slide-1">Pular para a apresentação</a>
+
+    <div class="progress-track" aria-hidden="true">
+      <span id="progressBar" class="progress-bar"></span>
+    </div>
+
+    <header class="deck-toolbar" aria-label="Controles da apresentação">
+      <div class="deck-brand">
+        <span class="brand-mark" aria-hidden="true">SM</span>
+        <span>RECAP / OBSERVABILIDADE</span>
+      </div>
+      <div class="toolbar-actions">
+        <button id="notesToggle" class="tool-button" type="button" aria-pressed="false">
+          Notas
+        </button>
+      </div>
+    </header>
+
+    <nav class="slide-navigation" aria-label="Navegação entre slides">
+      <a class="nav-dot" href="#slide-1" aria-label="Slide 1: fundamentos"></a>
+      <a class="nav-dot" href="#slide-2" aria-label="Slide 2: trindade do workload"></a>
+      <a class="nav-dot" href="#slide-3" aria-label="Slide 3: capacidades acumulativas"></a>
+      <a class="nav-dot" href="#slide-4" aria-label="Slide 4: dos Labs às capacidades reais"></a>
+      <a class="nav-dot" href="#slide-5" aria-label="Slide 5: soluções compostas"></a>
+      <a class="nav-dot" href="#slide-6" aria-label="Slide 6: evidência e diagnóstico"></a>
+      <a class="nav-dot" href="#slide-7" aria-label="Slide 7: gates no CI/CD"></a>
+      <a class="nav-dot" href="#slide-8" aria-label="Slide 8: inteligência operacional"></a>
+      <a class="nav-dot" href="#slide-9" aria-label="Slide 9: casos Netflix e Uber"></a>
+      <a class="nav-dot" href="#slide-10" aria-label="Slide 10: próximo degrau"></a>
+    </nav>
+
+    <main class="deck-shell">
+      <section id="slide-1" class="deck-slide slide-dark title-slide" data-section="slide-1">
+        <div class="slide-frame hero-frame">
+          <div class="slide-index">01 / 10 · RECAP</div>
+          <div class="hero-copy">
+            <p class="eyebrow">SparkMeasure · da evidência à decisão</p>
+            <h1>Automação não substitui fundamentos.</h1>
+            <p class="hero-lead">
+              Não existe etapa “melhor”. Cada camada aumenta a capacidade de agir — e também o raio
+              de impacto de uma decisão ruim.
+            </p>
+          </div>
+
+          <div class="foundation-equation" aria-label="Fundamentos mais evidência mais contexto geram ação segura">
+            <span>fundamentos</span>
+            <b aria-hidden="true">+</b>
+            <span>evidência</span>
+            <b aria-hidden="true">+</b>
+            <span>contexto</span>
+            <b aria-hidden="true">→</b>
+            <strong>ação segura</strong>
+          </div>
+
+          <div class="slide-thesis">
+            <span class="thesis-number">00</span>
+            <p>
+              Antes de automatizar, saiba explicar a fonte, o plano, a configuração e o limite da
+              infraestrutura.
+            </p>
+          </div>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            Abra retirando a ideia de ranking: fundamentos, observabilidade, políticas e automação
+            são capacidades acumulativas. Muitas empresas ainda obtêm mais valor tornando o
+            diagnóstico repetível do que tentando automatizar decisões cedo demais.
+          </p>
+          <p>
+            Mensagem de saída: quanto maior a capacidade de agir, maior a exigência de confiança,
+            contexto e reversibilidade.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-2" class="deck-slide" data-section="slide-2">
+        <div class="slide-frame">
+          <div class="slide-index">02 / 10 · FUNDAMENTOS</div>
+          <header class="slide-heading">
+            <p class="eyebrow">O workload é um sistema</p>
+            <h2>A trindade do workload Spark</h2>
+            <p>O gargalo aparece na relação entre três domínios — raramente em uma métrica isolada.</p>
+          </header>
+
+          <div class="trinity-board" aria-label="Três dimensões de um workload Spark">
+            <svg class="trinity-links" viewBox="0 0 100 100" aria-hidden="true">
+              <polygon points="50,12 12,88 88,88"></polygon>
+            </svg>
+            <article class="trinity-card data-card">
+              <span class="card-code">A / DATA</span>
+              <h3>Fontes &amp; layout</h3>
+              <ul>
+                <li>volume e distribuição</li>
+                <li>partições e tamanho de arquivo</li>
+                <li>skew, formatos e seletividade</li>
+              </ul>
+            </article>
+            <article class="trinity-card code-card">
+              <span class="card-code">B / COMPUTE</span>
+              <h3>Código &amp; configuração</h3>
+              <ul>
+                <li>plano físico e joins</li>
+                <li>shuffle, cache e paralelismo</li>
+                <li>configs do Spark e da JVM</li>
+              </ul>
+            </article>
+            <article class="trinity-card machine-card">
+              <span class="card-code">C / PLATFORM</span>
+              <h3>Maquinário &amp; limites</h3>
+              <ul>
+                <li>CPU, memória, disco e rede</li>
+                <li>tamanho e elasticidade do cluster</li>
+                <li>concorrência e infraestrutura</li>
+              </ul>
+            </article>
+            <div class="trinity-core">
+              <span>WORKLOAD</span>
+              <strong>resultado observado</strong>
+            </div>
+          </div>
+
+          <div class="scale-callout">
+            <div class="scale-heading">
+              <span class="scale-label">VOLUMETRIA × CUSTO</span>
+              <span>VOLUME E CUSTO AUMENTAM →</span>
+            </div>
+            <div class="heat-scale" aria-label="Escala térmica de custo de gigabytes até petabytes">
+              <span><span class="cost-level">$</span><b>GB</b> custo escondido</span>
+              <span><span class="cost-level">$$</span><b>TB</b> padrão operacional</span>
+              <span><span class="cost-level">$$$</span><b>PB</b> efeito multiplicado</span>
+            </div>
+          </div>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            Use um exemplo simples: um join lento pode vir de skew na fonte, estratégia de join no
+            plano, partições mal dimensionadas ou recursos inadequados. A mesma TaskMetric pode ser
+            sintoma de causas diferentes.
+          </p>
+          <p>
+            O callout GB → TB → PB é apenas uma âncora para newcomers. Não é uma fronteira rígida:
+            frequência, concorrência e SLA também multiplicam custo e risco.
+          </p>
+          <p>
+            Referência: <a href="https://spark.apache.org/docs/latest/hardware-provisioning.html">Apache Spark — Hardware Provisioning</a>.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-3" class="deck-slide" data-section="slide-3">
+        <div class="slide-frame">
+          <div class="slide-index">03 / 10 · MAPA DE CAPACIDADES</div>
+          <header class="slide-heading compact-heading">
+            <p class="eyebrow">Uma escada, não um ranking</p>
+            <h2>Capacidades acumulativas</h2>
+            <p>Cada degrau depende do anterior e responde a uma pergunta operacional diferente.</p>
+          </header>
+
+          <ol class="capability-stair" aria-label="Escada de capacidades de engenharia Spark">
+            <li class="stair-step reveal-step" style="--step: 0">
+              <span class="step-number">00</span>
+              <div><strong>Fundamentos</strong><small>O que o workload faz?</small></div>
+            </li>
+            <li class="stair-step reveal-step" style="--step: 1">
+              <span class="step-number">01</span>
+              <div><strong>Observação repetível</strong><small>O que aconteceu?</small></div>
+            </li>
+            <li class="stair-step reveal-step" style="--step: 2">
+              <span class="step-number">02</span>
+              <div><strong>Diagnóstico explicável</strong><small>Por que aconteceu?</small></div>
+            </li>
+            <li class="stair-step reveal-step" style="--step: 3">
+              <span class="step-number">03</span>
+              <div><strong>Guardrails &amp; governança</strong><small>Devemos aceitar?</small></div>
+            </li>
+            <li class="stair-step reveal-step" style="--step: 4">
+              <span class="step-number">04</span>
+              <div><strong>Inteligência operacional</strong><small>Onde agir primeiro?</small></div>
+            </li>
+            <li class="stair-step reveal-step" style="--step: 5">
+              <span class="step-number">05</span>
+              <div><strong>Automação limitada</strong><small>O que pode agir com segurança?</small></div>
+            </li>
+          </ol>
+
+          <div class="stair-legend">
+            <span><b>↑</b> confiança exigida</span>
+            <span><b>↑</b> contexto necessário</span>
+            <span><b>↑</b> raio de impacto</span>
+          </div>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            Não apresente como maturidade corporativa obrigatória. Uma equipe pode parar no degrau
+            de diagnóstico e estar exatamente onde precisa. O ganho está em escolher a menor
+            capacidade que resolve uma dor material.
+          </p>
+          <p>
+            A animação é deliberadamente simples: revele de baixo para cima para reforçar
+            dependência. Na impressão, todos os degraus aparecem.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-4" class="deck-slide labs-slide" data-section="slide-4">
+        <div class="slide-frame labs-frame">
+          <div class="slide-index">04 / 10 · LABS → CAPACIDADES</div>
+          <header class="slide-heading compact-heading labs-heading">
+            <p class="eyebrow">Cada Lab entrega uma peça do raciocínio</p>
+            <h2>Dos Labs às capacidades reais</h2>
+            <p>O workshop constrói blocos de decisão; produtos operacionais surgem da combinação entre eles.</p>
+          </header>
+
+          <ol class="labs-timeline" aria-label="Labs zero a sete e as capacidades que constroem">
+            <li class="lab-card lab-left">
+              <span class="lab-node" aria-hidden="true">0</span>
+              <div class="lab-card-body">
+                <h3>Lab 0 — Fontes de evidência</h3>
+                <p><strong>Constrói:</strong> inventário das evidências nativas e do sparkMeasure.</p>
+                <p><strong>Habilita:</strong> runbooks, triagem inicial e modelo comum de observabilidade.</p>
+              </div>
+            </li>
+            <li class="lab-card lab-right">
+              <span class="lab-node" aria-hidden="true">1</span>
+              <div class="lab-card-body">
+                <h3>Lab 1 — Granularidade diagnóstica</h3>
+                <p><strong>Constrói:</strong> escolha entre StageMetrics e TaskMetrics.</p>
+                <p><strong>Habilita:</strong> drill-down, investigação de outliers e análise de distribuição.</p>
+              </div>
+            </li>
+            <li class="lab-card lab-left">
+              <span class="lab-node" aria-hidden="true">2</span>
+              <div class="lab-card-body">
+                <h3>Lab 2 — Experimento controlado</h3>
+                <p><strong>Constrói:</strong> separação entre hipótese, evidência, compatibilidade e limitação.</p>
+                <p><strong>Habilita:</strong> validação de tuning e reprodução disciplinada de regressões.</p>
+              </div>
+            </li>
+            <li class="lab-card lab-right">
+              <span class="lab-node" aria-hidden="true">3</span>
+              <div class="lab-card-body">
+                <h3>Lab 3 — Custo de observar</h3>
+                <p><strong>Constrói:</strong> medição de overhead, warmup, repetição e fronteiras temporais.</p>
+                <p><strong>Habilita:</strong> budgets de coleta e estratégia de instrumentação.</p>
+              </div>
+            </li>
+            <li class="lab-card lab-left">
+              <span class="lab-node" aria-hidden="true">4</span>
+              <div class="lab-card-body">
+                <h3>Lab 4 — Fingerprint explicável</h3>
+                <p><strong>Constrói:</strong> métricas, ratios, flags, disponibilidade e precedência de regras.</p>
+                <p><strong>Habilita:</strong> catálogo de workloads, classificação e priorização da investigação.</p>
+              </div>
+            </li>
+            <li class="lab-card lab-right">
+              <span class="lab-node" aria-hidden="true">5</span>
+              <div class="lab-card-body">
+                <h3>Lab 5 — Policy operacional</h3>
+                <p><strong>Constrói:</strong> baseline, candidate, invariantes e budgets de performance.</p>
+                <p><strong>Habilita:</strong> guardrails de performance e decisões de promoção no CI/CD.</p>
+              </div>
+            </li>
+            <li class="lab-card lab-left">
+              <span class="lab-node" aria-hidden="true">6</span>
+              <div class="lab-card-body">
+                <h3>Lab 6 — Contrato de telemetria</h3>
+                <p><strong>Constrói:</strong> validação de schema, semântica, disponibilidade e correlação.</p>
+                <p><strong>Habilita:</strong> produto de métricas confiáveis para gates e automações.</p>
+              </div>
+            </li>
+            <li class="lab-card lab-right">
+              <span class="lab-node" aria-hidden="true">7</span>
+              <div class="lab-card-body">
+                <h3>Lab 7 — Histórico e drift</h3>
+                <p><strong>Constrói:</strong> relação temporal entre volume, runtime, shuffle, GC, spill e tasks.</p>
+                <p><strong>Habilita:</strong> dashboards Grafana, baselines, alertas e investigação de drift.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            “Habilita” não significa que o Lab entrega um produto pronto para produção. Cada Lab
+            constrói uma peça de raciocínio e uma solução real normalmente combina várias peças.
+          </p>
+          <p>
+            O dashboard do Lab 7 é read-only: ele não coleta nem valida métricas. O fingerprint do
+            Lab 4 organiza hipóteses e prioridades; ele não prova causa raiz.
+          </p>
+          <p>
+            A ordem é pedagógica, não uma escala obrigatória de maturidade. Uma equipe deve escolher
+            as capacidades que resolvem sua dor material e acrescentar contexto e ownership.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-5" class="deck-slide composition-slide" data-section="slide-5">
+        <div class="slide-frame composition-frame">
+          <div class="slide-index">05 / 10 · COMPOSIÇÃO</div>
+          <header class="slide-heading compact-heading composition-heading">
+            <p class="eyebrow">Pré-requisitos combinados com contexto</p>
+            <h2>Soluções reais combinam várias peças</h2>
+            <p>Possibilidades por composição — não produtos entregues prontos.</p>
+          </header>
+
+          <div class="composition-grid">
+            <article class="composition-card">
+              <span class="composition-id">01 / CI/CD</span>
+              <h3>Gate de performance no CI/CD</h3>
+              <code>Lab 2 → Lab 6 → Lab 5</code>
+              <ul>
+                <li>experimento comparável</li>
+                <li>telemetria validada</li>
+                <li>aplicação da policy</li>
+                <li>promover, bloquear ou declarar indeterminado</li>
+              </ul>
+              <p class="composition-caveat">Na operação, o contrato do Lab 6 é validado antes da policy do Lab 5.</p>
+            </article>
+            <article class="composition-card">
+              <span class="composition-id">02 / OBSERVABILIDADE</span>
+              <h3>Observabilidade temporal com Grafana</h3>
+              <code>Lab 0 + Lab 6 + Lab 7</code>
+              <ul>
+                <li>fontes conhecidas</li>
+                <li>telemetria correlacionável</li>
+                <li>histórico, baseline e drift</li>
+              </ul>
+              <p class="composition-caveat">O dashboard permanece uma lente read-only.</p>
+            </article>
+            <article class="composition-card">
+              <span class="composition-id">03 / CONTEXTO EXTERNO</span>
+              <h3>Inteligência de custos</h3>
+              <code>Lab 6 + Lab 7 + contexto externo</code>
+              <ul>
+                <li>métricas confiáveis e histórico</li>
+                <li>identidade, ownership e preços</li>
+                <li>unidade econômica</li>
+              </ul>
+              <p class="composition-caveat">Preços, chargeback e unit economics não são implementados pelos Labs.</p>
+            </article>
+            <article class="composition-card">
+              <span class="composition-id">04 / RECOMENDAÇÃO</span>
+              <h3>Recomendação de máquinas</h3>
+              <code>Lab 4 + Lab 6 + Lab 7 + contexto externo</code>
+              <ul>
+                <li>fingerprint e telemetria confiável</li>
+                <li>histórico, catálogo, restrições e preços</li>
+                <li>validação posterior por experimento controlado</li>
+              </ul>
+              <p class="composition-caveat">Os Labs criam pré-requisitos; não entregam um recomendador automático.</p>
+            </article>
+          </div>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            A ordem pedagógica mostra o Lab 5 antes do Lab 6, mas uma pipeline real executa baseline
+            e candidate, valida compatibilidade, coleta e normaliza telemetria, valida o contrato no
+            Lab 6, aplica a policy do Lab 5 e então promove, bloqueia ou declara indeterminado.
+          </p>
+          <p>
+            Inteligência de custos exige identidade, ownership, preços e unidade econômica.
+            Recomendação de máquinas exige catálogo de infraestrutura, restrições, histórico e
+            validação experimental. Esses elementos externos não são entregues pelos Labs.
+          </p>
+          <p>
+            Depois da decisão, o Lab 7 acompanha histórico e drift. Qualquer automação segura ainda
+            precisa de owner, limites, rollout gradual e rollback.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-6" class="deck-slide" data-section="slide-6">
+        <div class="slide-frame">
+          <div class="slide-index">06 / 10 · LEITURA TÉCNICA</div>
+          <header class="slide-heading">
+            <p class="eyebrow">Antes do gate</p>
+            <h2>Da evidência ao diagnóstico</h2>
+            <p>Ferramentas observam. O engenheiro conecta sinais ao comportamento do workload.</p>
+          </header>
+
+          <div class="diagnostic-flow">
+            <article class="diagnostic-card">
+              <span class="card-code">01 / FUNDAMENTO</span>
+              <h3>Descreva o esperado</h3>
+              <p>Fonte, volume, plano, configuração, SLA e recursos disponíveis.</p>
+              <span class="card-output">saída · hipótese verificável</span>
+            </article>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <article class="diagnostic-card featured-card">
+              <span class="card-code">02 / OBSERVAÇÃO</span>
+              <h3>Colete evidência</h3>
+              <p>Spark UI, eventos, StageMetrics, TaskMetrics e séries operacionais.</p>
+              <span class="card-output">saída · comportamento medido</span>
+            </article>
+            <div class="flow-arrow" aria-hidden="true">→</div>
+            <article class="diagnostic-card">
+              <span class="card-code">03 / DIAGNÓSTICO</span>
+              <h3>Explique a diferença</h3>
+              <p>Relacione volume, records read, shuffle, spill, tempo e distribuição.</p>
+              <span class="card-output">saída · causa provável + limite</span>
+            </article>
+          </div>
+
+          <div class="lens-strip">
+            <div>
+              <span class="lens-kicker">SparkMeasure</span>
+              <strong>instrumenta e resume</strong>
+            </div>
+            <div>
+              <span class="lens-kicker">Grafana</span>
+              <strong>compara no tempo</strong>
+            </div>
+            <div>
+              <span class="lens-kicker">Engenharia</span>
+              <strong>decide com contexto</strong>
+            </div>
+          </div>
+
+          <p class="slide-source">
+            Fonte: <a href="https://spark.apache.org/docs/latest/monitoring.html">Apache Spark · Monitoring</a>
+          </p>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            Saliente que SparkMeasure produz uma forma estável de telemetria; ele não decide sozinho
+            se um número é bom ou ruim. A interpretação nasce da comparação com volume conhecido,
+            histórico, contrato do workload e limites do ambiente.
+          </p>
+          <p>
+            Grafana entra como lente read-only para tendências e correlação. Não confunda dashboard
+            com política de aprovação.
+          </p>
+          <p>
+            Fontes completas: <a href="https://grafana.com/docs/grafana/latest/fundamentals/">Grafana Fundamentals</a>
+            e <a href="https://prometheus.io/docs/introduction/overview/">Prometheus Overview</a>.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-7" class="deck-slide" data-section="slide-7">
+        <div class="slide-frame">
+          <div class="slide-index">07 / 10 · CI/CD</div>
+          <header class="slide-heading compact-heading">
+            <p class="eyebrow">A telemetria informa; a policy decide</p>
+            <h2>CI/CD consome a decisão</h2>
+            <p>O código pode executar e ainda assim não estar pronto para promoção.</p>
+          </header>
+
+          <div class="gate-pipeline" aria-label="Pipeline de CI/CD com gates de performance">
+            <article class="gate-card reveal-step" style="--step: 0">
+              <span class="gate-id">G1</span>
+              <h3>Funcional</h3>
+              <p>O resultado está correto?</p>
+              <span class="status-chip status-pass">PASS</span>
+            </article>
+            <div class="pipeline-link reveal-step" style="--step: 1" aria-hidden="true"></div>
+            <article class="gate-card reveal-step" style="--step: 2">
+              <span class="gate-id">G2</span>
+              <h3>Compatibilidade</h3>
+              <p>Schema e contratos continuam válidos?</p>
+              <span class="status-chip status-pass">PASS</span>
+            </article>
+            <div class="pipeline-link reveal-step" style="--step: 3" aria-hidden="true"></div>
+            <article class="gate-card policy-card reveal-step" style="--step: 4">
+              <span class="gate-id">G3</span>
+              <h3>Policy de performance</h3>
+              <p>O comportamento respeita limites confiáveis?</p>
+              <span class="status-chip status-review">EVALUATE</span>
+            </article>
+            <div class="pipeline-link reveal-step" style="--step: 5" aria-hidden="true"></div>
+            <article class="gate-card outcome-card reveal-step" style="--step: 6">
+              <span class="gate-id">OUT</span>
+              <h3>Decisão</h3>
+              <ul class="decision-list">
+                <li><span class="decision-icon">✓</span> promover</li>
+                <li><span class="decision-icon">×</span> bloquear</li>
+                <li><span class="decision-icon">?</span> indeterminado</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="policy-contract">
+            <span class="contract-label">CONTRATO DO GATE</span>
+            <code>métrica + contexto + baseline + tolerância + evidência suficiente</code>
+          </div>
+          <p class="microcopy">
+            Sem baseline comparável, “indeterminado” é mais honesto do que um bloqueio arbitrário.
+          </p>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            Conecte com os Labs 5 e 6: o Lab 5 valida compatibilidade funcional e coleta a telemetria;
+            o Lab 6 transforma evidência em política operacional. Em uma pipeline real, ambos podem
+            rodar no mesmo CI, mas são gates diferentes.
+          </p>
+          <p>
+            Um exemplo: bloquear quando o shuffle por registro cresce além de uma tolerância contra
+            um baseline de volume equivalente. Se os dados de comparação não são equivalentes ou a
+            telemetria falhou, o resultado deve ser indeterminado — não um falso pass ou fail.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-8" class="deck-slide" data-section="slide-8">
+        <div class="slide-frame">
+          <div class="slide-index">08 / 10 · OPERAÇÃO &amp; ECONOMIA</div>
+          <header class="slide-heading">
+            <p class="eyebrow">Depois da confiança</p>
+            <h2>Da métrica à inteligência operacional</h2>
+            <p>O mesmo sinal ganha valor quando recebe identidade, histórico, restrições e custo.</p>
+          </header>
+
+          <div class="intelligence-formula" aria-label="Fórmula conceitual de inteligência operacional">
+            <span>métrica</span><b>+</b><span>identidade</span><b>+</b><span>histórico</span><b>+</b><span>restrições</span><b>+</b><span>preço</span>
+            <strong>→ decisão contextual</strong>
+          </div>
+
+          <div class="intelligence-cards">
+            <article class="intelligence-card">
+              <span class="card-code">01 / FINOPS</span>
+              <h3>Custos &amp; unit economics</h3>
+              <p>Associe execução a produto, owner e unidade útil.</p>
+              <dl><dt>Pergunta</dt><dd>Quanto custa produzir este resultado?</dd></dl>
+            </article>
+            <article class="intelligence-card featured-card">
+              <span class="card-code">02 / RECOMENDAÇÃO</span>
+              <h3>Right-sizing explicável</h3>
+              <p>Compare padrões antes de sugerir máquina ou configuração.</p>
+              <dl><dt>Pergunta</dt><dd>Qual mudança tem evidência e margem?</dd></dl>
+            </article>
+            <article class="intelligence-card">
+              <span class="card-code">03 / AUTOMAÇÃO</span>
+              <h3>Ação limitada</h3>
+              <p>Use limites, rollout gradual, owner e rollback.</p>
+              <dl><dt>Pergunta</dt><dd>O que pode mudar sem ampliar o risco?</dd></dl>
+            </article>
+          </div>
+
+          <p class="slide-source">
+            Fonte: <a href="https://www.finops.org/framework/capabilities/unit-economics/">FinOps · Unit Economics</a>
+          </p>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            Esta é a diferença entre DQ da telemetria e policy de produto. A estrutura das métricas
+            pode ser estável, mas a decisão depende de quem executou, qual volume entrou, qual SLA foi
+            contratado, quanto custa o recurso e quais restrições não podem ser violadas.
+          </p>
+          <p>
+            Não prometa recomendação universal de máquinas. Comece com recomendações explicáveis e
+            revisadas por humanos. Automatize somente ações bem delimitadas e reversíveis.
+          </p>
+          <p>
+            Fontes completas: <a href="https://www.finops.org/framework/capabilities/allocation/">FinOps Allocation</a>
+            e <a href="https://www.finops.org/framework/capabilities/usage-optimization/">FinOps Usage Optimization</a>.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-9" class="deck-slide" data-section="slide-9">
+        <div class="slide-frame">
+          <div class="slide-index">09 / 10 · CASOS REAIS</div>
+          <header class="slide-heading compact-heading">
+            <p class="eyebrow">Gigantes também começaram pela dor</p>
+            <h2>A dor determinou a solução</h2>
+            <p>Dois contextos diferentes; o mesmo padrão: problema concreto → evidência → ferramenta.</p>
+          </header>
+
+          <div class="case-grid">
+            <article class="case-study netflix-case">
+              <header>
+                <span class="case-year">NETFLIX · 2017</span>
+                <h3>Apache Iceberg</h3>
+              </header>
+              <div class="case-chain">
+                <div><span>DOR</span><p>Layouts de tabela e operações frágeis em escala.</p></div>
+                <i aria-hidden="true">→</i>
+                <div><span>RESPOSTA</span><p>Um formato de tabela com estado confiável e operações seguras.</p></div>
+                <i aria-hidden="true">→</i>
+                <div><span>LIÇÃO</span><p>Melhorar a camada certa antes de otimizar o consumidor.</p></div>
+              </div>
+              <p class="case-quote">“A fonte e o layout também fazem parte da performance.”</p>
+              <p class="case-source">
+                Fonte histórica: <a href="https://github.com/apache/iceberg/blob/a5eb3f6ba171ecfc517a4f09ae9654e7d8ae0291/README.md">README inicial do Iceberg</a>
+              </p>
+            </article>
+
+            <article class="case-study uber-case">
+              <header>
+                <span class="case-year">UBER · 2018</span>
+                <h3>JVM Profiler</h3>
+              </header>
+              <div class="case-chain">
+                <div><span>DOR</span><p>Métricas de servidor não explicavam cada aplicação distribuída.</p></div>
+                <i aria-hidden="true">→</i>
+                <div><span>RESPOSTA</span><p>Telemetria por processo correlacionada e centralizada.</p></div>
+                <i aria-hidden="true">→</i>
+                <div><span>LIÇÃO</span><p>Instrumente o nível em que a decisão precisa acontecer.</p></div>
+              </div>
+              <p class="case-quote">Exemplo publicado: 7 GB → 5 GB por executor; cerca de 2 TB poupados.</p>
+              <p class="case-source">
+                Fonte: <a href="https://www.uber.com/us/en/blog/jvm-profiler/">Uber Engineering · JVM Profiler</a>
+              </p>
+            </article>
+          </div>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            Evite transformar os casos em receita universal. O README inicial do Iceberg registrava
+            desenvolvimento ativo na Netflix e os limites do layout usado por Hive, Presto e Spark:
+            listagem de arquivos, renames em storage de objetos e dependência do metastore.
+          </p>
+          <p>
+            No caso Uber, o post de 2018 relata dezenas de milhares de aplicações em milhares de
+            máquinas. O profiler aproximou métricas do processo e da aplicação. O exemplo de 2 TB é
+            um caso reportado, não um threshold para outras empresas.
+          </p>
+          <p>
+            Referências adicionais: <a href="https://iceberg.apache.org/docs/latest/">Apache Iceberg atual</a>,
+            <a href="https://incubator.apache.org/projects/iceberg.html">histórico na ASF</a> e
+            <a href="https://github.com/uber-common/jvm-profiler">repositório JVM Profiler</a>.
+          </p>
+        </aside>
+      </section>
+
+      <section id="slide-10" class="deck-slide slide-dark closing-slide" data-section="slide-10">
+        <div class="slide-frame closing-frame">
+          <div class="slide-index">10 / 10 · FECHAMENTO</div>
+          <div class="closing-layout">
+            <div class="closing-copy">
+              <p class="eyebrow">A melhor arquitetura começa pela prioridade</p>
+              <h2>Qual é o próximo degrau?</h2>
+              <p class="closing-lead">
+                Resolva a dor real da sua empresa — não o problema mais sofisticado que a tecnologia
+                permite imaginar.
+              </p>
+
+              <ol class="priority-filter" aria-label="Filtro para escolher o próximo investimento">
+                <li><span>01</span><div><strong>Dor</strong><small>é recorrente e concreta?</small></div></li>
+                <li><span>02</span><div><strong>Impacto</strong><small>quem perde tempo, dinheiro ou confiança?</small></div></li>
+                <li><span>03</span><div><strong>Evidência</strong><small>conseguimos observar e explicar?</small></div></li>
+                <li><span>04</span><div><strong>Ação segura</strong><small>há owner, limite e rollback?</small></div></li>
+              </ol>
+            </div>
+
+            <div
+              class="asset-placeholder"
+              data-asset-src="assets/generated/recap-closing-hero.webp"
+              role="img"
+              aria-label="Espaço reservado para ilustração futura de um blueprint de engenharia conectando dados, código e infraestrutura"
+            >
+              <div class="placeholder-grid" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <strong>Blueprint de decisão</strong>
+              <p>Dados · código · infraestrutura<br />evidência · limites · ação reversível</p>
+            </div>
+          </div>
+
+          <footer class="closing-rule">
+            <strong>Automatize depois de entender.</strong>
+            <span>Comece pequeno · meça · explique · reverta</span>
+          </footer>
+        </div>
+        <aside class="speaker-notes" aria-hidden="true">
+          <h2>Notas do apresentador</h2>
+          <p>
+            Feche pedindo uma escolha, não uma promessa: qual dor justificaria o próximo degrau?
+            Se a resposta ainda não tem owner, impacto e evidência, a prioridade é entender melhor —
+            não adicionar automação.
+          </p>
+          <p>
+            O único asset generativo previsto para a apresentação ocupa este espaço. Enquanto o
+            arquivo não existe, o placeholder editorial é a arte final funcional. Quando
+            assets/generated/recap-closing-hero.webp for adicionado, o JavaScript o aplica sem mudar
+            o layout.
+          </p>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="keyboard-hint" aria-hidden="true">
+      <span>↑ ↓ navegar</span><span>N notas</span>
+    </footer>
+  </body>
+</html>
